@@ -17,5 +17,8 @@ Rails.application.routes.draw do
   # イベントストアの中身を見るブラウザ（RES Browser）
   mount RubyEventStore::Browser::App.for(event_store_locator: -> { Rails.configuration.event_store }), at: "/res"
 
+  # MCP（packs/mcp）。Streamable HTTP（stateless）。localhost からだけ受け付ける
+  match "mcp" => "churu_mcp/server#handle", via: %i[get post delete], as: :mcp
+
   get "up" => "rails/health#show", as: :rails_health_check
 end

@@ -30,7 +30,6 @@ module ChuruMcp
           outcome = bank.transfer(from_account, to_account, amount, memo:, dry_run: !confirm)
           result = outcome_to_h(outcome, confirm_hint: "口座 #{from_account} から #{to_account} へ #{amount} ちゅ〜る振り込みます")
           result.merge!(from_account:, to_account:)
-          # ドライランの transfer_id は仮のもの（確定するときに新しく振られる）なので返さない
           unless outcome.dry_run?
             result.merge!(transfer_id: outcome.transfer_id, status: "requested",
                           summary: "振込を受け付けました。振込先への入金は少しあとに行われます（get_transfer で確認）")

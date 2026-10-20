@@ -34,6 +34,7 @@ class ChuruMcp::ServerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "churu-bank", body.dig("result", "serverInfo", "name")
     assert_match "confirm: true", body.dig("result", "instructions")
+    assert_equal %w[tools], body.dig("result", "capabilities").keys
   end
 
   test "tools/list でツールが並ぶ" do
@@ -69,6 +70,7 @@ class ChuruMcp::ServerTest < ActionDispatch::IntegrationTest
     assert_equal [ 100, 70 ], content.values_at("balance_before", "balance_after")
     assert_equal %w[TransferDebited TransferRequested], content["events"].pluck("type")
     assert_nil content["transfer_id"]
+    assert_not content["events"].any? { |event| event["data"].key?("transfer_id") }, "仮の振込 ID は見せない"
     assert_equal before, event_store.read.count
     assert_equal 100, Account.find_by!(number: @alice).balance
   end

@@ -61,6 +61,12 @@ module ChuruMcp
             settled_at: transfer.settled_at&.iso8601, actor: transfer.actor }.compact
         end
 
+        # ドライランの transfer_id は仮のもの（確定するときに新しく振られる）なので見せない
+        def event_to_h(event, dry_run:)
+          data = dry_run ? event.data.except(:transfer_id) : event.data
+          { type: event.event_type.demodulize, data: }
+        end
+
         # 書き込みツールの結果。ドライランなら「何が起きるか」、確定なら「何が起きたか」
         def outcome_to_h(outcome, confirm_hint:)
           result = {
@@ -69,7 +75,7 @@ module ChuruMcp
             balance_before: outcome.balance_before,
             balance_after: outcome.balance_after,
             warnings: outcome.warnings,
-            events: outcome.events.map { |event| { type: event.event_type.demodulize, data: event.data } }
+            events: outcome.events.map { |event| event_to_h(event, dry_run: outcome.dry_run?) }
           }
           if outcome.dry_run?
             result[:summary] = "ドライランです（まだ何も書き込んでいません）。#{confirm_hint}"

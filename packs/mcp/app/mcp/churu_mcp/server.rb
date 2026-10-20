@@ -20,6 +20,7 @@ module ChuruMcp
         version: "0.1.0",
         instructions: INSTRUCTIONS,
         tools: TOOLS,
+        capabilities: { tools: {} }, # ツールだけ（プロンプト・リソースはない）
         configuration: MCP::Configuration.new(
           exception_reporter: ->(error, context) { Rails.error.report(error, context:, source: "churu_mcp") }
         )

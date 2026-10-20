@@ -1,4 +1,4 @@
-# 共通の土台: ApplicationRecord / ApplicationJob など、どのパックも継承するもの。
+# 共通の土台: ApplicationRecord / ApplicationJob / ApplicationController など、どのパックも継承するもの。
 # ここはどこにも依存しない（ドメインのコードを置かない）
 enforce_dependencies: true
 enforce_privacy: false

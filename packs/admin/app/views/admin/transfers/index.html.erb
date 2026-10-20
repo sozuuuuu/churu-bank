@@ -1,0 +1,32 @@
+<% content_for :title, "振込一覧 | ちゅーる銀行" %>
+
+<%# 振込のジョブが「処理中」→「完了 / 組戻し」に進めると、この一覧が morph で更新される %>
+<%= turbo_stream_from "transfers" %>
+
+<h1>振込一覧</h1>
+
+<% if @transfers.empty? %>
+  <p class="empty">まだ振込はありません。</p>
+<% else %>
+  <table class="table">
+    <thead>
+      <tr><th>受付日時</th><th>振込元</th><th>振込先</th><th class="num">金額</th><th>メモ</th><th>状態</th><th>処理日時</th></tr>
+    </thead>
+    <tbody>
+      <% @transfers.each do |transfer| %>
+        <tr id="<%= dom_id(transfer) %>">
+          <td><%= jp_time(transfer.requested_at) %></td>
+          <td><%= link_to transfer.source.holder_name, admin_account_path(transfer.from_account) %></td>
+          <td><%= link_to transfer.destination.holder_name, admin_account_path(transfer.to_account) %></td>
+          <td class="num"><%= churu(transfer.amount) %></td>
+          <td><%= transfer.memo %></td>
+          <td>
+            <%= render "transfers/status", transfer: %>
+            <% if transfer.failure_reason %><div class="muted small"><%= transfer.failure_reason %></div><% end %>
+          </td>
+          <td><%= jp_time(transfer.settled_at) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

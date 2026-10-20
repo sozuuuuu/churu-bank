@@ -8,11 +8,24 @@ Hotwire・Solid Queue・Solid Cable など Rails 標準の機能を一通り使�
 ```bash
 bin/rails db:prepare
 bin/dev            # http://localhost:3000 （Solid Queue のワーカーも Puma の中で動く）
-bin/rails test
+bin/test           # ルートとすべてのパックのテスト
+bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 ```
 
 - 環境: WSL の Ubuntu 24.04、Ruby は mise（`mise.toml`）、バージョン管理は jj
 - `/res` … RES Browser（イベントストアの中身を見る）
+
+## パッケージ（packwerk）
+
+| パッケージ | 中身 | 依存してよい先 |
+|---|---|---|
+| `.`（ルート） | 画面（いまは管理画面だけ）、画面へのライブ更新、イベントストア本体 | platform, banking |
+| `packs/banking` | 銀行ドメイン。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
+| `packs/platform` | `ApplicationRecord` / `ApplicationJob` などの土台 | なし |
+
+- `bin/packwerk check` で、依存（`enforce_dependencies`）と非公開の参照（`enforce_privacy`、packwerk-extensions）を検査する
+- 各パックは自分の `config/initializers` で自分のイベント購読だけを書く。イベントストア本体はルート
+- パックのテストは `packs/<名前>/test`。`bin/test` でまとめて流れる
 
 ## しくみ
 
@@ -61,11 +74,23 @@ Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ�
 | Turbo 8 の refresh（morph） | `turbo_refreshes_with` + `turbo_stream_from`。ほかのプロセスからの入出金も即反映 |
 | Stimulus | `amount_controller`（+10 / +50 ボタン）、`autosubmit_controller`（日付を変えたら送信） |
 
-## これから
+## TODO
 
-- 管理画面（行員）と利用者画面（口座の持ち主）を分ける
-- packwerk でドメインごとにパッケージを分ける（銀行の中核 / 管理画面 / 利用者画面 …）。
-  あとでドメインを足したときに、依存の境界がどう効くかを見る
-- 利息（Solid Queue の recurring で日次計算）、取消（逆仕訳）
-- MCP（`/mcp`、HTTP）で Zingiber から残高照会・振込（ドライラン → 確定）
-- 読み取りモデルの作り直しタスク（`bin/rails churu:rebuild_projections`）
+| # | やること | 先に必要 | 主な場所 |
+|---|---|---|---|
+| ~~A~~ | ~~packwerk 導入、銀行を `packs/banking` へ~~（済） | | |
+| B | 認証（Rails 8 の `generate authentication`）、ユーザーと口座のひも付け | | `packs/identity`（予定） |
+| C | 管理画面（行員）と利用者画面（口座の持ち主）を分ける | B | `packs/admin`・`packs/customer` |
+| D | 2つめのドメイン「ちゅ〜る商店」: 商品・在庫・注文。支払いは `Banking::Bank` 経由、在庫切れなら返金 | | `packs/shop` |
+| E | MCP（`/mcp`、HTTP）: 残高照会・明細・振込（ドライラン → 確定） | | `packs/mcp` |
+| F | 利息（Solid Queue の recurring で日次計算） | | `packs/banking` |
+| G | 取消（逆仕訳） | | `packs/banking` |
+| H | 読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`） | | `packs/banking` |
+| I | GitHub（private）と CI | | `.github/` |
+| J | Zingiber から銀行の MCP を使う | E | Zingiber 側 |
+| K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |
+
+並行の進め方（フェーズ1）: B+C / D / E→J / F+G+H を別々に進められる。
+各自 `jj workspace add ../churu-bank-<名前>` で作業ディレクトリを分け、`bin/dev -p 300X` でポートも分ける
+（DB は `storage/` 以下なので、作業ディレクトリごとに別になる）。
+`config/routes.rb`・`db/schema.rb` は複数から触るので、最後にまとめてマージする。

@@ -58,3 +58,8 @@ group :test do
 end
 
 gem "rails_event_store", "~> 3.2"
+
+gem "packs-rails", "~> 0.1.0"
+
+gem "packwerk", "~> 3.3", groups: [ :development, :test ]
+gem "packwerk-extensions", "~> 0.4.0", groups: [ :development, :test ]

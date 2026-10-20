@@ -1,0 +1,14 @@
+# 銀行ドメイン: 口座・入出金・振込（Rails Event Store でイベントソーシング）
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - Banking::Bank       … 書き込みの唯一の入口（dry_run あり）
+#   - Banking::Statement  … 時点指定の残高
+#   - Banking::Events     … イベントの定義（購読してよい。publish は Bank 経由で）
+#   - Banking::Error 系   … 例外
+#   - Account / LedgerEntry / Transfer … 読み取りモデル（参照だけ。書き込みはプロジェクションだけ）
+# 集約（Banking::Account / Banking::Transfer）やプロジェクション、ジョブは非公開
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform

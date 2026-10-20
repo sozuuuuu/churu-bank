@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# ルートとすべてのパックのテストを流す。引数があればそれだけ（bin/rails test と同じ）
+#   bin/test
+#   bin/test packs/banking/test/models/banking/transfer_test.rb:42
+set -e
+cd "$(dirname "$0")/.."
+if [ $# -eq 0 ]; then
+  set -- test packs/*/test
+fi
+exec bin/rails test "$@"

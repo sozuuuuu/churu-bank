@@ -1,0 +1,8 @@
+# ルートパッケージ: いまは画面（管理画面）とアプリ全体の設定。
+# 管理画面・利用者画面はあとで packs/admin・packs/customer に切り出す予定
+enforce_dependencies: true
+enforce_privacy: false
+
+dependencies:
+  - packs/platform
+  - packs/banking

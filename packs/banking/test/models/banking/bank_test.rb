@@ -50,7 +50,7 @@ class Banking::BankTest < ActiveSupport::TestCase
 
   test "同時に更新されたら後から来た方が失敗する" do
     @bank.deposit(@number, 100)
-    stale = @bank.load(@number) # この時点の version で止めておく
+    stale = @bank.load_account(@number) # この時点の version で止めておく
     @bank.withdraw(@number, 100) # 先に別の誰かが全額出金
 
     stale.withdraw(100) # 古い残高（100）では通ってしまうが…
@@ -70,11 +70,5 @@ class Banking::BankTest < ActiveSupport::TestCase
     assert_equal 50, Banking::Statement.new(@number, date: on_18th, basis: :as_of).balance
     assert_equal 0, Banking::Statement.new(@number, date: on_18th, basis: :as_at).balance
     assert_equal 150, Banking::Statement.new(@number, date: Date.new(2026, 10, 20)).balance
-  end
-
-  test "コミット後に画面更新のジョブが積まれる" do
-    assert_enqueued_with(job: BroadcastRefreshJob) do
-      @bank.deposit(@number, 1)
-    end
   end
 end

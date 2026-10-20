@@ -20,7 +20,7 @@ class Accounts::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@orca)
     assert_equal "requested", Transfer.last.status
 
-    perform_enqueued_jobs(only: Transfers::SettleJob)
+    perform_enqueued_jobs # 振込の後半は銀行パックの中のジョブ。画面からは名指ししない
     assert_equal "completed", Transfer.last.status
     assert_equal 40, Account.find_by!(number: @zingiber).balance
   end

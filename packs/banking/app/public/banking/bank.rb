@@ -53,8 +53,8 @@ module Banking
     # Transfers::SettleJob（Solid Queue）が settle_transfer を呼んで行う。
     def transfer(from, to, amount, memo: nil, dry_run: false)
       transfer_id = SecureRandom.uuid
-      source = load(from)
-      destination = load(to)
+      source = load_account(from)
+      destination = load_account(to)
       raise NotFound, "振込先の口座 #{to} はありません" if destination.status == :unopened
 
       before = source.balance
@@ -83,14 +83,14 @@ module Banking
       transfer = @repository.load(Transfer.new(transfer_id), Transfer.stream_name(transfer_id))
       return unless transfer.requested?
 
-      destination = load(transfer.to_account)
+      destination = load_account(transfer.to_account)
       begin
         destination.credit_transfer(transfer_id:, amount: transfer.amount, from: transfer.from_account,
                                     memo: transfer.memo)
         transfer.complete!
         account, number = destination, transfer.to_account
       rescue Banking::Error => e
-        source = load(transfer.from_account)
+        source = load_account(transfer.from_account)
         source.refund_transfer(transfer_id:, amount: transfer.amount, to: transfer.to_account, reason: e.message)
         transfer.fail!(reason: e.message)
         account, number = source, transfer.from_account
@@ -104,14 +104,14 @@ module Banking
     end
 
     # 集約から組み立てた「いまの」口座（読み取りモデルを使わない）
-    def load(number)
+    def load_account(number)
       @repository.load(Account.new(number), Account.stream_name(number))
     end
 
     private
 
     def change(number, dry_run:)
-      account = load(number)
+      account = load_account(number)
       before = account.balance
       yield account
       events = account.unpublished_events.to_a

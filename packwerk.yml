@@ -1,0 +1,21 @@
+# packwerk の設定。https://github.com/Shopify/packwerk/blob/main/USAGE.md
+#
+# パッケージは packs/<名前>/package.yml。ルート（package.yml）は画面とアプリ全体の設定。
+# 確認: bin/packwerk check（bin/ci でも実行）
+
+include:
+  - "**/*.{rb,rake,erb}"
+
+exclude:
+  - "{bin,node_modules,script,tmp,vendor,log,storage,db}/**/*"
+
+package_paths:
+  - "."
+  - "packs/*"
+
+# packwerk-extensions のチェッカー。privacy: パッケージの app/public 以外を外から参照したら違反
+require:
+  - packwerk/privacy/checker
+
+cache: true
+cache_directory: tmp/cache/packwerk

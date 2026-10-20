@@ -1,0 +1,73 @@
+<% content_for :title, "#{@account.holder_name} の口座 | ちゅーる銀行" %>
+
+<%# 行員の操作や振込のジョブ、MCP から更新があっても、この画面が morph で更新される %>
+<%= turbo_stream_from @account %>
+
+<div class="account-head card">
+  <div>
+    <p class="muted">口座番号 <%= @account.number %> ・ 開設 <%= jp_date(@account.opened_on) %></p>
+    <h1><%= @account.holder_name %> <span class="badge badge-<%= @account.status %>"><%= @account.status_label %></span></h1>
+  </div>
+  <p class="balance"><%= churu(@account.balance) %></p>
+</div>
+
+<div class="grid">
+  <section class="card">
+    <h2>振込</h2>
+    <% if @account.active? %>
+      <%# 入力 → 確認 → 確定 の画面遷移は、この Frame の中だけで起きる %>
+      <%= turbo_frame_tag "transfer", src: new_account_transfer_path(@account) do %>
+        <p class="muted">読み込み中…</p>
+      <% end %>
+    <% else %>
+      <p class="muted">この口座は<%= @account.status_label %>なので振り込めません。</p>
+    <% end %>
+  </section>
+
+  <section class="card">
+    <h2>時点指定の残高</h2>
+    <%# Frame だけ差し替えつつ、URL（?date=）も進める。morph で更新されても同じ日付で描き直される %>
+    <%= form_with url: balance_account_path(@account), method: :get,
+                  data: { turbo_frame: "balance", turbo_action: "advance", controller: "autosubmit" } do |f| %>
+      <%= f.date_field :date, value: @date, data: { action: "change->autosubmit#submit" } %>
+    <% end %>
+    <%= turbo_frame_tag "balance", src: balance_account_path(@account, date: @date) %>
+  </section>
+</div>
+
+<section class="card">
+  <h2>通帳</h2>
+  <% if @entries.empty? %>
+    <p class="muted">まだ取引はありません。</p>
+  <% else %>
+    <table class="table">
+      <thead>
+        <tr><th>記帳日時</th><th>起算日</th><th>取引</th><th>相手・メモ</th><th class="num">金額</th><th class="num">残高</th></tr>
+      </thead>
+      <tbody>
+        <% @entries.each do |entry| %>
+          <tr id="<%= dom_id(entry) %>">
+            <td><%= jp_time(entry.booked_at) %></td>
+            <td class="<%= "backdated" if entry.backdated? %>"><%= jp_date(entry.value_date) %></td>
+            <td>
+              <%= entry.kind_label %>
+              <% if (transfer = @transfers[entry.transfer_id]) && entry.kind == "transfer_out" %>
+                <%= render "transfers/status", transfer: %>
+              <% end %>
+            </td>
+            <td>
+              <% if entry.counterparty %>
+                <% name = @holders.fetch(entry.counterparty, entry.counterparty) %>
+                <%# 相手の口座ページへのリンクは、自分の口座どうしのときだけ %>
+                <%= @my_numbers.include?(entry.counterparty) ? link_to(name, account_path(entry.counterparty)) : name %>
+              <% end %>
+              <span class="muted"><%= entry.memo %></span>
+            </td>
+            <td class="num <%= entry.amount.negative? ? "minus" : "plus" %>"><%= churu(entry.amount, signed: true) %></td>
+            <td class="num"><%= churu(entry.balance_after) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>

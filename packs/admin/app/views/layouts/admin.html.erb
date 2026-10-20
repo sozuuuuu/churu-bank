@@ -1,0 +1,9 @@
+<%# 管理画面のメニューを入れて、ルートの application レイアウトで描く %>
+<% content_for :nav do %>
+  <span class="badge">管理画面</span>
+  <%= link_to "口座一覧", admin_accounts_path %>
+  <%= link_to "振込一覧", admin_transfers_path %>
+  <%= link_to "口座開設", new_admin_account_path %>
+  <%= link_to "イベント", "/res", data: { turbo: false } %>
+<% end %>
+<%= render template: "layouts/application" %>

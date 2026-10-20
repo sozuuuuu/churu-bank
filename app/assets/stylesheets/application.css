@@ -129,3 +129,9 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; margin
 .flash { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
 .flash-alert { border-color: var(--minus); color: var(--minus); }
 .flash-notice { border-color: var(--plus); color: var(--plus); }
+
+/* ログイン・ヘッダーのログアウト */
+.site-header nav { align-items: center; }
+.site-header nav form { display: inline; }
+.button.link, button.link { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
+.login { max-width: 360px; }

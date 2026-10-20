@@ -24,11 +24,13 @@
   <body>
     <header class="site-header">
       <%= link_to root_path, class: "brand" do %>🐟 ちゅーる銀行<% end %>
+      <%# メニューは画面のパックごと（packs/admin・packs/customer の layouts）で content_for :nav に入れる %>
       <nav>
-        <%= link_to "口座一覧", accounts_path %>
-        <%= link_to "振込一覧", transfers_path %>
-        <%= link_to "口座開設", new_account_path %>
-        <%= link_to "イベント", "/res", data: { turbo: false } %>
+        <%= yield :nav %>
+        <% if Current.user %>
+          <span class="muted"><%= Current.user.name %></span>
+          <%= button_to "ログアウト", session_path, method: :delete, class: "link" %>
+        <% end %>
       </nav>
     </header>
 

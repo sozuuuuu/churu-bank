@@ -1,0 +1,17 @@
+<%= turbo_frame_tag "balance" do %>
+  <dl class="as-of">
+    <div>
+      <dt>起算日基準 <small>本当はその日にいくらあったか</small></dt>
+      <dd><%= churu(@as_of.balance) %></dd>
+    </div>
+    <div>
+      <dt>記帳日基準 <small>その日に銀行が知っていた残高</small></dt>
+      <dd><%= churu(@as_at.balance) %></dd>
+    </div>
+  </dl>
+  <% if @as_of.balance != @as_at.balance %>
+    <p class="hint">
+      <%= jp_date(@date) %> より後に、さかのぼって記帳された取引があるため、2つの残高がずれています。
+    </p>
+  <% end %>
+<% end %>

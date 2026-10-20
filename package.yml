@@ -1,8 +1,9 @@
-# ルートパッケージ: いまは画面（管理画面）とアプリ全体の設定。
-# 管理画面・利用者画面はあとで packs/admin・packs/customer に切り出す予定
+# ルートパッケージ: レイアウト・JS（Stimulus）・CSS・ヘルパー、画面へのライブ更新（BroadcastRefreshJob）、
+# イベントストア本体とアプリ全体の設定。画面そのものは packs/admin・packs/customer
 enforce_dependencies: true
 enforce_privacy: false
 
 dependencies:
   - packs/platform
   - packs/banking
+  - packs/identity

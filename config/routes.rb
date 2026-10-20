@@ -1,21 +1,8 @@
 Rails.application.routes.draw do
-  root "accounts#index"
-
-  resources :accounts, only: %i[index show new create], param: :number do
-    member do
-      get :balance # 時点指定の残高（Turbo Frame で差し替え）
-    end
-    # 入出金（kind=deposit|withdrawal）と振込。どちらも確認（ドライラン）→ 確定の2段階
-    resources :transactions, only: %i[new create], module: :accounts
-    resources :transfers, only: %i[new create], module: :accounts
-    # 凍結を「口座に1つだけあるリソース」として扱う（POST で凍結、DELETE で解除）
-    resource :freeze, only: %i[create destroy], module: :accounts
-  end
-
-  resources :transfers, only: :index
-
-  # イベントストアの中身を見るブラウザ（RES Browser）
-  mount RubyEventStore::Browser::App.for(event_store_locator: -> { Rails.configuration.event_store }), at: "/res"
+  # 画面のルートは各パックの config/routes/<名前>.rb（packs-rails が探す場所に入れてある）
+  draw :identity # ログイン・ログアウト
+  draw :admin    # 管理画面 /admin（と /res）
+  draw :customer # 利用者画面 /
 
   get "up" => "rails/health#show", as: :rails_health_check
 end

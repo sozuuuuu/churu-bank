@@ -1,0 +1,6 @@
+<%# 利用者画面のメニューを入れて、ルートの application レイアウトで描く %>
+<% content_for :nav do %>
+  <%= link_to "わたしの口座", accounts_path %>
+  <%= link_to "管理画面", admin_root_path if Current.user&.admin? %>
+<% end %>
+<%= render template: "layouts/application" %>

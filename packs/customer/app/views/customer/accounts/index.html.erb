@@ -1,0 +1,28 @@
+<% content_for :title, "わたしの口座 | ちゅーる銀行" %>
+
+<%# 自分の口座のどれかが更新されたら、この一覧が morph で更新される %>
+<% @accounts.each do |account| %>
+  <%= turbo_stream_from account %>
+<% end %>
+
+<h1><%= Current.user.name %> さんの口座</h1>
+
+<% if @accounts.empty? %>
+  <p class="empty">まだ口座がありません。口座の開設は窓口（行員）にご相談ください。</p>
+<% else %>
+  <table class="table">
+    <thead>
+      <tr><th>口座番号</th><th>名義</th><th>状態</th><th class="num">残高</th></tr>
+    </thead>
+    <tbody>
+      <% @accounts.each do |account| %>
+        <tr id="<%= dom_id(account) %>">
+          <td><%= link_to account.number, account_path(account) %></td>
+          <td><%= account.holder_name %></td>
+          <td><span class="badge badge-<%= account.status %>"><%= account.status_label %></span></td>
+          <td class="num"><%= churu(account.balance) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

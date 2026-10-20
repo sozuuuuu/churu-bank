@@ -10,7 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_100003) do
+  create_table "account_ownerships", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "account_number", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_number"], name: "index_account_ownerships_on_account_number"
+    t.index ["user_id", "account_number"], name: "index_account_ownerships_on_user_id_and_account_number", unique: true
+    t.index ["user_id"], name: "index_account_ownerships_on_user_id"
+  end
+
   create_table "accounts", force: :cascade do |t|
     t.string "number", null: false
     t.string "holder_name", null: false
@@ -67,6 +77,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
     t.index ["transfer_id"], name: "index_ledger_entries_on_transfer_id"
   end
 
+  create_table "sessions", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
+
   create_table "transfers", force: :cascade do |t|
     t.string "transfer_id", null: false
     t.string "from_account", null: false
@@ -85,5 +104,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
     t.index ["transfer_id"], name: "index_transfers_on_transfer_id", unique: true
   end
 
+  create_table "users", force: :cascade do |t|
+    t.string "email_address", null: false
+    t.string "password_digest", null: false
+    t.string "name", null: false
+    t.boolean "admin", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_users_on_email_address", unique: true
+  end
+
+  add_foreign_key "account_ownerships", "users"
   add_foreign_key "event_store_events_in_streams", "event_store_events", column: "event_id", primary_key: "event_id"
+  add_foreign_key "sessions", "users"
 end

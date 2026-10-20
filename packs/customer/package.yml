@@ -1,0 +1,9 @@
+# 利用者画面（/）。ログインした利用者が、自分の口座だけを見て、自分の口座から振り込める。
+# 入出金と凍結は行員だけ（packs/admin）
+enforce_dependencies: true
+enforce_privacy: false
+
+dependencies:
+  - packs/platform
+  - packs/banking
+  - packs/identity

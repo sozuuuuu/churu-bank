@@ -1,0 +1,17 @@
+<% content_for :title, "口座開設 | ちゅーる銀行" %>
+
+<h1>口座開設</h1>
+
+<%= form_with url: admin_accounts_path, class: "card form" do |f| %>
+  <label>
+    名義
+    <%= f.text_field :holder_name, value: params[:holder_name], required: true, autofocus: true,
+                     placeholder: "例: オルカ" %>
+  </label>
+  <label>
+    持ち主（利用者）
+    <%= f.select :owner_id, @users.map { [ "#{it.name}（#{it.email_address}）", it.id ] },
+                 { selected: params[:owner_id], include_blank: "なし" } %>
+  </label>
+  <%= f.submit "開設する", class: "button primary" %>
+<% end %>

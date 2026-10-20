@@ -1,0 +1,37 @@
+<%= turbo_frame_tag "transfer" do %>
+  <% if @destinations.empty? %>
+    <p class="muted">振込先になる口座がありません。<%= link_to "口座を開設する", new_account_path, data: { turbo_frame: "_top" } %></p>
+  <% else %>
+    <%= form_with url: account_transfers_path(@account), class: "form", data: { controller: "amount" } do |f| %>
+      <% if @error %>
+        <p class="flash flash-alert"><%= @error %></p>
+      <% end %>
+
+      <label>
+        振込先
+        <%= f.select :to,
+                     @destinations.map { [ "#{it.number} #{it.holder_name}#{"（#{it.status_label}）" unless it.active?}", it.number ] },
+                     { selected: @form[:to], include_blank: "選んでください" }, required: true %>
+      </label>
+
+      <label>
+        金額（ちゅ〜る）
+        <%= f.number_field :amount, value: @form[:amount], min: 1, step: 1, required: true,
+                           data: { amount_target: "input" } %>
+      </label>
+      <div class="presets">
+        <% [ 10, 50, 100, 500 ].each do |n| %>
+          <button type="button" class="chip" data-action="amount#add" data-amount-value-param="<%= n %>">+<%= n %></button>
+        <% end %>
+        <button type="button" class="chip" data-action="amount#clear">クリア</button>
+      </div>
+
+      <label>
+        メモ
+        <%= f.text_field :memo, value: @form[:memo], placeholder: "例: おやつ代" %>
+      </label>
+
+      <%= f.submit "確認する", name: "preview", class: "button primary" %>
+    <% end %>
+  <% end %>
+<% end %>

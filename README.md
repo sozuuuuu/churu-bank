@@ -25,7 +25,7 @@ Banking::Account（集約: 業務ルール。残高はイベントから計算�
    ▼
 イベントストア（event_store_events）──同期──▶ Projections::AccountProjection
    │                                           → accounts / ledger_entries（画面用の読み取りモデル）
-   └─コミット後に非同期（Active Job / Solid Queue）─▶ BroadcastAccountRefreshJob
+   └─コミット後に非同期（Active Job / Solid Queue）─▶ BroadcastRefreshJob
                                                      → Turbo の refresh を Solid Cable で配信（morph）
 ```
 
@@ -33,7 +33,24 @@ Banking::Account（集約: 業務ルール。残高はイベントから計算�
 - **起算日と記帳日**: 入出金の起算日は RES の `valid_at`、記帳日は `timestamp`。
   `Banking::Statement` で「起算日基準（as_of）」と「記帳日基準（as_at）」の時点残高を出せる
 - **ドライラン**: `Banking::Bank` の各操作は `dry_run: true` で、書き込まずに結果だけ返す。
-  Web の入出金は「確認（ドライラン）→ 確定」の2段階
+  Web の入出金・振込は「確認（ドライラン）→ 確定」の2段階
+
+## 振込（プロセスマネージャ）
+
+```
+Bank#transfer（同期・1トランザクション）
+  Account$<振込元>  … TransferDebited（残高不足ならここで失敗）
+  Transfer$<id>     … TransferRequested            ※口座側のイベントも Transfer$<id> にリンク
+        │ コミット後に Solid Queue へ
+        ▼
+Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ）
+  ├ 入金できた   … Account$<振込先> TransferCredited → Transfer$<id> TransferCompleted
+  └ できなかった … Account$<振込元> TransferRefunded（組戻し）→ Transfer$<id> TransferFailed
+```
+
+- ジョブは `CorrelatedHandler` で correlation_id / causation_id を引き継ぐ。RES Browser の
+  `Transfer$<id>` ストリームで、引き落とし → 入金（または組戻し）までを1か所で辿れる
+- 振込先が凍結中だと、確認画面で「組戻しになります」と警告したうえで受け付ける（補償の動きを見るため）
 
 ## Hotwire で使っているもの
 
@@ -46,7 +63,9 @@ Banking::Account（集約: 業務ルール。残高はイベントから計算�
 
 ## これから
 
-- 振込（2口座をまたぐ。プロセスマネージャで引き落とし → 入金、失敗したら払い戻し）
+- 管理画面（行員）と利用者画面（口座の持ち主）を分ける
+- packwerk でドメインごとにパッケージを分ける（銀行の中核 / 管理画面 / 利用者画面 …）。
+  あとでドメインを足したときに、依存の境界がどう効くかを見る
 - 利息（Solid Queue の recurring で日次計算）、取消（逆仕訳）
 - MCP（`/mcp`、HTTP）で Zingiber から残高照会・振込（ドライラン → 確定）
 - 読み取りモデルの作り直しタスク（`bin/rails churu:rebuild_projections`）

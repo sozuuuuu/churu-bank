@@ -73,7 +73,7 @@ class Banking::BankTest < ActiveSupport::TestCase
   end
 
   test "コミット後に画面更新のジョブが積まれる" do
-    assert_enqueued_with(job: BroadcastAccountRefreshJob) do
+    assert_enqueued_with(job: BroadcastRefreshJob) do
       @bank.deposit(@number, 1)
     end
   end

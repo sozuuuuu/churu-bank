@@ -81,6 +81,18 @@ h2 { font-size: 1.1rem; margin: 0 0 12px; }
 .badge-active { color: var(--plus); }
 .badge-frozen { color: var(--minus); }
 .badge-closed { color: var(--muted); }
+.badge-transfer-requested { color: var(--muted); border-style: dashed; }
+.badge-transfer-completed { color: var(--plus); }
+.badge-transfer-failed { color: var(--minus); }
+.small { font-size: .8rem; }
+
+.account-actions { display: grid; justify-items: end; gap: 6px; }
+.account-actions .balance { margin: 0; }
+.button.small { font-size: .8rem; padding: 4px 10px; }
+select {
+  font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); width: 100%;
+}
 
 .form { display: grid; gap: 12px; }
 .form label { display: grid; gap: 4px; font-size: .9rem; }

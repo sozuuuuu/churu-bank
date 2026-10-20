@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_225517) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
   create_table "accounts", force: :cascade do |t|
     t.string "number", null: false
     t.string "holder_name", null: false
@@ -60,8 +60,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_225517) do
     t.string "actor"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "counterparty"
+    t.string "transfer_id"
     t.index ["account_number"], name: "index_ledger_entries_on_account_number"
     t.index ["event_id"], name: "index_ledger_entries_on_event_id", unique: true
+    t.index ["transfer_id"], name: "index_ledger_entries_on_transfer_id"
+  end
+
+  create_table "transfers", force: :cascade do |t|
+    t.string "transfer_id", null: false
+    t.string "from_account", null: false
+    t.string "to_account", null: false
+    t.integer "amount", null: false
+    t.string "memo"
+    t.string "status", null: false
+    t.string "failure_reason"
+    t.datetime "requested_at", null: false
+    t.datetime "settled_at"
+    t.string "actor"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["from_account"], name: "index_transfers_on_from_account"
+    t.index ["to_account"], name: "index_transfers_on_to_account"
+    t.index ["transfer_id"], name: "index_transfers_on_transfer_id", unique: true
   end
 
   add_foreign_key "event_store_events_in_streams", "event_store_events", column: "event_id", primary_key: "event_id"

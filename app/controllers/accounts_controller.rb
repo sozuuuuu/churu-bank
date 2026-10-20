@@ -7,6 +7,8 @@ class AccountsController < ApplicationController
 
   def show
     @entries = @account.ledger_entries.reverse_order.limit(100)
+    @transfers = Transfer.where(transfer_id: @entries.filter_map(&:transfer_id)).index_by(&:transfer_id)
+    @holders = Account.pluck(:number, :holder_name).to_h
     @date = parse_date(params[:date]) || Date.current
   end
 

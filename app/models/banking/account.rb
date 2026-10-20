@@ -50,6 +50,37 @@ module Banking
       )
     end
 
+    # 振込の引き落とし。出金と同じく、残高不足ならその場で失敗する
+    def debit_for_transfer(transfer_id:, amount:, to:, memo: nil)
+      ensure_active!
+      ensure_positive!(amount)
+      raise ArgumentError, "自分の口座には振り込めません" if to == number
+      if amount > balance
+        raise InsufficientFunds, "残高不足です（残高 #{balance} / 振込 #{amount}）"
+      end
+
+      apply Events::TransferDebited.new(
+        data: { account_number: number, transfer_id:, amount:, counterparty: to, memo: }
+      )
+    end
+
+    # 振込の入金。振込先が凍結中・解約済みなら InvalidState（→ 組戻しになる）
+    def credit_transfer(transfer_id:, amount:, from:, memo: nil)
+      ensure_active!
+      apply Events::TransferCredited.new(
+        data: { account_number: number, transfer_id:, amount:, counterparty: from, memo: }
+      )
+    end
+
+    # 組戻し。引き落とし済みのお金を返すだけなので、凍結中でも受け付ける
+    def refund_transfer(transfer_id:, amount:, to:, reason:)
+      raise NotFound, "口座 #{number} はありません" if status == :unopened
+
+      apply Events::TransferRefunded.new(
+        data: { account_number: number, transfer_id:, amount:, counterparty: to, reason: }
+      )
+    end
+
     def freeze!(reason:)
       ensure_active!
       apply Events::AccountFrozen.new(data: { account_number: number, reason: reason })
@@ -71,12 +102,9 @@ module Banking
       @status = :active
     end
 
-    on Events::MoneyDeposited do |event|
-      @balance += event.data.fetch(:amount)
-    end
-
-    on Events::MoneyWithdrawn do |event|
-      @balance -= event.data.fetch(:amount)
+    on Events::MoneyDeposited, Events::MoneyWithdrawn,
+       Events::TransferDebited, Events::TransferCredited, Events::TransferRefunded do |event|
+      @balance += Events.balance_delta(event)
     end
 
     on Events::AccountFrozen do |_event|

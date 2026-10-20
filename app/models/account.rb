@@ -5,7 +5,7 @@ class Account < ApplicationRecord
   has_many :ledger_entries, -> { order(:booked_at, :id) },
            primary_key: :number, foreign_key: :account_number, inverse_of: false
 
-  # 画面への配信（Turbo の refresh）は BroadcastAccountRefreshJob が行う
+  # 画面への配信（Turbo の refresh）は BroadcastRefreshJob が行う
 
   def to_param = number
 

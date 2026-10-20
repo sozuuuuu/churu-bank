@@ -21,10 +21,7 @@ module Banking
       @lines ||= begin
         balance = 0
         scope.filter_map do |event|
-          delta = case event
-          when Events::MoneyDeposited then event.data.fetch(:amount)
-          when Events::MoneyWithdrawn then -event.data.fetch(:amount)
-          end
+          delta = Events.balance_delta(event)
           next unless delta
 
           balance += delta

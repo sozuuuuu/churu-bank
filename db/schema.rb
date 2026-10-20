@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_000000) do
   create_table "accounts", force: :cascade do |t|
     t.string "number", null: false
     t.string "holder_name", null: false
@@ -62,8 +62,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
     t.datetime "updated_at", null: false
     t.string "counterparty"
     t.string "transfer_id"
+    t.string "reversal_of"
+    t.string "reversed_by"
     t.index ["account_number"], name: "index_ledger_entries_on_account_number"
     t.index ["event_id"], name: "index_ledger_entries_on_event_id", unique: true
+    t.index ["reversal_of"], name: "index_ledger_entries_on_reversal_of"
     t.index ["transfer_id"], name: "index_ledger_entries_on_transfer_id"
   end
 
@@ -80,6 +83,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
     t.string "actor"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "reversed_at"
+    t.string "reversal_reason"
     t.index ["from_account"], name: "index_transfers_on_from_account"
     t.index ["to_account"], name: "index_transfers_on_to_account"
     t.index ["transfer_id"], name: "index_transfers_on_transfer_id", unique: true

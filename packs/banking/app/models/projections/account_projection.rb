@@ -10,7 +10,11 @@ module Projections
       Banking::Events::MoneyWithdrawn => "withdrawal",
       Banking::Events::TransferDebited => "transfer_out",
       Banking::Events::TransferCredited => "transfer_in",
-      Banking::Events::TransferRefunded => "transfer_refund"
+      Banking::Events::TransferRefunded => "transfer_refund",
+      Banking::Events::TransferCreditReversed => "transfer_reversal",
+      Banking::Events::DepositReversed => "deposit_reversal",
+      Banking::Events::WithdrawalReversed => "withdrawal_reversal",
+      Banking::Events::InterestPaid => "interest"
     }.freeze
 
     def call(event)
@@ -39,21 +43,36 @@ module Projections
     def number(event) = event.data.fetch(:account_number)
 
     def book(event)
+      delta = Banking::Events.balance_delta(event)
+      return if delta.zero? # 0 ちゅ〜るの利息（端数を繰り越しただけ）は通帳に載せない
+
       account = ::Account.lock.find_by!(number: number(event))
-      account.update!(balance: account.balance + Banking::Events.balance_delta(event))
+      account.update!(balance: account.balance + delta)
+      reversal_of = event.data[:reversed_event_id]
       LedgerEntry.create!(
         account_number: account.number,
         event_id: event.event_id,
         kind: LEDGER_KINDS.fetch(event.class),
-        amount: Banking::Events.balance_delta(event),
+        amount: delta,
         balance_after: account.balance,
-        memo: event.data[:memo] || event.data[:reason],
+        memo: memo(event),
         counterparty: event.data[:counterparty],
         transfer_id: event.data[:transfer_id],
+        reversal_of:,
         booked_at: event.timestamp,
         value_date: event.valid_at.in_time_zone.to_date,
         actor: event.metadata[:actor]
       )
+      LedgerEntry.where(event_id: reversal_of).update_all(reversed_by: event.event_id) if reversal_of
+    end
+
+    def memo(event)
+      case event
+      when Banking::Events::InterestPaid
+        "#{event.data.fetch(:interest_date).to_date.strftime('%-m/%-d')} 分の利息"
+      else
+        event.data[:memo] || event.data[:reason]
+      end
     end
   end
 end

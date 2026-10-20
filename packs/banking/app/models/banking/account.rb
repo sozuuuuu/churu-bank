@@ -8,12 +8,20 @@ module Banking
   class Account
     include AggregateRoot
 
-    attr_reader :number, :holder_name, :status, :balance
+    # 日割りの利息は「年利 ÷ 365」（うるう年も 365 で割る）
+    DAYS_IN_YEAR = 365
+
+    attr_reader :number, :holder_name, :status, :balance, :interest_carry
 
     def initialize(number)
       @number = number
       @status = :unopened
       @balance = 0
+      @reversible = {}        # 取り消せる取引: event_id => [取消イベントのクラス, 金額]
+      @reversed = Set.new     # 取り消し済みの event_id
+      @reversals = Set.new    # 取消イベント自身の event_id（取消の取消はできない）
+      @interest_dates = Set.new
+      @interest_carry = Rational(0)
     end
 
     def self.stream_name(number) = "Account$#{number}"
@@ -97,14 +105,88 @@ module Banking
       apply Events::AccountClosed.new(data: { account_number: number })
     end
 
+    # 振込の組戻しで、振込先から引き戻す。振込先が使ってしまっていたら残高不足で失敗する。
+    # 銀行側の訂正なので凍結中でも受け付ける（解約済みは不可）
+    def reverse_transfer_credit(transfer_id:, amount:, from:, reason:)
+      ensure_not_closed!
+      if amount > balance
+        raise InsufficientFunds, "振込先の残高が足りないので組戻しできません（残高 #{balance} / 振込 #{amount}）"
+      end
+
+      apply Events::TransferCreditReversed.new(
+        data: { account_number: number, transfer_id:, amount:, counterparty: from, reason: }
+      )
+    end
+
+    # 入金・出金の取消（逆仕訳）。元のイベントは残したまま、逆向きのイベントで相殺する。
+    # - 取り消せるのは入金・出金だけ。振込は Bank#reverse_transfer（組戻し）で戻す
+    # - 二重取消・取消の取消はできない
+    # - 銀行側の訂正なので凍結中でも受け付ける（解約済みは不可）
+    # - 入金の取消で残高がマイナスになるときは残高不足で失敗する
+    # - 起算日は取消した時点（過去の時点残高は書き換えない）
+    def reverse(event_id, reason:)
+      ensure_not_closed!
+      raise ArgumentError, "取消の理由を入れてください" if reason.blank?
+      raise InvalidState, "取消の取引は取り消せません" if @reversals.include?(event_id)
+      raise InvalidState, "この取引はすでに取り消されています" if @reversed.include?(event_id)
+
+      reversal, amount = @reversible.fetch(event_id) do
+        raise NotFound, "口座 #{number} に取り消せる取引（入金・出金）#{event_id} はありません"
+      end
+      if reversal == Events::DepositReversed && amount > balance
+        raise InsufficientFunds, "残高が足りないので入金を取り消せません（残高 #{balance} / 入金 #{amount}）"
+      end
+
+      apply reversal.new(data: { account_number: number, reversed_event_id: event_id, amount:, reason: })
+    end
+
+    # 1日分の利息。base_balance は interest_date の日の終わりの残高（起算日基準）。
+    #
+    # 端数: 「残高 × 年利 ÷ 365 + 前日までの繰り越し」の整数部分を払い、1 未満の端数は
+    #       口座ごとに次の日へ繰り越す（切り捨てて消えることはない）。端数は分数のまま持つ。
+    # 凍結中: 付ける（凍結は利用者が動かせないだけで、お金は口座にある）。解約済み: 付けない。
+    # 同じ日の利息は1回だけ（払った日を集約が覚えている）。
+    def pay_interest(date:, base_balance:, annual_rate:)
+      ensure_not_closed!
+      raise InvalidState, "#{date} の利息は支払い済みです" if interest_paid_on?(date)
+      return if base_balance <= 0
+
+      accrued = Rational(base_balance) * Rational(annual_rate) / DAYS_IN_YEAR + interest_carry
+      amount = accrued.floor
+      apply Events::InterestPaid.new(
+        data: { account_number: number, interest_date: date, base_balance:, annual_rate: annual_rate.to_s,
+                amount:, carry: (accrued - amount).to_s },
+        metadata: { valid_at: (date + 1).in_time_zone.beginning_of_day }
+      )
+    end
+
+    def interest_paid_on?(date) = @interest_dates.include?(date)
+
     on Events::AccountOpened do |event|
       @holder_name = event.data.fetch(:holder_name)
       @status = :active
     end
 
-    on Events::MoneyDeposited, Events::MoneyWithdrawn,
-       Events::TransferDebited, Events::TransferCredited, Events::TransferRefunded do |event|
+    on Events::MoneyDeposited, Events::MoneyWithdrawn do |event|
       @balance += Events.balance_delta(event)
+      @reversible[event.event_id] = [ Events::REVERSALS.fetch(event.class), event.data.fetch(:amount) ]
+    end
+
+    on Events::DepositReversed, Events::WithdrawalReversed do |event|
+      @balance += Events.balance_delta(event)
+      @reversed << event.data.fetch(:reversed_event_id)
+      @reversals << event.event_id
+    end
+
+    on Events::TransferDebited, Events::TransferCredited, Events::TransferRefunded,
+       Events::TransferCreditReversed do |event|
+      @balance += Events.balance_delta(event)
+    end
+
+    on Events::InterestPaid do |event|
+      @balance += Events.balance_delta(event)
+      @interest_dates << event.data.fetch(:interest_date).to_date
+      @interest_carry = Rational(event.data.fetch(:carry))
     end
 
     on Events::AccountFrozen do |_event|
@@ -126,6 +208,13 @@ module Banking
       when :active then nil
       when :unopened then raise NotFound, "口座 #{number} はありません"
       when :frozen then raise InvalidState, "口座 #{number} は凍結されています"
+      when :closed then raise InvalidState, "口座 #{number} は解約済みです"
+      end
+    end
+
+    def ensure_not_closed!
+      case status
+      when :unopened then raise NotFound, "口座 #{number} はありません"
       when :closed then raise InvalidState, "口座 #{number} は解約済みです"
       end
     end

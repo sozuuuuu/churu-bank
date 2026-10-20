@@ -4,8 +4,8 @@ Rails.configuration.to_prepare do
   events = Banking::Events
 
   # 同期: 読み取りモデルの更新
-  event_store.subscribe(Projections::AccountProjection.new, to: events::ACCOUNT)
-  event_store.subscribe(Projections::TransferProjection.new, to: events::TRANSFER)
+  # （bin/rails churu:rebuild_projections も同じ Projections.all を使う）
+  Projections.all.each { |projection, types| event_store.subscribe(projection, to: types) }
 
   # 非同期（コミット後に Solid Queue へ）: 振込の後半（入金 or 組戻し）
   event_store.subscribe(Transfers::SettleJob, to: [ events::TransferDebited ])

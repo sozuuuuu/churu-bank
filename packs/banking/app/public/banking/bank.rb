@@ -4,6 +4,9 @@
 #   bank.deposit("0000001", 100, memo: "おこづかい")
 #   bank.withdraw("0000001", 30, dry_run: true)  # 書き込まずに結果だけ返す
 #   bank.transfer("0000001", "0000002", 50)      # 引き落としまで。入金は非同期
+#   bank.reverse("0000001", event_id, reason: "金額まちがい")  # 入金・出金の取消
+#   bank.reverse_transfer(transfer_id, reason: "振込先まちがい") # 完了した振込の組戻し
+#   bank.pay_interest(date: Date.yesterday)      # 日次の利息（ふだんは Interest::PayJob が呼ぶ）
 #
 # 書き込みは「集約を読み込む → ルールを確かめて apply → まとめて publish」。
 # publish と同期プロジェクションは1つのトランザクションに入れるので、
@@ -35,6 +38,13 @@ module Banking
 
     def withdraw(number, amount, memo: nil, value_date: nil, dry_run: false)
       change(number, dry_run:) { |account| account.withdraw(amount, memo:, value_date:) }
+    end
+
+    # 入金・出金の取消（逆仕訳）。event_id は取り消す入金・出金のイベント（LedgerEntry#event_id）。
+    # 元のイベントは残し、DepositReversed / WithdrawalReversed で相殺する。二重取消・取消の取消は不可。
+    # 振込はここでは取り消せない（reverse_transfer で組戻しする）
+    def reverse(number, event_id, reason:, dry_run: false)
+      change(number, dry_run:) { |account| account.reverse(event_id, reason:) }
     end
 
     def freeze_account(number, reason:, dry_run: false)
@@ -103,6 +113,62 @@ module Banking
       transfer
     end
 
+    # 完了した振込の組戻し（取消）。1つのトランザクションで
+    #   Account$<振込先> TransferCreditReversed（引き戻し）→ Account$<振込元> TransferRefunded（払い戻し）
+    #   → Transfer$<id> TransferReversed
+    # を書く。振込先の残高が足りなければ InsufficientFunds。処理中・失敗（組戻し済み）の振込は不可。
+    # 返す Outcome は振込元の口座のもの
+    def reverse_transfer(transfer_id, reason:, dry_run: false)
+      transfer = @repository.load(Transfer.new(transfer_id), Transfer.stream_name(transfer_id))
+      raise NotFound, "振込 #{transfer_id} はありません" if transfer.status == :new
+
+      transfer.reverse!(reason:)
+      from, to = transfer.from_account, transfer.to_account
+      destination = load_account(to)
+      source = load_account(from)
+      raise InvalidState, "振込元の口座 #{from} は解約済みなので組戻しできません" if source.status == :closed
+
+      before = source.balance
+      destination.reverse_transfer_credit(transfer_id:, amount: transfer.amount, from:, reason:)
+      source.refund_transfer(transfer_id:, amount: transfer.amount, to:, reason:)
+
+      money_events = destination.unpublished_events.to_a + source.unpublished_events.to_a
+      events = money_events + transfer.unpublished_events.to_a
+      unless dry_run
+        store_all(destination => Account.stream_name(to), source => Account.stream_name(from),
+                  transfer => Transfer.stream_name(transfer_id)) do
+          money_events.each { |event| link_to_transfer(transfer_id, event) }
+        end
+      end
+
+      Outcome.new(account_number: from, events:, balance_before: before, balance_after: source.balance,
+                  dry_run:, transfer_id:)
+    end
+
+    # 日次の利息（Interest::PayJob が毎日、前日分を呼ぶ）。全口座に pay_interest_to して、
+    # 利息のイベントを書いた口座の Outcome を返す。何度呼んでも同じ日の利息は1回だけ
+    def pay_interest(date: Date.yesterday, annual_rate: self.class.annual_interest_rate, dry_run: false)
+      opened = @event_store.read.of_type(Events::AccountOpened).map { |event| event.data.fetch(:account_number) }
+      opened.filter_map { |number| pay_interest_to(number, date:, annual_rate:, dry_run:) }
+    end
+
+    # 1口座分の利息。date の日の終わりの残高（起算日基準 = Statement の as_of）に年利 ÷ 365 をかける。
+    # 支払い済み・解約済み・残高 0 なら何もせず nil（端数の扱いは Banking::Account#pay_interest）
+    def pay_interest_to(number, date: Date.yesterday, annual_rate: self.class.annual_interest_rate,
+                        dry_run: false)
+      account = load_account(number)
+      return if %i[unopened closed].include?(account.status) || account.interest_paid_on?(date)
+
+      base_balance = Statement.new(number, date:, event_store: @event_store).balance
+      outcome = change(number, dry_run:, account:) do |a|
+        a.pay_interest(date:, base_balance:, annual_rate:)
+      end
+      outcome unless outcome.events.empty?
+    end
+
+    # 年利（文字列の小数。例: "0.365"）。packs/banking/config/initializers/banking_interest.rb で設定
+    def self.annual_interest_rate = Rails.configuration.x.banking.annual_interest_rate
+
     # 集約から組み立てた「いまの」口座（読み取りモデルを使わない）
     def load_account(number)
       @repository.load(Account.new(number), Account.stream_name(number))
@@ -110,8 +176,7 @@ module Banking
 
     private
 
-    def change(number, dry_run:)
-      account = load_account(number)
+    def change(number, dry_run:, account: load_account(number))
       before = account.balance
       yield account
       events = account.unpublished_events.to_a

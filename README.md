@@ -89,6 +89,8 @@ Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ�
 | I | GitHub（private）と CI | | `.github/` |
 | J | Zingiber から銀行の MCP を使う | E | Zingiber 側 |
 | K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |
+| L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |
+| M | 利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮 | C | `packs/customer` |
 
 並行の進め方（フェーズ1）: B+C / D / E→J / F+G+H を別々に進められる。
 各自 `jj workspace add ../churu-bank-<名前>` で作業ディレクトリを分け、`bin/dev -p 300X` でポートも分ける

@@ -1,0 +1,37 @@
+<%= turbo_frame_tag "checkout" do %>
+  <div class="confirm">
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+      <%= link_to "カートに戻る", shop_root_path, class: "button", data: { turbo_frame: "_top" } %>
+    <% else %>
+      <p class="muted">まだ注文していません。内容を確認してください。</p>
+      <% @outcome.warnings.each do |warning| %>
+        <p class="hint"><%= warning %></p>
+      <% end %>
+      <dl>
+        <dt>購入者</dt>
+        <dd><%= current_buyer.number %> <%= current_buyer.holder_name %></dd>
+        <dt>合計</dt>
+        <dd><strong><%= churu(@outcome.total) %></strong></dd>
+        <dt>残高</dt>
+        <dd><%= churu(@outcome.payment.balance_before) %> → <strong><%= churu(@outcome.payment.balance_after) %></strong></dd>
+        <dt>発生するイベント</dt>
+        <dd>
+          <code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code><br>
+          <code><%= @outcome.payment.events.map { it.class.name.demodulize }.join(", ") %></code>（銀行）
+        </dd>
+        <dt>このあと</dt>
+        <dd class="muted">商店の口座への入金が終わったら、在庫を引き当てて完了します（足りなければ返金）</dd>
+      </dl>
+
+      <%= form_with url: shop_orders_path, data: { turbo_frame: "_top" } do |f| %>
+        <%= f.hidden_field :order_id, value: @order_id %>
+        <% @items.each do |sku, quantity| %>
+          <%= hidden_field_tag "items[#{sku}]", quantity %>
+        <% end %>
+        <%= f.submit "注文する", class: "button primary" %>
+        <%= link_to "戻る", shop_root_path, class: "button", data: { turbo_frame: "_top" } %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

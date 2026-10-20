@@ -1,0 +1,26 @@
+<% if orders.empty? %>
+  <p class="empty">まだ注文はありません。</p>
+<% else %>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>注文日時</th><th>注文</th><th>購入者</th><th>内容</th><th class="num">合計</th><th>状態</th></tr>
+      </thead>
+      <tbody>
+        <% orders.each do |order| %>
+          <tr id="<%= dom_id(order) %>">
+            <td><%= jp_time(order.placed_at) %></td>
+            <td><%= link_to order.short_id, shop_order_path(order) %></td>
+            <td><%= order.buyer_account %></td>
+            <td><%= order.lines.map { "#{it.name}×#{it.quantity}" }.join("、") %></td>
+            <td class="num"><%= churu(order.total) %></td>
+            <td>
+              <%= render "shop/orders/status", order: %>
+              <% if order.failure_reason %><div class="muted small"><%= order.failure_reason %></div><% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

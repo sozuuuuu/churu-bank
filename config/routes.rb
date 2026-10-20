@@ -14,6 +14,9 @@ Rails.application.routes.draw do
 
   resources :transfers, only: :index
 
+  # ちゅ〜る商店（packs/shop/config/routes/shop.rb）
+  draw :shop
+
   # イベントストアの中身を見るブラウザ（RES Browser）
   mount RubyEventStore::Browser::App.for(event_store_locator: -> { Rails.configuration.event_store }), at: "/res"
 

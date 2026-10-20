@@ -1,0 +1,8 @@
+<% content_for :title, "注文履歴 | ちゅ〜る商店" %>
+<%= render "shop/header", title: "注文履歴" %>
+
+<p class="muted small">
+  <%= current_buyer ? "#{current_buyer.holder_name} さんの注文" : "すべての注文（購入者を選ぶと、その人の注文だけになります）" %>。
+  支払い・引き当て・返金が進むと、この一覧はその場で更新されます。
+</p>
+<%= render "shop/orders/table", orders: @orders %>

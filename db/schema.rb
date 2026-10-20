@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_100001) do
   create_table "accounts", force: :cascade do |t|
     t.string "number", null: false
     t.string "holder_name", null: false
@@ -65,6 +65,46 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_230001) do
     t.index ["account_number"], name: "index_ledger_entries_on_account_number"
     t.index ["event_id"], name: "index_ledger_entries_on_event_id", unique: true
     t.index ["transfer_id"], name: "index_ledger_entries_on_transfer_id"
+  end
+
+  create_table "shop_order_lines", force: :cascade do |t|
+    t.string "order_id", null: false
+    t.string "sku", null: false
+    t.string "name", null: false
+    t.integer "unit_price", null: false
+    t.integer "quantity", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_shop_order_lines_on_order_id"
+  end
+
+  create_table "shop_orders", force: :cascade do |t|
+    t.string "order_id", null: false
+    t.string "buyer_account", null: false
+    t.integer "total", null: false
+    t.string "status", null: false
+    t.string "payment_transfer_id"
+    t.string "refund_transfer_id"
+    t.string "failure_reason"
+    t.datetime "placed_at", null: false
+    t.string "actor"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["buyer_account"], name: "index_shop_orders_on_buyer_account"
+    t.index ["order_id"], name: "index_shop_orders_on_order_id", unique: true
+    t.index ["payment_transfer_id"], name: "index_shop_orders_on_payment_transfer_id"
+    t.index ["refund_transfer_id"], name: "index_shop_orders_on_refund_transfer_id"
+  end
+
+  create_table "shop_products", force: :cascade do |t|
+    t.string "sku", null: false
+    t.string "name", null: false
+    t.string "emoji"
+    t.integer "price", null: false
+    t.integer "stock", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sku"], name: "index_shop_products_on_sku", unique: true
   end
 
   create_table "transfers", force: :cascade do |t|

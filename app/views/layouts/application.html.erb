@@ -21,7 +21,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
+  <body class="<%= content_for(:body_class) %>">
     <header class="site-header">
       <%= link_to root_path, class: "brand" do %>🐟 ちゅーる銀行<% end %>
       <%# メニューは画面のパックごと（packs/admin・packs/customer の layouts）で content_for :nav に入れる %>

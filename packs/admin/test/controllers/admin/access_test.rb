@@ -23,6 +23,7 @@ class Admin::AccessTest < ActionDispatch::IntegrationTest
     get admin_accounts_path
     assert_response :success
     assert_match "オルカ", response.body
+    assert_no_match "customer/theme", response.body # 利用者画面のテーマは読み込まない
     get "/res"
     assert_redirected_to "/res/streams/all" # RES Browser の中へ
   end

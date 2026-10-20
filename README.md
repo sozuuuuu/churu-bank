@@ -42,6 +42,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - 管理画面は `User#admin` だけ。そうでなければ 404（管理画面があることも見せない）。`/res` もルーティングの制約で管理者だけ
 - 利用者画面は `account_ownerships` でひも付いた口座だけ。他人の口座は口座ページ・時点残高・振込とも 404。
   入出金と凍結は行員だけ。振込先には全口座（解約済みを除く）を選べる
+- 利用者画面は見た目も別（ねこ・ちゅ〜るのテーマ、`packs/customer/app/assets/stylesheets/customer/theme.css`）。`body.customer` の下だけに効き、管理画面は今の見た目のまま
 - だれの操作かは、イベントの metadata の actor に `admin:<メール>` / `customer:<メール>` で残る
 - Action Cable もログインが必要（`ApplicationCable::Connection`）。購読できるのは画面に埋め込まれた署名つきのストリームだけ
 
@@ -91,6 +92,8 @@ Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ�
 | Turbo Frame + `data-turbo-action="advance"` | 時点指定の残高（URL の `?date=` も進む） |
 | Turbo 8 の refresh（morph） | `turbo_refreshes_with` + `turbo_stream_from`。ほかのプロセスからの入出金も即反映 |
 | Stimulus | `amount_controller`（+10 / +50 ボタン）、`autosubmit_controller`（日付を変えたら送信） |
+| 利用者画面の動き（Stimulus + CSS、外部ライブラリなし） | `count_up_controller`（残高のカウントアップ。morph で値が変わると前の値から数える）、`arrival_controller`（morph で届いた通帳の行をふわっと出す）、`transfer_status_controller` → `celebrate_controller`（振込完了・入金で紙吹雪とトースト）。`prefers-reduced-motion` なら止める |
+| View Transitions | 利用者画面だけ `<meta name="view-transition">`。一覧と口座ページで残高がつながる |
 
 ## TODO
 

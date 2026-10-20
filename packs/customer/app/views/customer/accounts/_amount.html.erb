@@ -1,0 +1,5 @@
+<%# 残高。morph で金額が変わると count-up が前の値から数え直す。
+    view-transition-name で、一覧と口座ページのあいだを残高がすっと移動する %>
+<span class="amount" style="view-transition-name: balance-<%= account.number %>"
+      data-controller="count-up" data-count-up-amount-value="<%= account.balance %>"
+      data-count-up-unit-value=" ちゅ〜る"><%= churu(account.balance) %></span>

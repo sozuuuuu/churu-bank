@@ -19,6 +19,9 @@ module Projections
       when Banking::Events::TransferFailed
         find(event).update!(status: "failed", settled_at: event.timestamp,
                             failure_reason: event.data[:reason])
+      when Banking::Events::TransferReversed
+        find(event).update!(status: "reversed", reversed_at: event.timestamp,
+                            reversal_reason: event.data[:reason])
       end
     end
 

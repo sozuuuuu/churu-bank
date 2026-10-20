@@ -1,6 +1,8 @@
 # 読み取りモデル: 振込の一覧と状態。書き込みは Banking::Bank → イベント → プロジェクションだけ
 class Transfer < ApplicationRecord
-  STATUS_LABELS = { "requested" => "処理中", "completed" => "完了", "failed" => "組戻し" }.freeze
+  STATUS_LABELS = {
+    "requested" => "処理中", "completed" => "完了", "failed" => "組戻し", "reversed" => "組戻し（取消）"
+  }.freeze
 
   belongs_to :source, class_name: "Account", primary_key: :number, foreign_key: :from_account,
                       inverse_of: false
@@ -12,4 +14,7 @@ class Transfer < ApplicationRecord
   def to_param = transfer_id
 
   def status_label = STATUS_LABELS.fetch(status, status)
+
+  # 画面で「組戻し」ボタンを出してよいか（最終判断は Banking::Bank#reverse_transfer）
+  def reversible? = status == "completed"
 end

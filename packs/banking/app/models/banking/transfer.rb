@@ -1,4 +1,5 @@
-# 振込の集約（ストリーム "Transfer$<振込ID>"）。状態は requested → completed / failed。
+# 振込の集約（ストリーム "Transfer$<振込ID>"）。状態は requested → completed / failed、
+# completed → reversed（完了後の組戻し）。
 #
 # お金の動きは口座側のイベント（TransferDebited / Credited / Refunded）が持ち、
 # こちらは「その振込がいまどうなっているか」だけを持つ。
@@ -33,6 +34,15 @@ module Banking
       apply Events::TransferFailed.new(data: { transfer_id: id, reason: })
     end
 
+    # 完了した振込の組戻し。お金の動き（振込先から引き戻し・振込元へ払い戻し）は口座側のイベント
+    def reverse!(reason:)
+      raise InvalidState, "振込 #{id} は組戻し済みです" if status == :reversed
+      raise InvalidState, "完了した振込だけ組戻しできます（いまは #{status}）" unless status == :completed
+      raise ArgumentError, "組戻しの理由を入れてください" if reason.blank?
+
+      apply Events::TransferReversed.new(data: { transfer_id: id, reason: })
+    end
+
     def requested? = status == :requested
 
     on Events::TransferRequested do |event|
@@ -51,9 +61,13 @@ module Banking
       @status = :failed
     end
 
+    on Events::TransferReversed do |_event|
+      @status = :reversed
+    end
+
     # 口座側のお金の動きも、このストリームにリンクされている（Bank#link_to_transfer）。
     # 状態には関係ないが、AggregateRoot は知らないイベントで止まるので受け取っておく
-    on Events::TransferDebited, Events::TransferCredited, Events::TransferRefunded do |_event|
+    on(*Events::TRANSFER_MONEY) do |_event|
     end
 
     private

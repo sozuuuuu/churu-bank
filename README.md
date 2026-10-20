@@ -84,6 +84,64 @@ Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ�
   `Transfer$<id>` ストリームで、引き落とし → 入金（または組戻し）までを1か所で辿れる
 - 振込先が凍結中だと、確認画面で「組戻しになります」と警告したうえで受け付ける（補償の動きを見るため）
 
+## 利息（日次）
+
+`Interest::PayJob` が `config/recurring.yml` で毎日 0:05（東京）に動き、`Bank#pay_interest` で前日分を払う。
+
+- **元になる残高**: 前日の終わりの残高（起算日基準 = `Banking::Statement` の `as_of`）。あとから過去日付で
+  入金しても、すでに払った利息は計算し直さない
+- **利率**: 年利。日割りは年利 ÷ 365（うるう年も 365）。既定は 36.5%（= 1日 0.1%）で、
+  環境変数 `CHURU_ANNUAL_INTEREST_RATE`（`packs/banking/config/initializers/banking_interest.rb`）で変える
+- **端数**: 整数部分だけ払い、1 未満は口座ごとに分数のまま翌日へ繰り越す（切り捨てて消えない）。
+  払う額が 0 の日も `InterestPaid`（amount: 0, carry: 端数）を書くが、通帳と時点残高には載せない
+- **1日1回**: 口座の集約が「どの日の利息を払ったか」を覚えているので、ジョブが二重に動いても・リトライしても1回だけ
+- **凍結中**は付ける（お金は口座にある）。**残高 0・解約済み**には付けない
+- 利息の起算日（valid_at）は対象日の翌日 0:00。止まっていて動かなかった日は自動では払わない
+  （`Bank#pay_interest(date: …)` で手で流せる）
+
+## 取消（逆仕訳）と組戻し
+
+元のイベントは消さず、逆向きのイベントで相殺する。残高は `Banking::Events.balance_delta` を通るので、
+集約・読み取りモデル・`Banking::Statement` のどれから見てもずれない。
+
+| 対象 | API | イベント | 条件 |
+|---|---|---|---|
+| 入金 | `Bank#reverse(number, event_id, reason:)` | `DepositReversed` | 残高が足りること（使ってしまった入金は取り消せない） |
+| 出金 | 同上 | `WithdrawalReversed` | |
+| 完了した振込 | `Bank#reverse_transfer(transfer_id, reason:)` | 振込先 `TransferCreditReversed` → 振込元 `TransferRefunded` → `Transfer$` `TransferReversed` | 振込先の残高が足りること。処理中・失敗（組戻し済み）は不可 |
+
+- 二重取消・取消の取消はできない（`InvalidState`）。振込のイベントは `reverse` では取り消せない（`NotFound`）
+- 銀行側の訂正なので凍結中の口座でもできる。解約済みは不可。理由（`reason`）は必須
+- 起算日は取消した時点（過去の時点残高は書き換えない）
+- 通帳: 取消の行は `reversal_of`、元の行は `reversed_by` に相手のイベント ID が入る
+  （`LedgerEntry#original_entry` / `#reversal_entry`）。振込は `transfers.status = "reversed"`
+
+## 読み取りモデルの作り直し
+
+```bash
+bin/rails churu:rebuild_projections
+```
+
+`accounts` / `ledger_entries` / `transfers` を空にして、イベントストアの全イベントを書かれた順に
+同期プロジェクション（`Projections.all`）へ流し直す。1トランザクションで行い、非同期ハンドラ
+（振込の `SettleJob`、画面の `BroadcastRefreshJob`）は動かさない。
+
+## 画面から使う Banking::Bank の API
+
+すべて `dry_run: true` で「確認 → 確定」の2段階にでき、`Outcome`（`balance_before` / `balance_after` / `events` /
+`warnings`）を返す。失敗は `Banking::Error` の子クラス（`NotFound` / `InvalidState` / `InsufficientFunds` /
+`ConcurrentModification`）か、入力まちがいの `ArgumentError`。
+
+| やりたいこと | 呼び方 | 画面での目安 |
+|---|---|---|
+| 入出金の取消 | `bank.reverse(number, entry.event_id, reason:, dry_run:)` | `LedgerEntry#reversible?` の行に「取消」。取消済みは `reversed?`、取消の行は `reversal?` |
+| 振込の組戻し | `bank.reverse_transfer(transfer.transfer_id, reason:, dry_run:)` | `Transfer#reversible?`（完了）の振込に「組戻し」。Outcome は振込元の口座 |
+| 利息を手で払う | `bank.pay_interest(date:, dry_run:)` → `[Outcome]` / 1口座なら `bank.pay_interest_to(number, date:, dry_run:)` → `Outcome` か `nil` | 行員の画面向け。ふだんはジョブに任せる |
+| 利率の表示 | `Banking::Bank.annual_interest_rate`（文字列。例 `"0.365"`） | |
+
+通帳の種類（`LedgerEntry::KIND_LABELS`）に `interest`（利息）・`deposit_reversal` / `withdrawal_reversal`（取消）・
+`transfer_reversal`（組戻しの引き戻し）が増えた。振込の状態（`Transfer::STATUS_LABELS`）に `reversed` が増えた。
+
 ## Hotwire で使っているもの
 
 | 機能 | 場所 |
@@ -104,9 +162,9 @@ Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ�
 | ~~C~~ | ~~管理画面（行員）と利用者画面（口座の持ち主）を分ける~~（済） | B | `packs/admin`・`packs/customer` |
 | D | 2つめのドメイン「ちゅ〜る商店」: 商品・在庫・注文。支払いは `Banking::Bank` 経由、在庫切れなら返金 | | `packs/shop` |
 | E | MCP（`/mcp`、HTTP）: 残高照会・明細・振込（ドライラン → 確定） | | `packs/mcp` |
-| F | 利息（Solid Queue の recurring で日次計算） | | `packs/banking` |
-| G | 取消（逆仕訳） | | `packs/banking` |
-| H | 読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`） | | `packs/banking` |
+| ~~F~~ | ~~利息（Solid Queue の recurring で日次計算）~~（済。画面は未） | | `packs/banking` |
+| ~~G~~ | ~~取消（逆仕訳）~~（済。画面は未: 通帳の「取消」・振込の「組戻し」ボタン） | | `packs/banking` |
+| ~~H~~ | ~~読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`）~~（済） | | `packs/banking` |
 | I | GitHub（private）と CI | | `.github/` |
 | J | Zingiber から銀行の MCP を使う | E | Zingiber 側 |
 | K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |

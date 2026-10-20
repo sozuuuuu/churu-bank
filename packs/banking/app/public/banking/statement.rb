@@ -22,7 +22,7 @@ module Banking
         balance = 0
         scope.filter_map do |event|
           delta = Events.balance_delta(event)
-          next unless delta
+          next if delta.nil? || delta.zero? # 0 ちゅ〜るの利息（端数を繰り越しただけ）は載せない
 
           balance += delta
           Line.new(event:, delta:, balance:)

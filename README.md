@@ -26,6 +26,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/customer` | 利用者画面 `/`（`Customer::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込 | platform, banking, identity |
 | `packs/identity` | ログイン（Rails 8 の `generate authentication`）、`User#admin`、利用者と口座のひも付け（`account_ownerships`）。外から使えるのは `app/public`（`User` / `Current` / `Authentication`） | platform |
 | `packs/banking` | 銀行ドメイン。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
+| `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と `/shop` の画面。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
@@ -46,6 +47,17 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - 利用者画面は見た目も別（ねこ・ちゅ〜るのテーマ、`packs/customer/app/assets/stylesheets/customer/theme.css`）。`body.customer` の下だけに効き、管理画面は今の見た目のまま
 - だれの操作かは、イベントの metadata の actor に `admin:<メール>` / `customer:<メール>` で残る
 - Action Cable もログインが必要（`ApplicationCable::Connection`）。購読できるのは画面に埋め込まれた署名つきのストリームだけ
+
+### packwerk の気づき（商店を作って）
+
+- 商店は銀行の公開 API（`Bank` / `Events` / 例外 / 読み取りモデル）だけで作れた。プロセスマネージャは
+  銀行のイベント（`TransferCompleted` / `TransferFailed`）を購読するので、銀行側の変更はいらない
+- 商店のテストで銀行の非公開ジョブ（`Transfers::SettleJob`）だけを流そうとして privacy 違反になった。
+  `perform_enqueued_jobs(except: Shop::PaymentJob)` のように「自分のジョブ以外」と書けば済む
+- 画面の土台（`ApplicationController`・レイアウト・`churu` などのヘルパー・`account_path`）はルートにあり、
+  パックからは依存できない。商店は `ActionController::Base` から直接作り、レイアウトとヘルパーは名前で借りている。
+  定数ではないので packwerk には見えない依存。画面の共通部品は `packs/platform`（か UI 用のパック）に移すのがよさそう
+  （商店は認証より前に作ったので、ログイン・利用者の口座とのつなぎ込みは TODO の N）
 
 ## しくみ
 
@@ -143,6 +155,31 @@ bin/rails churu:rebuild_projections
 通帳の種類（`LedgerEntry::KIND_LABELS`）に `interest`（利息）・`deposit_reversal` / `withdrawal_reversal`（取消）・
 `transfer_reversal`（組戻しの引き戻し）が増えた。振込の状態（`Transfer::STATUS_LABELS`）に `reversed` が増えた。
 
+## ちゅ〜る商店（packs/shop）
+
+`/shop`。銀行とは別のドメインで、集約とイベントを自前で持つ。支払いと返金は `Banking::Bank#transfer`
+（購入者 ⇄ 商店の口座「ちゅ〜る商店」）だけを使い、銀行は商店を知らない。
+
+```
+Shop::Store#place_order（同期・1トランザクション。銀行の引き落としも同じトランザクション）
+  Order$<id> … OrderPlaced → OrderPaymentRequested（振込IDは ShopTransfer$<振込ID> にリンク）
+        │ 銀行の SettleJob → TransferCompleted / TransferFailed
+        ▼
+Shop::PaymentJob（銀行のイベントを購読）→ Store#settle_transfer（何度動いても1回分だけ）
+  ├ 支払い完了 → Product$<sku> StockAllocated → OrderPaid → OrderFulfilled
+  │   在庫不足 → OrderPaid → OrderCancelled → OrderRefundRequested（商店 → 購入者 の振込）→ OrderRefunded
+  └ 支払い失敗（残高不足・組戻し）→ OrderPaymentFailed
+```
+
+- **在庫は支払い前に引き当てない**。注文の確認で「在庫が足りないので返金になります」と警告するだけで、
+  引き当ては支払いが終わってから。支払い待ちの注文が在庫を抱え込む（期限切れの解放が要る）のを避け、
+  そのかわり支払い後に足りなければ返金する（補償）。銀行の「凍結中の口座への振込 → 組戻し」と同じ考え方
+- **二重実行**: 注文IDは確認画面で決めるので、「注文する」が2回送られても2回目は `AlreadyPlaced`。
+  ジョブが2回動いても、注文の状態と集約の `expected_version` で1回分しか引き当て・返金しない
+- 注文 → 振込 → 引き当て（返金）は同じ correlation_id を持つ（RES Browser で辿れる）
+- 購入者はいまは画面で口座を選ぶだけ（`Shop::ApplicationController#current_buyer`）。認証ができたら差し替える
+- 開発用の商品は `bin/rails db:seed`（商店の口座も開く）
+
 ## Hotwire で使っているもの
 
 | 機能 | 場所 |
@@ -196,7 +233,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~A~~ | ~~packwerk 導入、銀行を `packs/banking` へ~~（済） | | |
 | ~~B~~ | ~~認証（Rails 8 の `generate authentication`）、ユーザーと口座のひも付け~~（済） | | `packs/identity` |
 | ~~C~~ | ~~管理画面（行員）と利用者画面（口座の持ち主）を分ける~~（済） | B | `packs/admin`・`packs/customer` |
-| D | 2つめのドメイン「ちゅ〜る商店」: 商品・在庫・注文。支払いは `Banking::Bank` 経由、在庫切れなら返金 | | `packs/shop` |
+| ~~D~~ | ~~2つめのドメイン「ちゅ〜る商店」: 商品・在庫・注文。支払いは `Banking::Bank` 経由、在庫切れなら返金~~（済） | | `packs/shop` |
 | ~~E~~ | ~~MCP（`/mcp`、HTTP）: 残高照会・明細・振込（ドライラン → 確定）~~（済） | | `packs/mcp` |
 | ~~F~~ | ~~利息（Solid Queue の recurring で日次計算）~~（済。画面は未） | | `packs/banking` |
 | ~~G~~ | ~~取消（逆仕訳）~~（済。画面は未: 通帳の「取消」・振込の「組戻し」ボタン） | | `packs/banking` |
@@ -205,7 +242,9 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | J | Zingiber から銀行の MCP を使う | E | Zingiber 側 |
 | K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |
 | L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |
-| M | 利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮 | C | `packs/customer` |
+| ~~M~~ | ~~利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮~~（済） | C | `packs/customer` |
+| N | 商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ | B, D | `packs/shop`・`packs/platform` |
+| O | 管理画面に取消・組戻し・利息の手動実行のボタン（API は「画面から使う Banking::Bank の API」） | F, G | `packs/admin` |
 
 並行の進め方（フェーズ1）: B+C / D / E→J / F+G+H を別々に進められる。
 各自 `jj workspace add ../churu-bank-<名前>` で作業ディレクトリを分け、`bin/dev -p 300X` でポートも分ける

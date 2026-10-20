@@ -1,0 +1,28 @@
+<%# 商店のページ共通: 見出し・購入者の切り替え・商店内のナビ %>
+<%# 商店のイベントがあると、商店のどのページも morph で更新される %>
+<%= turbo_stream_from "shop" %>
+<%# 購入者の残高（銀行のイベントで、ルートの BroadcastRefreshJob が口座のストリームに配信する） %>
+<%= turbo_stream_from current_buyer if current_buyer %>
+
+<div class="shop-head">
+  <div>
+    <h1>🛒 <%= title %></h1>
+    <nav class="shop-nav">
+      <%= link_to "商品", shop_root_path %>
+      <%= link_to "注文履歴", shop_orders_path %>
+      <%= link_to "商品と在庫の管理", shop_admin_products_path %>
+    </nav>
+  </div>
+
+  <%= form_with url: shop_buyer_path, method: :patch, class: "shop-buyer", data: { controller: "autosubmit" } do |f| %>
+    <label>
+      購入者
+      <%= f.select :account_number, buyers.map { [ "#{it.number} #{it.holder_name}", it.number ] },
+                   { selected: current_buyer&.number, include_blank: "口座を選んでください" },
+                   data: { action: "change->autosubmit#submit" } %>
+    </label>
+    <% if current_buyer %>
+      <span class="muted small">残高 <strong><%= churu(current_buyer.balance) %></strong></span>
+    <% end %>
+  <% end %>
+</div>

@@ -1,0 +1,16 @@
+# ちゅ〜る商店: 商品・在庫・注文（Rails Event Store でイベントソーシング）。銀行とは別のドメイン
+#
+# 支払いと返金は Banking::Bank（銀行の公開 API）だけを使う。銀行は商店を知らない。
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - Shop::Store   … 書き込みの唯一の入口（dry_run あり）
+#   - Shop::Events  … イベントの定義（購読してよい。publish は Store 経由で）
+#   - Shop::Error 系 … 例外
+#   - ShopProduct / ShopOrder / ShopOrderLine … 読み取りモデル（参照だけ）
+# 集約（Shop::Product / Shop::Order）、プロジェクション、ジョブ、画面は非公開
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/banking

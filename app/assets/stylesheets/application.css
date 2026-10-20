@@ -139,3 +139,27 @@ input[type="email"], input[type="password"] {
   font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--bg); color: var(--text); width: 100%;
 }
+
+/* ちゅ〜る商店（packs/shop） */
+.shop-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.shop-head h1 { margin: 0 0 4px; }
+.shop-nav { display: flex; gap: 12px; font-size: .9rem; }
+.shop-buyer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.shop-buyer label { display: flex; align-items: center; gap: 6px; font-size: .9rem; }
+.shop-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
+@media (max-width: 760px) { .shop-layout { grid-template-columns: 1fr; } }
+.shop-products { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+.shop-product { margin-bottom: 0; }
+.shop-product h2 { margin: 4px 0; }
+.shop-product .balance { font-size: 1.3rem; margin: 0; }
+.shop-emoji { font-size: 2.2rem; }
+.shop-add, .shop-inline { display: flex; gap: 6px; align-items: center; }
+.shop-add input[type="number"], .shop-inline input[type="number"] { width: 5.5em; }
+.shop-cart .table td, .shop-cart .table th { white-space: normal; }
+.shop-cart form { margin-top: 12px; }
+.confirm-like { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; }
+.confirm-like dt { color: var(--muted); }
+.confirm-like dd { margin: 0; }
+.badge-order-placed, .badge-order-payment_pending, .badge-order-paid, .badge-order-cancelled, .badge-order-refunding { color: var(--muted); border-style: dashed; }
+.badge-order-fulfilled, .badge-order-refunded { color: var(--plus); }
+.badge-order-payment_failed, .badge-order-refund_failed { color: var(--minus); }

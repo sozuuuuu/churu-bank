@@ -1,0 +1,58 @@
+<% content_for :title, "ちゅ〜る商店" %>
+<%= render "shop/header", title: "ちゅ〜る商店" %>
+
+<% if @products.empty? %>
+  <p class="empty">まだ商品がありません。<%= link_to "商品を登録する", shop_admin_products_path %></p>
+<% else %>
+  <div class="shop-layout">
+    <div class="shop-products">
+      <% @products.each do |product| %>
+        <div class="card shop-product" id="<%= dom_id(product) %>">
+          <div class="shop-emoji"><%= product.emoji || "📦" %></div>
+          <h2><%= product.name %></h2>
+          <p class="balance"><%= churu(product.price) %></p>
+          <p class="muted small">
+            <% if product.in_stock? %>在庫 <%= product.stock %><% else %><span class="minus">在庫切れ</span><% end %>
+          </p>
+          <%= form_with url: shop_cart_items_path, class: "shop-add" do |f| %>
+            <%= f.hidden_field :sku, value: product.sku %>
+            <%= f.number_field :quantity, value: 1, min: 1, step: 1, required: true, "aria-label": "数" %>
+            <%= f.submit "カートに入れる", class: "button small" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <aside class="card shop-cart">
+      <h2>カート</h2>
+      <% if @cart_lines.empty? %>
+        <p class="muted">カートは空です</p>
+      <% else %>
+        <table class="table">
+          <tbody>
+            <% @cart_lines.each do |product, quantity| %>
+              <tr>
+                <td><%= product.display_name %> × <%= quantity %></td>
+                <td class="num"><%= churu(product.price * quantity) %></td>
+                <td><%= button_to "×", shop_cart_item_path(product.sku), method: :delete, class: "chip", title: "カートから出す" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot>
+            <tr><th>合計（いまの値段）</th><th class="num"><%= churu(@cart_lines.sum { |p, q| p.price * q }) %></th><th></th></tr>
+          </tfoot>
+        </table>
+
+        <%= turbo_frame_tag "checkout" do %>
+          <% if current_buyer %>
+            <%= form_with url: shop_orders_path do |f| %>
+              <%= f.submit "注文内容を確認", name: "preview", class: "button primary" %>
+            <% end %>
+          <% else %>
+            <p class="hint">注文するには、上で購入者の口座を選んでください</p>
+          <% end %>
+        <% end %>
+      <% end %>
+    </aside>
+  </div>
+<% end %>

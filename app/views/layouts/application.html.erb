@@ -28,6 +28,7 @@
       <nav>
         <%= yield :nav %>
         <% if Current.user %>
+          <%= link_to "ちゅ〜る商店", "/shop" %>
           <span class="muted"><%= Current.user.name %></span>
           <%= button_to "ログアウト", session_path, method: :delete, class: "link" %>
         <% end %>

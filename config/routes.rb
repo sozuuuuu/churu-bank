@@ -3,6 +3,7 @@ Rails.application.routes.draw do
   draw :identity # ログイン・ログアウト
   draw :admin    # 管理画面 /admin（と /res）
   draw :customer # 利用者画面 /
+  draw :shop     # ちゅ〜る商店 /shop
 
   # MCP（packs/mcp）。Streamable HTTP（stateless）。localhost からだけ受け付ける
   match "mcp" => "churu_mcp/server#handle", via: %i[get post delete], as: :mcp

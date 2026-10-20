@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+# Solid Queue のワーカーを Puma の中で一緒に動かす
+ENV["SOLID_QUEUE_IN_PUMA"] ||= "1"
+exec "./bin/rails", "server", *ARGV

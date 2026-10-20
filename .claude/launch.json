@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "churu-bank",
+      "runtimeExecutable": "wsl.exe",
+      "runtimeArgs": ["-d", "Ubuntu-24.04", "-e", "/home/sozu/bin/cb", "bin/dev"],
+      "port": 3000
+    }
+  ]
+}

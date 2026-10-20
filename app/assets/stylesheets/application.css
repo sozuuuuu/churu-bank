@@ -1,0 +1,119 @@
+/* ちゅーる銀行 */
+:root {
+  --bg: #faf7f2;
+  --surface: #ffffff;
+  --text: #2b2420;
+  --muted: #7a6f66;
+  --border: #e8e0d6;
+  --accent: #d9622b;
+  --accent-text: #ffffff;
+  --plus: #1f7a4d;
+  --minus: #b3261e;
+  --warn-bg: #fff4d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1816;
+    --surface: #25211e;
+    --text: #f1ebe4;
+    --muted: #a99d92;
+    --border: #3a332e;
+    --accent: #f0864f;
+    --accent-text: #1b1816;
+    --plus: #6fd3a0;
+    --minus: #ff8a80;
+    --warn-bg: #3d3420;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  line-height: 1.6;
+}
+
+a { color: var(--accent); }
+
+.site-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.site-header .brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--text); }
+.site-header nav { display: flex; gap: 16px; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+h1 { font-size: 1.5rem; margin: 0 0 12px; }
+h2 { font-size: 1.1rem; margin: 0 0 12px; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; margin-bottom: 16px;
+}
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.grid .card { margin-bottom: 0; }
+.grid + .card { margin-top: 16px; }
+
+.muted { color: var(--muted); }
+.empty { color: var(--muted); padding: 24px 0; }
+
+.account-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px; }
+.account-head p { margin: 0; }
+.account-head h1 { margin: 0; }
+.balance { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.table th, .table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.table th { font-size: .85rem; color: var(--muted); font-weight: 600; }
+.card .table { display: block; overflow-x: auto; }
+.num { text-align: right !important; }
+.plus { color: var(--plus); }
+.minus { color: var(--minus); }
+.backdated { background: var(--warn-bg); }
+
+.badge { font-size: .75rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); vertical-align: middle; }
+.badge-active { color: var(--plus); }
+.badge-frozen { color: var(--minus); }
+.badge-closed { color: var(--muted); }
+
+.form { display: grid; gap: 12px; }
+.form label { display: grid; gap: 4px; font-size: .9rem; }
+input[type="text"], input[type="number"], input[type="date"] {
+  font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); width: 100%;
+}
+.segmented { display: flex; gap: 16px; }
+.segmented label { display: flex; align-items: center; gap: 4px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: .85rem; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer;
+}
+details summary { cursor: pointer; color: var(--muted); font-size: .9rem; margin-bottom: 6px; }
+
+.button {
+  display: inline-block; font: inherit; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none;
+}
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+
+.confirm dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0 0 16px; }
+.confirm dt { color: var(--muted); }
+.confirm dd { margin: 0; }
+.confirm form { display: flex; gap: 8px; }
+
+.as-of { display: grid; gap: 8px; margin: 12px 0 0; }
+.as-of div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.as-of dt small { display: block; color: var(--muted); font-size: .75rem; }
+.as-of dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hint { background: var(--warn-bg); padding: 8px; border-radius: 8px; font-size: .85rem; }
+
+.flash { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
+.flash-alert { border-color: var(--minus); color: var(--minus); }
+.flash-notice { border-color: var(--plus); color: var(--plus); }

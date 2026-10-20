@@ -26,6 +26,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/customer` | 利用者画面 `/`（`Customer::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込 | platform, banking, identity |
 | `packs/identity` | ログイン（Rails 8 の `generate authentication`）、`User#admin`、利用者と口座のひも付け（`account_ownerships`）。外から使えるのは `app/public`（`User` / `Current` / `Authentication`） | platform |
 | `packs/banking` | 銀行ドメイン。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
+| `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
 - `bin/packwerk check` で、依存（`enforce_dependencies`）と非公開の参照（`enforce_privacy`、packwerk-extensions）を検査する
@@ -153,6 +154,41 @@ bin/rails churu:rebuild_projections
 | 利用者画面の動き（Stimulus + CSS、外部ライブラリなし） | `count_up_controller`（残高のカウントアップ。morph で値が変わると前の値から数える）、`arrival_controller`（morph で届いた通帳の行をふわっと出す）、`transfer_status_controller` → `celebrate_controller`（振込完了・入金で紙吹雪とトースト）。`prefers-reduced-motion` なら止める |
 | View Transitions | 利用者画面だけ `<meta name="view-transition">`。一覧と口座ページで残高がつながる |
 
+## MCP（packs/mcp）
+
+Claude などの MCP クライアントから銀行を使うための入口。公式の Ruby SDK（`mcp` gem）で、
+Rails の同じプロセスの中に Streamable HTTP のエンドポイント `/mcp` を置いている
+（stateless・JSON で返す）。同じプロセスなので、振込の入金ジョブや画面のライブ更新もそのまま効く。
+
+| ツール | 中身 |
+|---|---|
+| `list_accounts` | 口座一覧（口座番号・名義・状態・残高） |
+| `get_account` | 残高と通帳（新しいほうから `limit` 件） |
+| `balance_at` | ある日の終わり時点の残高。起算日基準（`as_of`）と記帳日基準（`as_at`）の両方 |
+| `list_transfers` / `get_transfer` | 振込の一覧・状態（処理中 / 完了 / 組戻し） |
+| `deposit` / `withdraw` / `transfer` | 入金・出金・振込。**既定はドライラン**。`confirm: true` のときだけ書き込む |
+
+- 書き込みは `Banking::Bank`（actor `"mcp"`）だけを通す。ドライランでは残高の変化・警告・発生するイベントを返す
+- サーバーの instructions とツールの説明で「ドライランを見せて OK をもらってから `confirm: true`」と指示している
+- localhost 以外からのリクエストは 403。Host / Origin の検査（DNS リバインディング対策）は SDK が行う
+- トークン認証（任意）: 環境変数 `CHURU_MCP_TOKEN` か credentials の `mcp.token` を設定すると、
+  `Authorization: Bearer <トークン>` が必須になる（設定しなければ localhost だけで受け付ける）
+
+Claude Code への登録の例（サーバーを `bin/dev` で起動しておく）:
+
+```bash
+claude mcp add --transport http churu-bank http://localhost:3000/mcp
+# トークンを設定したとき
+claude mcp add --transport http churu-bank http://localhost:3000/mcp --header "Authorization: Bearer ${CHURU_MCP_TOKEN}"
+```
+
+curl で試す:
+
+```bash
+curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_account","arguments":{"account_number":"0000001"}}}'
+```
+
 ## TODO
 
 | # | やること | 先に必要 | 主な場所 |
@@ -161,7 +197,7 @@ bin/rails churu:rebuild_projections
 | ~~B~~ | ~~認証（Rails 8 の `generate authentication`）、ユーザーと口座のひも付け~~（済） | | `packs/identity` |
 | ~~C~~ | ~~管理画面（行員）と利用者画面（口座の持ち主）を分ける~~（済） | B | `packs/admin`・`packs/customer` |
 | D | 2つめのドメイン「ちゅ〜る商店」: 商品・在庫・注文。支払いは `Banking::Bank` 経由、在庫切れなら返金 | | `packs/shop` |
-| E | MCP（`/mcp`、HTTP）: 残高照会・明細・振込（ドライラン → 確定） | | `packs/mcp` |
+| ~~E~~ | ~~MCP（`/mcp`、HTTP）: 残高照会・明細・振込（ドライラン → 確定）~~（済） | | `packs/mcp` |
 | ~~F~~ | ~~利息（Solid Queue の recurring で日次計算）~~（済。画面は未） | | `packs/banking` |
 | ~~G~~ | ~~取消（逆仕訳）~~（済。画面は未: 通帳の「取消」・振込の「組戻し」ボタン） | | `packs/banking` |
 | ~~H~~ | ~~読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`）~~（済） | | `packs/banking` |

@@ -63,3 +63,6 @@ gem "packs-rails", "~> 0.1.0"
 
 gem "packwerk", "~> 3.3", groups: [ :development, :test ]
 gem "packwerk-extensions", "~> 0.4.0", groups: [ :development, :test ]
+
+# MCP サーバー（packs/mcp の /mcp）。公式の Ruby SDK
+gem "mcp", "~> 1.8"

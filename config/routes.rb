@@ -4,5 +4,8 @@ Rails.application.routes.draw do
   draw :admin    # 管理画面 /admin（と /res）
   draw :customer # 利用者画面 /
 
+  # MCP（packs/mcp）。Streamable HTTP（stateless）。localhost からだけ受け付ける
+  match "mcp" => "churu_mcp/server#handle", via: %i[get post delete], as: :mcp
+
   get "up" => "rails/health#show", as: :rails_health_check
 end

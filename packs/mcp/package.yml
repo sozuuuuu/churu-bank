@@ -1,0 +1,14 @@
+# MCP サーバー: Claude などから銀行を使うための入口（POST /mcp、Streamable HTTP）。
+#
+# 公式の Ruby SDK（mcp gem）で、Rails の同じプロセスの中で動かす。
+# なので Solid Queue のジョブ（振込の入金）も、画面のライブ更新もそのまま効く。
+#   - ChuruMcp::ServerController … /mcp。localhost 以外からは 403。トークンを設定したら Bearer も必須
+#   - ChuruMcp::Server           … ツールを並べた MCP::Server を組み立てる
+#   - ChuruMcp::Tools::*         … ツール本体。書き込みは Banking::Bank（actor "mcp"）だけを通す
+# 書き込みツールは既定でドライラン。confirm: true のときだけ実行する
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/banking

@@ -1,0 +1,24 @@
+// ちゅーる銀行の Zed 設定（WSL で開く前提: zed --wsl Ubuntu-24.04 /home/sozu/churu-bank）
+{
+  "languages": {
+    "Ruby": {
+      // ruby-lsp だけを使う。RuboCop の診断・整形も ruby-lsp が bundle の rubocop で行う
+      "language_servers": ["ruby-lsp", "!solargraph", "!rubocop", "!sorbet", "!steep", "..."],
+      "format_on_save": "on",
+    },
+    "HTML+ERB": {
+      "language_servers": ["ruby-lsp", "..."],
+    },
+  },
+  "lsp": {
+    "ruby-lsp": {
+      "initialization_options": {
+        "enabledFeatures": {
+          "diagnostics": true,
+          "formatting": true,
+        },
+        "formatter": "rubocop",
+      },
+    },
+  },
+}

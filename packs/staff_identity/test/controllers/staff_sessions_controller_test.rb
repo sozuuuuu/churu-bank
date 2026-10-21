@@ -43,6 +43,7 @@ class StaffSessionsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as_staff other
     get admin_root_path
     assert_select "header", /くろ/
+    assert_empty @staff.sessions.reload # 前の行員のセッションは消える
   end
 
   test "行員を選ばない・いない行員では入れない" do

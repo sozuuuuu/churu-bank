@@ -16,6 +16,7 @@ class StaffSessionsController < ApplicationController
 
   def create
     if staff = Staff.find_by(id: params[:staff_id])
+      find_staff_session_by_cookie&.destroy # 行員を切り替えたら、前の行員のセッションは消す
       start_new_staff_session_for staff
       redirect_to after_staff_authentication_url
     else

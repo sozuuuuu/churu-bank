@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_100004) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "user_id", null: false
     t.string "account_number", null: false
@@ -78,6 +78,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_100004) do
     t.index ["event_id"], name: "index_ledger_entries_on_event_id", unique: true
     t.index ["reversal_of"], name: "index_ledger_entries_on_reversal_of"
     t.index ["transfer_id"], name: "index_ledger_entries_on_transfer_id"
+  end
+
+  create_table "notice_receipts", force: :cascade do |t|
+    t.integer "notice_id", null: false
+    t.integer "user_id", null: false
+    t.datetime "read_at"
+    t.datetime "dismissed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["notice_id", "user_id"], name: "index_notice_receipts_on_notice_id_and_user_id", unique: true
+    t.index ["notice_id"], name: "index_notice_receipts_on_notice_id"
+    t.index ["user_id"], name: "index_notice_receipts_on_user_id"
+  end
+
+  create_table "notice_targets", force: :cascade do |t|
+    t.integer "notice_id", null: false
+    t.integer "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["notice_id", "user_id"], name: "index_notice_targets_on_notice_id_and_user_id", unique: true
+    t.index ["notice_id"], name: "index_notice_targets_on_notice_id"
+    t.index ["user_id"], name: "index_notice_targets_on_user_id"
+  end
+
+  create_table "notices", force: :cascade do |t|
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.text "body", default: "", null: false
+    t.boolean "important", default: false, null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at"
+    t.string "audience", default: "everyone", null: false
+    t.string "posted_by"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["starts_at", "ends_at"], name: "index_notices_on_starts_at_and_ends_at"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -161,5 +197,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_100004) do
 
   add_foreign_key "account_ownerships", "users"
   add_foreign_key "event_store_events_in_streams", "event_store_events", column: "event_id", primary_key: "event_id"
+  add_foreign_key "notice_receipts", "notices"
+  add_foreign_key "notice_receipts", "users"
+  add_foreign_key "notice_targets", "notices"
+  add_foreign_key "notice_targets", "users"
   add_foreign_key "sessions", "users"
 end

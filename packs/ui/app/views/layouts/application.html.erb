@@ -38,6 +38,8 @@
       <% flash.each do |type, message| %>
         <p class="flash flash-<%= type %>"><%= message %></p>
       <% end %>
+      <%# ページの頭に差し込む部品（利用者画面のお知らせのねこ。packs/notices の notices_inbox が入れる） %>
+      <%= yield :page_top %>
       <%= yield %>
     </main>
   </body>

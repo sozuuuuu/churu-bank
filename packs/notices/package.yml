@@ -1,0 +1,16 @@
+# 銀行からのお知らせ・お願い・メンテナンス（あとでキャンペーン）。ふつうの ActiveRecord（イベントソーシングにしない）
+#   - 行員の画面: /admin/notices（作成・編集・掲載終了）。行員（User#admin）だけ。管理画面のメニューからはリンク（ルート名）だけ
+#   - 利用者の画面: /notices（一覧・本文）。ねこが吹き出しで知らせる部品を利用者画面に差し込む
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - Notices::InboxHelper … 利用者画面のレイアウトで notices_inbox を呼ぶと、メニューのバッジとねこの吹き出しが入る。
+#                            画面のパックのベースコントローラで helper Notices::InboxHelper する
+#   - Notices::Board       … お知らせを出す・直す・掲載を終える唯一の入口（行員の画面と、あとでキャンペーンのパックが使う）
+# モデル（Notice / NoticeTarget / NoticeReceipt）、ジョブ、画面は非公開
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/identity
+  - packs/ui

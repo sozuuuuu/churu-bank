@@ -46,3 +46,16 @@ shop.open_shop
   shop.register_product(**product.except(:stock))
   shop.restock(product[:sku], product[:stock]) if product[:stock].positive?
 end
+
+# ---- 銀行からのお知らせ（packs/notices）。同じタイトルがなければ出す ----
+notices = Notices::Board.new(actor: "seed")
+[
+  { kind: "info", title: "ジンジベルお迎え準備中",
+    body: "ちゅーる銀行に、新しいねこ「ジンジベル」がやってきます。\nただいまお迎えの準備中です。窓口で見かけたら、やさしく声をかけてにゃ。" },
+  { kind: "request", title: "住所変更のお届けをお願いします", important: true,
+    body: "お引っ越しをされた方は、窓口（行員）まで新しいご住所をお届けください。\nお届けがないと、大事なお手紙（ちゅ〜るの試供品など）が届きません。" },
+  { kind: "maintenance", title: "メンテナンスのお知らせ", ends_at: 7.days.from_now.end_of_day,
+    body: "毎日 0:05 ごろ、利息の計算のため、ほんの少しのあいだ残高の表示が遅れることがあります。\nお昼寝しながらお待ちください。" }
+].each do |notice|
+  notices.post(**notice) unless Notice.exists?(title: notice[:title])
+end

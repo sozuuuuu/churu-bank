@@ -1,0 +1,38 @@
+<%# ねこの吹き出し。開くと既読になるので、ホバーでの先読み（Turbo の prefetch）はしない。
+    新しいお知らせが出たら Notices::RefreshJob の refresh で morph され、
+    新しく入った吹き出しだけが「ぽよん」と出る（CSS）。ねこが跳ねてトーストを出すのは notices--inbox（Stimulus） %>
+<%= turbo_stream_from "notices" %>
+<%= turbo_stream_from Current.user, :notices %>
+<% notices = bubble ? inbox.bubble : [] %>
+<% shown = notices.first(3) %>
+<section id="notice-board" class="notice-board" aria-label="銀行からのお知らせ"
+         data-controller="notices--inbox" data-turbo-prefetch="false" <%= "hidden" if shown.empty? %>>
+  <div class="notice-cat-wrap" data-notices--inbox-target="cat">
+    <%= render "notices/inbox/cat" %>
+  </div>
+  <div class="notice-bubbles">
+    <p class="notice-hello">
+      <%= notices.any?(&:important?) ? "だいじなお知らせがあるにゃ！" : "お知らせだにゃ〜" %>
+    </p>
+    <ol>
+      <% shown.each_with_index do |notice, i| %>
+        <li id="<%= dom_id(notice, :bubble) %>" data-notice-id="<%= notice.id %>" style="--i: <%= i %>"
+            class="notice-bubble notice-kind-<%= notice.kind %><%= " is-important" if notice.important? %><%= " is-unread" unless inbox.read?(notice) %>">
+          <span class="notice-bubble-head">
+            <span class="notice-chip"><%= notice.kind_icon %> <%= notice.kind_label %></span>
+            <% if notice.important? %><span class="notice-important">だいじ</span><% end %>
+            <% unless inbox.read?(notice) %><span class="notice-new">NEW</span><% end %>
+          </span>
+          <%= link_to notice.title, notice_path(notice), class: "notice-bubble-title" %>
+          <%= button_to notice_dismissal_path(notice), class: "notice-close", form_class: "notice-close-form",
+                        title: "閉じる", "aria-label": "「#{notice.title}」を閉じる" do %>×<% end %>
+        </li>
+      <% end %>
+    </ol>
+    <% if notices.size > shown.size %>
+      <%= link_to "ほかに #{notices.size - shown.size} 件あるにゃ →", notices_path, class: "notice-more" %>
+    <% end %>
+  </div>
+</section>
+<%# トーストの中身は JS が入れるので、morph で消されないようにする %>
+<p id="notice-toast" class="toast" role="status" aria-live="polite" data-turbo-permanent></p>

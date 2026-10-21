@@ -1,4 +1,6 @@
-# 利用者のログイン（new / create）とログアウト（destroy）。/session。見た目はねこテーマ
+# 利用者のログイン（new / create）とログアウト（destroy）。/session。見た目はねこテーマ。
+# 学習用なのでパスワードは使わない: ドロップダウンで利用者を選ぶだけで、その人の利用者のセッション（customer_session_id）が始まる。
+# パスワードの列と検証は Customer に残してある（使っていないだけ）。行員のログイン（/admin/session）とは別のまま
 class CustomerSessionsController < ApplicationController
   include CustomerAuthentication
   helper Ui::FormatHelper # packs/ui のレイアウト（layouts/cat）を使うしるし
@@ -11,14 +13,15 @@ class CustomerSessionsController < ApplicationController
   layout "cat"
 
   def new
+    @customers = Customer.order(:id)
   end
 
   def create
-    if customer = Customer.authenticate_by(params.permit(:email_address, :password))
+    if (customer = Customer.find_by(id: params[:customer_id]))
       start_new_customer_session_for customer
       redirect_to after_customer_authentication_url
     else
-      redirect_to new_customer_session_path, alert: "メールアドレスかパスワードがちがいます"
+      redirect_to new_customer_session_path, alert: "利用者を選んでください"
     end
   end
 

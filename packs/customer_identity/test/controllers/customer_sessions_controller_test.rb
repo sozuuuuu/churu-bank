@@ -14,7 +14,7 @@ class CustomerSessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "ログインすると利用者画面へ。Cookie は customer_session_id" do
-    post customer_session_path, params: { email_address: @customer.email_address, password: TEST_PASSWORD }
+    post customer_session_path, params: { customer_id: @customer.id }
 
     assert_redirected_to root_url
     assert cookies[:customer_session_id].present?
@@ -25,13 +25,24 @@ class CustomerSessionsControllerTest < ActionDispatch::IntegrationTest
     get accounts_path
     assert_redirected_to new_customer_session_path
 
-    post customer_session_path, params: { email_address: @customer.email_address, password: TEST_PASSWORD }
+    post customer_session_path, params: { customer_id: @customer.id }
     assert_redirected_to accounts_url
   end
 
-  test "行員のアカウントでは利用者としてログインできない" do
+  test "ログイン画面は利用者をドロップダウンで選ぶだけ（パスワードの欄はない）" do
+    get new_customer_session_path
+
+    assert_select "select[name=customer_id] option", text: "オルカ さん"
+    assert_select "input[type=password]", count: 0
+  end
+
+  test "選んでいない・いない利用者では入れない。行員の Cookie もできない" do
     staff = create_staff
 
+    post customer_session_path, params: { customer_id: "" }
+    assert_redirected_to new_customer_session_path
+    post customer_session_path, params: { customer_id: Customer.maximum(:id) + 1 }
+    assert_redirected_to new_customer_session_path
     post customer_session_path, params: { email_address: staff.email_address, password: TEST_PASSWORD }
 
     assert_redirected_to new_customer_session_path

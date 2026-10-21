@@ -13,7 +13,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 ```
 
 - 環境: WSL の Ubuntu 24.04、Ruby は mise（`mise.toml`）、バージョン管理は jj
-- ログイン: 開発用のアカウントとパスワードは `db/seeds.rb`（行員 2 人と、利用者のオルカ・ジンジベル・ミケ）。
+- ログイン: 開発用のアカウントは `db/seeds.rb`（行員 2 人と、利用者のオルカ・ジンジベル・ミケ）。利用者はパスワードなしで、ログイン画面のドロップダウンから選ぶだけ。
   **行員と利用者はアカウントもログイン画面も別**: 行員は `/admin/session/new`、利用者は `/session/new`
 - `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員だけ）
 - `/res` … RES Browser（イベントストアの中身を見る。行員だけ）
@@ -59,7 +59,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 |---|---|---|
 | モデル・テーブル | `Staff`（`staffs`）・`staff_sessions` | `Customer`（`customers`、顧客台帳）・`customer_sessions` |
 | パック | `packs/staff_identity` | `packs/customer_identity`（ログイン）＋ `packs/customer_registry`（台帳） |
-| ログイン画面 | `/admin/session/new`（管理画面と同じ見た目） | `/session/new`（ねこテーマ） |
+| ログイン画面 | `/admin/session/new`（管理画面と同じ見た目） | `/session/new`（ねこテーマ。**学習用なのでパスワードなし**: 利用者をドロップダウンで選んで入る。パスワードの列と検証は残してあるが使わない） |
 | セッションの Cookie | `staff_session_id` | `customer_session_id` |
 | ベースコントローラで include | `StaffAuthentication`（`current_staff`） | `CustomerAuthentication`（`current_customer`） |
 | ライブ更新の購読 | `staff_stream_from` → `StaffStreamsChannel` | `customer_stream_from` → `CustomerStreamsChannel` |

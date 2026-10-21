@@ -6,7 +6,7 @@ import { kira, prefersReducedMotion } from "controllers/motion"
 //   - 出来事は window の cat:say（detail: { text, face, bounce }）で入れ替える。cat:reset でページのセリフに戻す
 //   - 窓をクリックすると、出しかけの文字を全部出す
 //   - Turbo の refresh（morph）でページのセリフ（data 属性）が変わればそれを出す。出来事のセリフを出しているあいだは
-//     cat:reset まで出さない。文字とねこの要素は data-turbo-permanent で、morph に消されない（中身はこの JS が書く）
+//     cat:reset まで出さず、morph でも文字とねこは書き換えさせない（keep）
 // 「視差効果を減らす」設定なら、1文字ずつにはせず全文を出し、ねこも弾ませない
 export default class extends Controller {
   static targets = ["text", "live", "cat"]
@@ -30,6 +30,13 @@ export default class extends Controller {
     const changed = this.#show(text, face)
     // うれしい顔に変わったときは #setFace が弾ませる。もともとうれしい顔なら、ここで弾む
     if (bounce && !(changed && face === "happy")) this.#bounce()
+  }
+
+  // 出来事のセリフを出しているあいだは、morph で文字とねこを書き換えない（窓の data 属性 = ページのセリフは更新させる）
+  keep(event) {
+    if (!this.spoken) return
+    const parts = [this.hasTextTarget && this.textTarget, this.hasLiveTarget && this.liveTarget, this.hasCatTarget && this.catTarget]
+    if (parts.includes(event.target)) event.preventDefault()
   }
 
   reset() {

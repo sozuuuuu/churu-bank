@@ -314,15 +314,33 @@ body.cat-theme .passbook-amount small { color: var(--sub); font-size: .75rem; }
 /* ---- 商店（利用者） ---- */
 body.cat-theme .shop-head h1 { display: flex; align-items: center; gap: 8px; }
 body.cat-theme .shop-nav a { font-weight: 700; }
-body.cat-theme .shop-products { gap: 20px; }
-body.cat-theme .shop-product { display: grid; gap: 4px; align-content: start; }
+body.cat-theme .shop-layout { grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; }
+@media (max-width: 760px) { body.cat-theme .shop-layout { grid-template-columns: minmax(0, 1fr); } }
+body.cat-theme .shop-products { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+/* 中身（数の欄＋ボタン）の幅でカードからはみ出さないように、列をカードの幅に合わせる */
+body.cat-theme .shop-product { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; align-content: start; margin: 0; }
+body.cat-theme .shop-product h2 { font-size: 1.05rem; margin: 6px 0 0; overflow-wrap: anywhere; }
+body.cat-theme .shop-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+body.cat-theme .shop-add input[type="number"] { flex: 0 0 5em; width: 5em; }
+body.cat-theme .shop-add .button { flex: 1 1 auto; }
 body.cat-theme .shop-product-icon {
   display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%;
   border: var(--line-thin) solid var(--ink); background: var(--pink-soft);
 }
 body.cat-theme .shop-product .balance { font-size: 1.4rem; font-weight: 900; }
-body.cat-theme .shop-add input[type="number"], body.cat-theme .shop-inline input[type="number"] { width: 5.5em; }
+body.cat-theme .shop-inline input[type="number"] { width: 5.5em; }
 body.cat-theme .shop-cart h2 { margin-bottom: 8px; }
+/* カートは幅が狭いので、商品名は折り返し、金額は折り返さない */
+body.cat-theme .shop-cart .table { display: table; font-size: .9rem; }
+body.cat-theme .shop-cart .table td, body.cat-theme .shop-cart .table th { padding: 8px 4px; }
+body.cat-theme .shop-cart .table .num { white-space: nowrap; }
+body.cat-theme .shop-cart .table td:last-child { width: 1%; }
+body.cat-theme .shop-cart form .button { width: 100%; }
+/* カートの中の注文の確認は、見出しと中身を縦に並べる（2列だと狭い） */
+body.cat-theme .shop-cart .confirm dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+body.cat-theme .shop-cart .confirm dd { margin-bottom: 8px; }
+body.cat-theme .shop-cart .confirm code { overflow-wrap: anywhere; }
+body.cat-theme .shop-cart .confirm form { flex-direction: column; align-items: stretch; }
 
 /* ================================================================
  * ねこのちゅーる（ui/_cat）。data-face で表情を1つだけ出す

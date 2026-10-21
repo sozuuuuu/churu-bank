@@ -1,0 +1,9 @@
+<%# 申請の中身（承認・却下の画面で出す） %>
+<dt>種類</dt>
+<dd><%= request.kind_label %> <span class="badge"><%= request.status_label %></span></dd>
+<dt>対象</dt>
+<dd><%= request.summary %></dd>
+<dt>理由</dt>
+<dd><%= request.reason %></dd>
+<dt>申請</dt>
+<dd class="muted"><%= jp_time(request.requested_at) %> <%= actor_name(request.requested_by) %></dd>

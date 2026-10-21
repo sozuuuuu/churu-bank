@@ -1,0 +1,25 @@
+<%= turbo_frame_tag "approval" do %>
+  <div class="confirm reversal-panel">
+    <h3>申請の却下</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl><%= render "admin/approvals/request", request: @request %></dl>
+
+    <% if @request.decidable_by?(current_staff.actor) %>
+      <%= form_with url: admin_approval_rejection_path(@request), class: "form" do |f| %>
+        <label>
+          却下の理由
+          <%= f.text_field :reason, value: @reason, required: true, autofocus: true, placeholder: "例: 証跡が足りません" %>
+        </label>
+        <div class="actions">
+          <%= f.submit "確認する", name: "preview", class: "button primary" %>
+          <%= link_to "やめる", admin_approvals_path, class: "button", data: { turbo_frame: "_top" } %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="muted"><%= @request.pending? ? "自分の申請は却下できません（取り下げはできます）。" : "この申請は「#{@request.status_label}」です。" %></p>
+      <%= link_to "閉じる", admin_approvals_path, class: "button", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

@@ -5,11 +5,6 @@
       <p class="flash flash-alert"><%= @error %></p>
     <% end %>
 
-    <div class="segmented">
-      <label><%= f.radio_button :kind, "deposit", checked: @form[:kind] == "deposit" %> 入金</label>
-      <label><%= f.radio_button :kind, "withdrawal", checked: @form[:kind] == "withdrawal" %> 出金</label>
-    </div>
-
     <label>
       金額（ちゅ〜る）
       <%= f.number_field :amount, value: @form[:amount], min: 1, step: 1, required: true,
@@ -24,7 +19,7 @@
 
     <label>
       メモ
-      <%= f.text_field :memo, value: @form[:memo], placeholder: "例: おこづかい" %>
+      <%= f.text_field :memo, value: @form[:memo], placeholder: "例: 窓口に持ち込まれた現金" %>
     </label>
 
     <details <%= "open" if @form[:value_date] %>>

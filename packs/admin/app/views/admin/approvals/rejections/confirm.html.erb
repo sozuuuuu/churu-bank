@@ -1,0 +1,17 @@
+<%= turbo_frame_tag "approval" do %>
+  <div class="confirm reversal-panel">
+    <h3>申請の却下（確認）</h3>
+    <p class="muted">まだ却下していません。却下しても銀行の残高・状態は変わりません。</p>
+    <dl>
+      <%= render "admin/approvals/request", request: @request %>
+      <dt>却下の理由</dt><dd><%= @reason %></dd>
+      <dt>発生するイベント</dt><dd><code>ApprovalRejected</code></dd>
+    </dl>
+
+    <%= form_with url: admin_approval_rejection_path(@request), data: { turbo_frame: "_top" } do |f| %>
+      <%= f.hidden_field :reason, value: @reason %>
+      <%= f.submit "却下する", class: "button primary" %>
+      <%= link_to "戻る", new_admin_approval_rejection_path(@request, reason: @reason), class: "button" %>
+    <% end %>
+  </div>
+<% end %>

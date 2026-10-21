@@ -1,0 +1,27 @@
+<%= turbo_frame_tag "withdrawal_request" do %>
+  <%= form_with url: account_withdrawal_requests_path(@account), class: "form", data: { controller: "amount" } do |f| %>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <p class="muted small">出金は銀行の窓口で行員が行います。依頼を出すと窓口に並び、処理されると口座から出金されます。</p>
+
+    <label>
+      金額（ちゅ〜る）
+      <%= f.number_field :amount, value: @form[:amount], min: 1, step: 1, required: true,
+                         data: { amount_target: "input" } %>
+    </label>
+    <div class="presets">
+      <% [ 10, 50, 100 ].each do |n| %>
+        <button type="button" class="chip" data-action="amount#add" data-amount-value-param="<%= n %>">+<%= n %></button>
+      <% end %>
+      <button type="button" class="chip" data-action="amount#clear">クリア</button>
+    </div>
+
+    <label>
+      メモ
+      <%= f.text_field :memo, value: @form[:memo], placeholder: "例: おやつを買う" %>
+    </label>
+
+    <%= f.submit "確認する", name: "preview", class: "button primary" %>
+  <% end %>
+<% end %>

@@ -1,5 +1,6 @@
 # 管理画面（行員用、/admin）。行員としてログインした人（packs/staff_identity）だけが入れる。
-# 全口座の一覧・開設・入出金・振込・凍結、振込一覧、取消・組戻し・利息の手動実行、RES Browser（/res）。
+# 全口座の一覧・開設・入金（現金の持ち込み）・振込・凍結、窓口（出金依頼の処理）、振込一覧、
+# 取消・組戻し・凍結の解除の申請と承認（packs/approvals）、利息の手動実行、RES Browser（/res）。
 # 口座の持ち主（利用者）は顧客台帳（packs/customer_registry）から引く。利用者のログイン（customer_identity）には依存しない
 enforce_dependencies: true
 enforce_privacy: false
@@ -7,6 +8,7 @@ enforce_privacy: false
 dependencies:
   - packs/platform
   - packs/banking
+  - packs/approvals
   - packs/staff_identity
   - packs/customer_registry
   - packs/ui

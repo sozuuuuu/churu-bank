@@ -1,0 +1,27 @@
+<%= turbo_frame_tag "withdrawal_request" do %>
+  <div class="confirm">
+    <p class="muted">まだ依頼していません。内容を確認してください。</p>
+    <% @outcome.warnings.each do |warning| %>
+      <p class="hint"><%= warning %></p>
+    <% end %>
+    <dl>
+      <dt>出金する額</dt>
+      <dd><%= churu(@form[:amount].to_i) %></dd>
+      <% if @form[:memo] %>
+        <dt>メモ</dt><dd><%= @form[:memo] %></dd>
+      <% end %>
+      <dt>処理されたら残高</dt>
+      <dd><%= churu(@outcome.balance_before) %> → <strong><%= churu(@outcome.balance_after) %></strong></dd>
+      <dt>発生するイベント</dt>
+      <dd><code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code></dd>
+    </dl>
+
+    <%= form_with url: account_withdrawal_requests_path(@account), data: { turbo_frame: "_top" } do |f| %>
+      <% @form.compact.each do |key, value| %>
+        <%= f.hidden_field key, value: value %>
+      <% end %>
+      <%= f.submit "出金を依頼する", class: "button primary" %>
+      <%= link_to "戻る", new_account_withdrawal_request_path(@account, @form.compact), class: "button" %>
+    <% end %>
+  </div>
+<% end %>

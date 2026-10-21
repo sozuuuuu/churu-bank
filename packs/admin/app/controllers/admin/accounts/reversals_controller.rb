@@ -1,5 +1,6 @@
-# 入出金の取消（逆仕訳）。通帳の行の「取消」から、Turbo Frame "reversal" の中で動く:
-#   new（理由の入力）→ create + preview=1（ドライランの確認画面）→ create（確定して口座ページへ）
+# 入出金の取消（逆仕訳）の申請。通帳の行の「取消」から、Turbo Frame "reversal" の中で動く:
+#   new（理由の入力）→ create + preview=1（ドライランの確認画面）→ create（申請して口座ページへ）
+# 取消は二人承認（TODO の Q2）: ここでは申請するだけで、別の行員が承認待ち（/admin/approvals）で承認すると実行される
 module Admin
   module Accounts
     class ReversalsController < ApplicationController
@@ -11,14 +12,14 @@ module Admin
 
       def create
         @reason = params[:reason].to_s
-        @outcome = bank.reverse(@account.number, @entry.event_id, reason: @reason.strip,
-                                                                  dry_run: params[:preview].present?)
+        @outcome = desk.request_reversal(@account.number, @entry.event_id, reason: @reason,
+                                         dry_run: params[:preview].present?).outcome
 
-        if @outcome.dry_run?
+        if params[:preview].present?
           render :confirm
         else
-          redirect_to admin_account_path(@account), notice: "#{@entry.kind_label}を取り消しました",
-                                                    status: :see_other
+          redirect_to admin_account_path(@account), status: :see_other,
+                                                    notice: "#{@entry.kind_label}の取消を申請しました。別の行員が承認すると実行されます"
         end
       rescue Banking::Error, ArgumentError => e
         @error = e.message

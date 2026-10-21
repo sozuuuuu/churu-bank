@@ -40,7 +40,7 @@ class ChuruMcp::ServerTest < ActionDispatch::IntegrationTest
   test "tools/list でツールが並ぶ" do
     tools = rpc("tools/list").dig("result", "tools")
 
-    assert_equal %w[list_accounts get_account balance_at list_transfers get_transfer deposit withdraw transfer],
+    assert_equal %w[list_accounts get_account balance_at list_transfers get_transfer deposit request_withdrawal transfer],
                  tools.pluck("name")
     transfer = tools.find { |tool| tool["name"] == "transfer" }
     assert_equal false, transfer.dig("inputSchema", "properties", "confirm", "default")
@@ -111,18 +111,26 @@ class ChuruMcp::ServerTest < ActionDispatch::IntegrationTest
     assert_match "明日以降", error.dig("content", 0, "text")
   end
 
-  test "入金・出金もドライランが既定" do
+  test "入金・出金の依頼もドライランが既定" do
     assert call_tool("deposit", { account_number: @bob, amount: 5 }).dig("structuredContent", "dry_run")
-    assert call_tool("withdraw", { account_number: @alice, amount: 5 }).dig("structuredContent", "dry_run")
+    assert call_tool("request_withdrawal", { account_number: @alice, amount: 5 }).dig("structuredContent", "dry_run")
     assert_equal [ 100, 0 ], [ @alice, @bob ].map { |n| Account.find_by!(number: n).balance }
+    assert_empty WithdrawalRequest.all
 
     call_tool("deposit", { account_number: @bob, amount: 5, confirm: true })
-    call_tool("withdraw", { account_number: @alice, amount: 5, confirm: true })
-    assert_equal [ 95, 5 ], [ @alice, @bob ].map { |n| Account.find_by!(number: n).balance }
+    assert_equal [ 100, 5 ], [ @alice, @bob ].map { |n| Account.find_by!(number: n).balance }
+  end
+
+  test "出金は依頼を出すだけ（withdraw のツールはない）。行員が窓口で処理するまでお金は動かない" do
+    content = call_tool("request_withdrawal", { account_number: @alice, amount: 5, confirm: true })["structuredContent"]
+
+    request = WithdrawalRequest.find_by!(request_id: content["request_id"])
+    assert_equal [ "requested", "mcp" ], [ request.status, request.requested_by ]
+    assert_equal 100, Account.find_by!(number: @alice).balance
   end
 
   test "業務エラーは isError のツール結果で、理由を返す" do
-    result = call_tool("withdraw", { account_number: @alice, amount: 1000 })
+    result = call_tool("request_withdrawal", { account_number: @alice, amount: 1000 })
 
     assert result["isError"]
     assert_match "残高不足", result.dig("content", 0, "text")

@@ -18,21 +18,58 @@
       <%= button_to "凍結する", admin_account_freeze_path(@account), class: "button small",
                     form: { data: { turbo_confirm: "#{@account.holder_name} の口座を凍結しますか？" } } %>
     <% when "frozen" %>
-      <%= button_to "凍結を解除する", admin_account_freeze_path(@account), method: :delete, class: "button small" %>
+      <% if @approvals.any? { it.kind == "unfreeze" } %>
+        <span class="muted small">凍結の解除を申請中（承認待ち）</span>
+      <% else %>
+        <%# 解除は二人承認: ここでは申請だけ。別の行員が承認待ちで承認すると解除される %>
+        <%= form_with url: admin_account_freeze_path(@account), method: :delete, class: "inline-form" do |f| %>
+          <%= f.text_field :reason, required: true, placeholder: "解除の理由（例: 本人確認できた）" %>
+          <%= f.submit "凍結の解除を申請する", class: "button small" %>
+        <% end %>
+      <% end %>
     <% end %>
   </div>
 </div>
 
+<% if @approvals.any? || @withdrawal_requests.any? %>
+  <section class="card">
+    <% if @withdrawal_requests.any? %>
+      <h2>窓口の出金依頼</h2>
+      <ul>
+        <% @withdrawal_requests.each do |request| %>
+          <li id="<%= dom_id(request) %>">
+            <%= jp_time(request.requested_at) %> <strong><%= churu(request.amount) %></strong> <span class="muted"><%= request.memo %></span>
+            <%= link_to "窓口で処理する", admin_withdrawal_requests_path, class: "button small" %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if @approvals.any? %>
+      <h2>承認待ちの申請</h2>
+      <ul>
+        <% @approvals.each do |request| %>
+          <li id="<%= dom_id(request) %>">
+            <span class="badge"><%= request.kind_label %></span> <%= request.summary %>
+            <span class="muted">理由: <%= request.reason %> ・ 申請 <%= actor_name(request.requested_by) %></span>
+            <%= link_to "承認待ちへ", admin_approvals_path, class: "button small" %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>
+
 <div class="grid">
   <section class="card">
-    <h2>入出金</h2>
+    <h2>入金（現金の持ち込み）</h2>
     <% if @account.active? %>
       <%# 入力 → 確認 → 確定 の画面遷移は、この Frame の中だけで起きる %>
       <%= turbo_frame_tag "transaction", src: new_admin_account_transaction_path(@account) do %>
         <p class="muted">読み込み中…</p>
       <% end %>
+      <p class="muted small">出金は、利用者の出金依頼を<%= link_to "窓口", admin_withdrawal_requests_path %>で処理します。</p>
     <% else %>
-      <p class="muted">この口座は<%= @account.status_label %>なので入出金できません。</p>
+      <p class="muted">この口座は<%= @account.status_label %>なので入金できません。</p>
     <% end %>
   </section>
 
@@ -108,7 +145,10 @@
             <td class="num"><%= churu(entry.balance_after) %></td>
             <td class="muted"><%= entry.actor %></td>
             <td>
-              <% if entry.reversible? %>
+              <% if @pending_entry_ids.include?(entry.event_id) ||
+                    (transfer && @pending_transfer_ids.include?(transfer.transfer_id) && entry.kind.in?(%w[transfer_out transfer_in])) %>
+                <span class="badge">承認待ち</span>
+              <% elsif entry.reversible? %>
                 <%= link_to "取消", new_admin_account_reversal_path(@account, event_id: entry.event_id),
                             class: "button small", data: { turbo_frame: "reversal" } %>
               <% elsif transfer&.reversible? && entry.kind.in?(%w[transfer_out transfer_in]) %>

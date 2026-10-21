@@ -1,0 +1,10 @@
+<%# 出金依頼（出金の確認・断るの画面で出す） %>
+<dt>口座</dt>
+<dd><%= request.account.holder_name %>（<%= request.account_number %>） <span class="badge badge-<%= request.account.status %>"><%= request.account.status_label %></span></dd>
+<dt>金額</dt>
+<dd><strong><%= churu(request.amount) %></strong> <span class="badge"><%= request.status_label %></span></dd>
+<% if request.memo %>
+  <dt>メモ</dt><dd><%= request.memo %></dd>
+<% end %>
+<dt>受付</dt>
+<dd class="muted"><%= jp_time(request.requested_at) %> <%= actor_name(request.requested_by) %></dd>

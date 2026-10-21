@@ -1,0 +1,18 @@
+<%= turbo_frame_tag "counter" do %>
+  <div class="confirm reversal-panel">
+    <h3>出金依頼を断る（確認）</h3>
+    <p class="muted">まだ断っていません。お金は動きません。</p>
+    <dl>
+      <%= render "admin/withdrawal_requests/request", request: @request %>
+      <dt>理由</dt><dd><%= @reason %></dd>
+      <dt>発生するイベント</dt>
+      <dd><code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code></dd>
+    </dl>
+
+    <%= form_with url: admin_withdrawal_request_rejection_path(@request), data: { turbo_frame: "_top" } do |f| %>
+      <%= f.hidden_field :reason, value: @reason %>
+      <%= f.submit "断る", class: "button primary" %>
+      <%= link_to "戻る", new_admin_withdrawal_request_rejection_path(@request, reason: @reason), class: "button" %>
+    <% end %>
+  </div>
+<% end %>

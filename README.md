@@ -238,7 +238,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~F~~ | ~~利息（Solid Queue の recurring で日次計算）~~（済。画面は未） | | `packs/banking` |
 | ~~G~~ | ~~取消（逆仕訳）~~（済。画面は未: 通帳の「取消」・振込の「組戻し」ボタン） | | `packs/banking` |
 | ~~H~~ | ~~読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`）~~（済） | | `packs/banking` |
-| I | GitHub（public）と CI。push 前にコミットの作者メールを noreply に | | `.github/` |
+| I | GitHub（public）と CI | | `.github/` |
 | ~~J~~ | ~~Zingiber から銀行の MCP を使う~~（やらない。2026-10-21 決定） | E | Zingiber 側 |
 | K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |
 | L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |

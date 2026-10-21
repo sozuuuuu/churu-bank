@@ -108,6 +108,8 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_interest_path(date:)
     assert_match "1 口座に払いました", flash[:notice]
     assert_equal 1001, Account.find_by!(number: @orca).balance
+    get admin_interest_path(date:) # flash が morph で消えても、状況は URL の日付から出る
+    assert_select ".interest-status", /支払い済み\s*1\s*口座.*まだ払っていない\s*0\s*口座/m
 
     post admin_interest_path, params: { date: date.iso8601, preview: "1" }
     assert_match "支払い済み", response.body

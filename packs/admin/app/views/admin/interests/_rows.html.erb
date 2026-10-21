@@ -11,7 +11,7 @@
         <% when :pay %>
           <td class="num"><%= churu(row.base_balance) %></td>
           <td class="num plus"><%= churu(row.amount, signed: true) %></td>
-          <td class="muted"><%= row.carry %></td>
+          <td class="muted"><%= Rational(row.carry).zero? ? "なし" : row.carry %></td>
         <% when :paid %>
           <td colspan="3"><span class="badge">支払い済み</span> <span class="muted">この日の分はもう払ったので、何もしません</span></td>
         <% when :zero %>

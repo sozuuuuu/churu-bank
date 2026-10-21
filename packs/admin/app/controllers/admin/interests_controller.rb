@@ -6,8 +6,10 @@ module Admin
   class InterestsController < ApplicationController
     include InterestPayment
 
+    # ?date= があれば、その日の支払い状況も出す（確定後の flash はライブ更新の morph で消えるので、状況は URL から描く）
     def show
       @date = parse_interest_date || Date.yesterday
+      @status_rows = Account.order(:number).map { interest_row(it, @date) } if parse_interest_date
     end
 
     def create

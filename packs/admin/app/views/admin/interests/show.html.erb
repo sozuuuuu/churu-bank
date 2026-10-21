@@ -16,6 +16,13 @@
 <section class="card">
   <h2>全口座に払う</h2>
   <%# 入力 → 確認 → 確定 の画面遷移は、この Frame の中だけで起きる %>
+  <% if @status_rows %>
+    <% paid, unpaid = @status_rows.count { it.state == :paid }, @status_rows.count(&:pay?) %>
+    <p class="interest-status <%= unpaid.zero? ? "flash flash-notice" : "hint" %>">
+      <%= jp_date(@date) %> の利息: 支払い済み <strong><%= paid %></strong> 口座 ・ まだ払っていない <strong><%= unpaid %></strong> 口座
+      <span class="muted small">（残高 0・解約済みは対象外）</span>
+    </p>
+  <% end %>
   <%= turbo_frame_tag "interest" do %>
     <%= render "admin/interests/form", url: admin_interest_path %>
   <% end %>

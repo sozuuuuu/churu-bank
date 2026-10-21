@@ -14,3 +14,6 @@ turbo-frame#reversal:empty { display: none; }
 .interest-rate { margin: 0 0 8px; }
 .interest-rows { margin-bottom: 12px; }
 .interest-rows tr.skip td { color: var(--muted); }
+.table tr.reversed td.num + td.num { text-decoration: none; color: inherit; } /* 残高は当時のまま */
+.reversal-panel form.form { display: grid; }
+.interest-status { margin: 0 0 12px; }

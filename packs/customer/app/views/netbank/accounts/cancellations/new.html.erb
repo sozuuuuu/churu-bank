@@ -2,7 +2,8 @@
   <div class="confirm">
     <h3>振込の取消</h3>
     <% if @error %>
-      <p class="flash flash-alert"><%= @error %></p>
+      <%= cat_say_tag "取り消せなかったにゃ… 上のメッセージを読んでほしいにゃ。", face: :sad %>
+      <p class="flash flash-alert"><%= icon(:alert) %> <%= @error %></p>
     <% end %>
     <dl><%= render "netbank/accounts/cancellations/transfer", transfer: @transfer %></dl>
 

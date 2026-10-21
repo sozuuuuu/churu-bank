@@ -1,4 +1,14 @@
 <% content_for :title, "注文 #{@order.short_id} | ちゅ〜る商店" %>
+<% case @order.status %>
+<% when "fulfilled" %>
+  <% cat_says "お買いもの完了にゃ！ ありがとにゃ。", face: :happy %>
+<% when "payment_failed", "refund_failed" %>
+  <% cat_says "うまくいかなかったにゃ… 下の理由を見てほしいにゃ。", face: :sad %>
+<% when "refunding", "refunded", "cancelled" %>
+  <% cat_says "この注文はお金を返したにゃ。理由は下に書いてあるにゃ。", face: :sad %>
+<% else %>
+  <% cat_says "いま準備しているにゃ。進んだらこの画面が変わるにゃ。" %>
+<% end %>
 <%= render "shop/header", title: "注文 #{@order.short_id}" %>
 
 <div class="grid">

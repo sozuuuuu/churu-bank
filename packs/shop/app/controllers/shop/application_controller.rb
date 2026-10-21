@@ -5,6 +5,7 @@ module Shop
   class ApplicationController < ::ApplicationController
     include CustomerAuthentication
     helper Ui::FormatHelper
+    helper Ui::ThemeHelper # アイコン・ねこ・セリフ窓（layouts/cat が使う）
 
     layout "shop/customer"
 

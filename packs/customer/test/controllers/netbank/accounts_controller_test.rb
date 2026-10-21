@@ -27,6 +27,9 @@ class Netbank::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_match "turbo-cable-stream-source", response.body # ライブ更新を購読している
     assert_match "ui/cat", response.body # 利用者画面のねこテーマ
     assert_match 'data-controller="count-up"', response.body # 残高のカウントアップ
+    assert_select "#serif[data-controller=serif]" # 画面下のねこのセリフ窓
+    assert_select "#serif .cat[data-face=normal]"
+    assert_select "dialog#hooray" # 振込完了の演出
   end
 
   test "取り消された行は通帳で分かる（取消のボタンは出さない）" do

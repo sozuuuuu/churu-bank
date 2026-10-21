@@ -16,5 +16,10 @@ module Notices
       content_for :page_top, render("notices/inbox/board", inbox:, bubble:)
       nil
     end
+
+    # 種類の線画アイコン（利用者画面。行員の画面は Notice#kind_icon の絵文字のまま）
+    KIND_ICONS = { "info" => :megaphone, "request" => :heart, "maintenance" => :wrench }.freeze
+
+    def notice_kind_icon(notice, size: 18) = icon(KIND_ICONS.fetch(notice.kind, :letter), size:)
   end
 end

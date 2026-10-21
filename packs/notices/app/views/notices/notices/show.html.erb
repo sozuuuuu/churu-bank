@@ -1,12 +1,17 @@
 <% content_for :title, "#{@notice.title} | ちゅーる銀行" %>
+<% if @notice.important? %>
+  <% cat_says "重要なお知らせにゃ！ 最後まで読んでほしいにゃ。", face: :surprised %>
+<% else %>
+  <% cat_says "銀行からのお手紙を持ってきたにゃ。" %>
+<% end %>
 
-<article class="card notice-letter-card notice-kind-<%= @notice.kind %><%= " is-important" if @notice.important? %>">
+<article class="card tone notice-letter-card notice-kind-<%= @notice.kind %><%= " is-important" if @notice.important? %>">
   <div class="notice-letter-head">
-    <%= render "notices/inbox/cat" %>
+    <span class="notice-row-icon"><%= notice_kind_icon(@notice, size: 26) %></span>
     <div>
       <span class="notice-bubble-head">
-        <span class="notice-chip"><%= @notice.kind_icon %> <%= @notice.kind_label %></span>
-        <% if @notice.important? %><span class="notice-important">だいじ</span><% end %>
+        <span class="notice-chip"><%= @notice.kind_label %></span>
+        <% if @notice.important? %><span class="notice-important">重要</span><% end %>
       </span>
       <h1><%= @notice.title %></h1>
       <p class="muted small">
@@ -24,9 +29,9 @@
   </div>
 
   <div class="notice-actions">
-    <%= link_to "← お知らせの一覧", notices_path, class: "button" %>
+    <%= link_to notices_path, class: "button" do %><%= icon(:back) %> お知らせの一覧<% end %>
     <% if @notice.important? && !inbox.dismissed?(@notice) %>
-      <%= button_to "読んだにゃ（吹き出しを閉じる）", notice_dismissal_path(@notice), class: "button primary" %>
+      <%= button_to notice_dismissal_path(@notice), class: "button primary" do %><%= icon(:check) %> 読みました（吹き出しを閉じる）<% end %>
     <% end %>
   </div>
 </article>

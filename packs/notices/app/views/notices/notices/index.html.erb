@@ -1,28 +1,30 @@
 <% content_for :title, "お知らせ | ちゅーる銀行" %>
+<% if @notices.empty? %>
+  <% cat_says "いまはお知らせはないにゃ。のんびりしてってにゃ。" %>
+<% else %>
+  <% cat_says "銀行からのお知らせはここにまとめてあるにゃ。新しいものには NEW がついてるにゃ。" %>
+<% end %>
 
-<section class="hello">
-  <%= render "notices/inbox/cat" %>
-  <div class="bubble">
-    <p class="bubble-sub">銀行からのお知らせだにゃ</p>
-    <h1>お知らせ</h1>
-  </div>
-</section>
+<header class="page-title">
+  <p>銀行から</p>
+  <h1><span class="marker">お知らせ</span></h1>
+</header>
 
 <% if @notices.empty? %>
-  <p class="empty">いまはお知らせがありません。のんびりしてにゃ。</p>
+  <p class="empty">いまはお知らせがありません。</p>
 <% else %>
   <%# 開くと既読になるので、ホバーでの先読み（Turbo の prefetch）はしない %>
   <ul class="notice-list" data-turbo-prefetch="false">
-    <% @notices.each_with_index do |notice, i| %>
+    <% @notices.each do |notice| %>
       <% inbox_read = inbox.read?(notice) %>
-      <li id="<%= dom_id(notice) %>" style="--i: <%= i %>"
+      <li id="<%= dom_id(notice) %>"
           class="notice-kind-<%= notice.kind %><%= " is-important" if notice.important? %><%= " is-unread" unless inbox_read %>">
         <%= link_to notice_path(notice), class: "notice-row" do %>
-          <span class="notice-row-icon" aria-hidden="true"><%= notice.kind_icon %></span>
+          <span class="notice-row-icon"><%= notice_kind_icon(notice, size: 22) %></span>
           <span class="notice-row-main">
             <span class="notice-bubble-head">
               <span class="notice-chip"><%= notice.kind_label %></span>
-              <% if notice.important? %><span class="notice-important">だいじ</span><% end %>
+              <% if notice.important? %><span class="notice-important">重要</span><% end %>
               <% if inbox_read %>
                 <span class="muted small">既読</span>
               <% else %>

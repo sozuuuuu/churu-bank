@@ -2,6 +2,7 @@
 class CustomerSessionsController < ApplicationController
   include CustomerAuthentication
   helper Ui::FormatHelper # packs/ui のレイアウト（layouts/cat）を使うしるし
+  helper Ui::ThemeHelper # アイコン・ねこ・セリフ窓（layouts/cat が使う）
 
   allow_unauthenticated_customer_access only: %i[ new create ]
   rate_limit to: 10, within: 3.minutes, only: :create,
@@ -17,7 +18,7 @@ class CustomerSessionsController < ApplicationController
       start_new_customer_session_for customer
       redirect_to after_customer_authentication_url
     else
-      redirect_to new_customer_session_path, alert: "メールアドレスかパスワードがちがうにゃ"
+      redirect_to new_customer_session_path, alert: "メールアドレスかパスワードがちがいます"
     end
   end
 

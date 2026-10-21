@@ -1,14 +1,17 @@
 <% content_for :title, "ログイン | ちゅーる銀行" %>
 <% content_for :home_path, new_customer_session_path %>
+<% if flash[:alert] %>
+  <% cat_says "ログインできなかったにゃ… メールアドレスとパスワードをもう一度たしかめてにゃ。", face: :sad %>
+<% else %>
+  <% cat_says "いらっしゃいにゃ。ちゅーる銀行のねこ、ちゅーるにゃ。メールアドレスとパスワードでログインしてにゃ。" %>
+<% end %>
 
-<section class="hello login-hello">
-  <div class="bubble">
-    <p class="bubble-sub">いらっしゃいにゃ</p>
-    <h1>ちゅーる銀行にログイン</h1>
-  </div>
-</section>
+<header class="page-title">
+  <p>ようこそ</p>
+  <h1><span class="marker">ちゅーる銀行にログイン</span></h1>
+</header>
 
-<%= form_with url: customer_session_path, class: "card form login" do |form| %>
+<%= form_with url: customer_session_path, class: "card tone form login" do |form| %>
   <label>
     メールアドレス
     <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username",
@@ -18,5 +21,5 @@
     パスワード
     <%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72 %>
   </label>
-  <%= form.submit "ログイン 🐾", class: "button primary" %>
+  <%= form.button class: "button primary" do %><%= icon(:key) %> ログイン<% end %>
 <% end %>

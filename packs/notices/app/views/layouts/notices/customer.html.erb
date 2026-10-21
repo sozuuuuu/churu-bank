@@ -2,8 +2,8 @@
     一覧と本文のページなので、ねこの吹き出しは出さない（メニューのバッジとライブ更新だけ） %>
 <%= customer_header %>
 <% content_for :nav do %>
-  <%= link_to "わたしの口座", root_path %>
-  <%= link_to "ちゅ〜る商店", shop_root_path %>
+  <%= link_to root_path, "aria-current": ("page" if controller_path.start_with?("netbank")) do %><%= icon(:wallet, size: 18) %> わたしの口座<% end %>
+  <%= link_to shop_root_path, "aria-current": ("page" if controller_path.start_with?("shop")) do %><%= icon(:cart, size: 18) %> ちゅ〜る商店<% end %>
 <% end %>
 <%= notices_inbox(bubble: false) %>
 <%= render template: "layouts/cat" %>

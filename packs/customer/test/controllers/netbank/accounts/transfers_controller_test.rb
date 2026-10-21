@@ -18,10 +18,12 @@ class Netbank::Accounts::TransfersControllerTest < ActionDispatch::IntegrationTe
     post account_transfers_path(@orca_number), params: { to: @zingiber_number, amount: "40", preview: "1" }
     assert_response :success
     assert_match "まだ振り込んでいません", response.body
+    assert_select "[data-controller=cat-say][data-cat-say-face-value=surprised]" # 確認画面ではねこがびっくり
     assert_equal 0, Transfer.count
 
     post account_transfers_path(@orca_number), params: { to: @zingiber_number, amount: "40" }
     assert_redirected_to account_path(@orca_number)
+    assert_equal Transfer.last.transfer_id, flash[:celebrate] # 口座ページで振込完了の演出を出すしるし
     assert_equal @orca.actor, LedgerEntry.where(account_number: @orca_number).last.actor
 
     perform_enqueued_jobs
@@ -46,6 +48,10 @@ class Netbank::Accounts::TransfersControllerTest < ActionDispatch::IntegrationTe
 
     assert_response :unprocessable_entity
     assert_match "凍結中", response.body
+    assert_select "[data-controller=cat-say][data-cat-say-face-value=sad]"
+
+    get account_path(@orca_number)
+    assert_select "#serif[data-serif-face-value=sad]" # 凍結中の口座ページでは、ねこはしょんぼり
   end
 
   test "入出金は利用者画面にはない" do

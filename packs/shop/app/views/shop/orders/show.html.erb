@@ -53,5 +53,7 @@
       <% end %>
     </tbody>
   </table>
-  <p class="small"><%= link_to "RES Browser で見る", "/res/streams/Order$#{@order.order_id}", data: { turbo: false } %></p>
+  <% if staff? %>
+    <p class="small"><%= link_to "RES Browser で見る", "/res/streams/Order$#{@order.order_id}", data: { turbo: false } %></p>
+  <% end %>
 </div>

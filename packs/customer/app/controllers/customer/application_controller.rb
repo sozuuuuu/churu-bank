@@ -2,6 +2,7 @@
 module Customer
   class ApplicationController < ::ApplicationController
     include Authentication
+    helper Ui::FormatHelper
 
     layout "customer"
 

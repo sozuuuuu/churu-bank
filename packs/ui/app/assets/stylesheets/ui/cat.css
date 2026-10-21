@@ -1,9 +1,9 @@
 /*
- * 利用者画面のテーマ（ねこ・ちゅ〜る）。customer レイアウトだけが読み込む。
- * すべて body.customer の下に書いて、管理画面には効かないようにする。
+ * 利用者向けのテーマ（ねこ・ちゅ〜る）。packs/ui の layouts/cat だけが読み込む（利用者画面と、利用者が見る商店）。
+ * すべて body.cat-theme の下に書いて、管理画面には効かないようにする。
  * ルートの application.css の色の変数（--bg など）もここで上書きする。
  */
-body.customer {
+body.cat-theme {
   --bg: #fff6f1;
   --surface: #ffffff;
   --text: #4a3540;
@@ -35,7 +35,7 @@ body.customer {
 }
 
 @media (prefers-color-scheme: dark) {
-  body.customer {
+  body.cat-theme {
     --bg: #231b26;
     --surface: #2f2534;
     --text: #fbeff4;
@@ -58,74 +58,74 @@ body.customer {
 }
 
 /* ---- 共通の部品をまるく、やわらかく ---- */
-body.customer .site-header {
+body.cat-theme .site-header {
   background: color-mix(in srgb, var(--surface) 85%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 2px dashed var(--border);
   position: sticky; top: 0; z-index: 10;
 }
-body.customer .site-header .brand { color: var(--accent); font-weight: 800; letter-spacing: .02em; }
-body.customer .site-header nav a { text-decoration: none; font-weight: 700; }
+body.cat-theme .site-header .brand { color: var(--accent); font-weight: 800; letter-spacing: .02em; }
+body.cat-theme .site-header nav a { text-decoration: none; font-weight: 700; }
 
-body.customer h1, body.customer h2 { font-weight: 800; }
+body.cat-theme h1, body.cat-theme h2 { font-weight: 800; }
 
-body.customer .card {
+body.cat-theme .card {
   border: 2px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 
-body.customer .button {
+body.cat-theme .button {
   border-radius: 999px; border-width: 2px; font-weight: 700;
   transition: transform .15s ease, box-shadow .15s ease;
 }
-body.customer .button:hover { transform: translateY(-2px); }
-body.customer .button:active { transform: scale(.96); }
-body.customer .button.primary {
+body.cat-theme .button:hover { transform: translateY(-2px); }
+body.cat-theme .button:active { transform: scale(.96); }
+body.cat-theme .button.primary {
   background: linear-gradient(135deg, var(--accent), var(--churu));
   border-color: transparent;
   box-shadow: 0 4px 12px rgb(255 122 156 / .35);
 }
 
-body.customer input[type="text"], body.customer input[type="number"], body.customer input[type="date"],
-body.customer select {
+body.cat-theme input[type="text"], body.cat-theme input[type="number"], body.cat-theme input[type="date"],
+body.cat-theme select {
   border-radius: 14px; border-width: 2px;
 }
-body.customer input:focus, body.customer select:focus {
+body.cat-theme input:focus, body.cat-theme select:focus {
   outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 1px;
 }
 
-body.customer .chip {
+body.cat-theme .chip {
   border-width: 2px; font-weight: 700;
   transition: transform .15s ease, background .15s ease;
 }
-body.customer .chip:hover { background: color-mix(in srgb, var(--churu) 20%, var(--bg)); transform: translateY(-1px) rotate(-2deg); }
+body.cat-theme .chip:hover { background: color-mix(in srgb, var(--churu) 20%, var(--bg)); transform: translateY(-1px) rotate(-2deg); }
 
-body.customer .badge { border-width: 2px; font-weight: 700; }
-body.customer .flash { border-radius: 16px; border-width: 2px; }
-body.customer .hint { border-radius: 14px; }
-body.customer .confirm dl { background: var(--bg); border-radius: 16px; padding: 12px; }
+body.cat-theme .badge { border-width: 2px; font-weight: 700; }
+body.cat-theme .flash { border-radius: 16px; border-width: 2px; }
+body.cat-theme .hint { border-radius: 14px; }
+body.cat-theme .confirm dl { background: var(--bg); border-radius: 16px; padding: 12px; }
 
-body.customer .muted { color: var(--muted); }
-body.customer .plus { color: var(--plus); }
-body.customer .minus { color: var(--minus); }
+body.cat-theme .muted { color: var(--muted); }
+body.cat-theme .plus { color: var(--plus); }
+body.cat-theme .minus { color: var(--minus); }
 
 /* ---- ねこ ---- */
-body.customer .cat { width: 96px; height: auto; flex: none; overflow: visible; }
-body.customer .cat .cat-fur { fill: var(--cat-fur); }
-body.customer .cat .cat-ear { fill: var(--cat-ear); }
-body.customer .cat .cat-stripe { fill: none; stroke: var(--cat-stripe); stroke-width: 4; stroke-linecap: round; }
-body.customer .cat .cat-eye { fill: var(--cat-eye); }
-body.customer .cat .cat-shine { fill: #fff; }
-body.customer .cat .cat-cheek { fill: var(--cat-cheek); opacity: .7; }
-body.customer .cat .cat-nose { fill: var(--accent); }
-body.customer .cat .cat-line { fill: none; stroke: var(--cat-eye); stroke-width: 2; stroke-linecap: round; opacity: .7; }
-body.customer .cat .cat-tail { fill: var(--cat-fur); stroke: var(--cat-stripe); stroke-width: 3; }
+body.cat-theme .cat { width: 96px; height: auto; flex: none; overflow: visible; }
+body.cat-theme .cat .cat-fur { fill: var(--cat-fur); }
+body.cat-theme .cat .cat-ear { fill: var(--cat-ear); }
+body.cat-theme .cat .cat-stripe { fill: none; stroke: var(--cat-stripe); stroke-width: 4; stroke-linecap: round; }
+body.cat-theme .cat .cat-eye { fill: var(--cat-eye); }
+body.cat-theme .cat .cat-shine { fill: #fff; }
+body.cat-theme .cat .cat-cheek { fill: var(--cat-cheek); opacity: .7; }
+body.cat-theme .cat .cat-nose { fill: var(--accent); }
+body.cat-theme .cat .cat-line { fill: none; stroke: var(--cat-eye); stroke-width: 2; stroke-linecap: round; opacity: .7; }
+body.cat-theme .cat .cat-tail { fill: var(--cat-fur); stroke: var(--cat-stripe); stroke-width: 3; }
 
-body.customer .cat-eyes { transform-box: fill-box; transform-origin: center; animation: cat-blink 5s infinite; }
-body.customer .cat-tail { transform-box: fill-box; transform-origin: 0% 100%; animation: cat-tail 2.4s ease-in-out infinite; }
-body.customer .cat { animation: cat-float 3.2s ease-in-out infinite; }
-body.customer .cat.happy { animation: cat-jump .8s cubic-bezier(.3, 1.6, .5, 1) 2; }
+body.cat-theme .cat-eyes { transform-box: fill-box; transform-origin: center; animation: cat-blink 5s infinite; }
+body.cat-theme .cat-tail { transform-box: fill-box; transform-origin: 0% 100%; animation: cat-tail 2.4s ease-in-out infinite; }
+body.cat-theme .cat { animation: cat-float 3.2s ease-in-out infinite; }
+body.cat-theme .cat.happy { animation: cat-jump .8s cubic-bezier(.3, 1.6, .5, 1) 2; }
 
 @keyframes cat-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
 @keyframes cat-tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
@@ -138,55 +138,55 @@ body.customer .cat.happy { animation: cat-jump .8s cubic-bezier(.3, 1.6, .5, 1) 
 }
 
 /* ---- 口座一覧 ---- */
-body.customer .hello { display: flex; align-items: center; gap: 12px; margin: 8px 0 20px; }
-body.customer .bubble {
+body.cat-theme .hello { display: flex; align-items: center; gap: 12px; margin: 8px 0 20px; }
+body.cat-theme .bubble {
   position: relative; background: var(--surface); border: 2px solid var(--border);
   border-radius: var(--radius); padding: 10px 18px; box-shadow: var(--shadow);
 }
-body.customer .bubble::before { /* 吹き出しのしっぽ */
+body.cat-theme .bubble::before { /* 吹き出しのしっぽ */
   content: ""; position: absolute; left: -10px; top: 50%; width: 16px; height: 16px;
   background: var(--surface); border-left: 2px solid var(--border); border-bottom: 2px solid var(--border);
   transform: translateY(-50%) rotate(45deg);
 }
-body.customer .bubble h1 { margin: 0; }
-body.customer .bubble-sub { margin: 0; color: var(--accent); font-weight: 700; font-size: .9rem; }
+body.cat-theme .bubble h1 { margin: 0; }
+body.cat-theme .bubble-sub { margin: 0; color: var(--accent); font-weight: 700; font-size: .9rem; }
 
-body.customer .account-cards {
+body.cat-theme .account-cards {
   list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
 }
-body.customer .account-cards li { animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 80ms); }
-body.customer .account-card {
+body.cat-theme .account-cards li { animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 80ms); }
+body.cat-theme .account-card {
   display: grid; gap: 6px; padding: 18px; text-decoration: none; color: var(--text);
   background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius);
   box-shadow: var(--shadow); transition: transform .2s ease, border-color .2s ease;
 }
-body.customer .account-card:hover { transform: translateY(-4px) rotate(-.5deg); border-color: var(--accent); }
-body.customer .account-card-head { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
-body.customer .account-card-head .badge { margin-left: auto; }
-body.customer .account-card-name { font-size: 1.2rem; font-weight: 800; }
-body.customer .account-card .amount { font-size: 1.8rem; font-weight: 800; color: var(--churu); }
-body.customer .paw { display: inline-block; animation: paw-wiggle 2.8s ease-in-out infinite; }
+body.cat-theme .account-card:hover { transform: translateY(-4px) rotate(-.5deg); border-color: var(--accent); }
+body.cat-theme .account-card-head { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
+body.cat-theme .account-card-head .badge { margin-left: auto; }
+body.cat-theme .account-card-name { font-size: 1.2rem; font-weight: 800; }
+body.cat-theme .account-card .amount { font-size: 1.8rem; font-weight: 800; color: var(--churu); }
+body.cat-theme .paw { display: inline-block; animation: paw-wiggle 2.8s ease-in-out infinite; }
 @keyframes paw-wiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-16deg); } 90% { transform: rotate(12deg); } }
 
 /* ---- 口座ページ ---- */
-body.customer .hero {
+body.cat-theme .hero {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   background:
     radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--churu) 22%, transparent), transparent 55%),
     var(--surface);
   animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both;
 }
-body.customer .hero h1 { margin: 0; }
-body.customer .hero p { margin: 0; }
-body.customer .hero-body { flex: 1 1 200px; }
-body.customer .hero-balance { display: grid; justify-items: end; }
-body.customer .hero-balance small { color: var(--muted); font-weight: 700; }
-body.customer .hero-balance .amount { font-size: clamp(2rem, 6vw, 2.8rem); font-weight: 800; color: var(--churu); }
+body.cat-theme .hero h1 { margin: 0; }
+body.cat-theme .hero p { margin: 0; }
+body.cat-theme .hero-body { flex: 1 1 200px; }
+body.cat-theme .hero-balance { display: grid; justify-items: end; }
+body.cat-theme .hero-balance small { color: var(--muted); font-weight: 700; }
+body.cat-theme .hero-balance .amount { font-size: clamp(2rem, 6vw, 2.8rem); font-weight: 800; color: var(--churu); }
 
-body.customer .amount { display: inline-block; font-variant-numeric: tabular-nums; }
-body.customer .amount.up { animation: amount-up .7s cubic-bezier(.3, 1.6, .5, 1); }
-body.customer .amount.down { animation: amount-down .6s ease; }
+body.cat-theme .amount { display: inline-block; font-variant-numeric: tabular-nums; }
+body.cat-theme .amount.up { animation: amount-up .7s cubic-bezier(.3, 1.6, .5, 1); }
+body.cat-theme .amount.down { animation: amount-down .6s ease; }
 @keyframes amount-up {
   0% { transform: scale(1); }
   40% { transform: scale(1.18); color: var(--plus); }
@@ -198,38 +198,38 @@ body.customer .amount.down { animation: amount-down .6s ease; }
   60% { transform: translateX(3px); }
 }
 
-body.customer .pop { animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 80ms); }
+body.cat-theme .pop { animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 80ms); }
 @keyframes pop-in {
   from { opacity: 0; transform: translateY(14px) scale(.97); }
   to { opacity: 1; transform: none; }
 }
 
 /* Frame の中身（振込の入力 → 確認）が入れ替わるたびに、ふわっと */
-body.customer turbo-frame > * { animation: fade-up .35s ease both; }
+body.cat-theme turbo-frame > * { animation: fade-up .35s ease both; }
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* ---- 通帳 ---- */
-body.customer .passbook { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-body.customer .passbook li {
+body.cat-theme .passbook { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+body.cat-theme .passbook li {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
   padding: 10px 14px; border-radius: 16px; background: var(--bg); border: 2px solid transparent;
 }
-body.customer .passbook li.in { border-left: 6px solid color-mix(in srgb, var(--plus) 55%, transparent); }
-body.customer .passbook li.out { border-left: 6px solid color-mix(in srgb, var(--minus) 45%, transparent); }
-body.customer .passbook-icon {
+body.cat-theme .passbook li.in { border-left: 6px solid color-mix(in srgb, var(--plus) 55%, transparent); }
+body.cat-theme .passbook li.out { border-left: 6px solid color-mix(in srgb, var(--minus) 45%, transparent); }
+body.cat-theme .passbook-icon {
   display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
   background: var(--surface); font-size: 1.3rem; box-shadow: var(--shadow);
 }
-body.customer .passbook-main { display: grid; min-width: 0; }
-body.customer .passbook-title { font-weight: 800; }
-body.customer .passbook-sub { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
-body.customer .passbook-date { color: var(--muted); font-size: .75rem; }
-body.customer .passbook-date .backdated { border-radius: 999px; padding: 0 6px; margin-left: 4px; }
-body.customer .passbook-amount { display: grid; justify-items: end; font-variant-numeric: tabular-nums; }
-body.customer .passbook-amount small { color: var(--muted); font-size: .75rem; }
+body.cat-theme .passbook-main { display: grid; min-width: 0; }
+body.cat-theme .passbook-title { font-weight: 800; }
+body.cat-theme .passbook-sub { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+body.cat-theme .passbook-date { color: var(--muted); font-size: .75rem; }
+body.cat-theme .passbook-date .backdated { border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+body.cat-theme .passbook-amount { display: grid; justify-items: end; font-variant-numeric: tabular-nums; }
+body.cat-theme .passbook-amount small { color: var(--muted); font-size: .75rem; }
 
 /* morph で新しく届いた行 */
-body.customer .passbook li.arrived { animation: arrive .9s cubic-bezier(.3, 1.5, .5, 1) both; }
+body.cat-theme .passbook li.arrived { animation: arrive .9s cubic-bezier(.3, 1.5, .5, 1) both; }
 @keyframes arrive {
   0% { opacity: 0; transform: translateY(-16px) scale(.9); background: color-mix(in srgb, var(--churu) 30%, var(--bg)); }
   60% { opacity: 1; transform: translateY(2px) scale(1.02); }
@@ -241,7 +241,7 @@ body.customer .passbook li.arrived { animation: arrive .9s cubic-bezier(.3, 1.5,
   position: fixed; z-index: 1000; pointer-events: none; font-size: 1.4rem;
   transform: translate(-50%, -50%);
 }
-body.customer .toast {
+body.cat-theme .toast {
   position: fixed; left: 50%; bottom: 24px; z-index: 1001;
   padding: 12px 20px; border-radius: 999px; font-weight: 800;
   background: linear-gradient(135deg, var(--accent), var(--churu)); color: var(--accent-text);
@@ -249,21 +249,21 @@ body.customer .toast {
   opacity: 0; pointer-events: none; transform: translate(-50%, 20px) scale(.9);
   transition: opacity .3s ease, transform .4s cubic-bezier(.3, 1.6, .5, 1);
 }
-body.customer .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
-body.customer .toast:empty { display: none; }
+body.cat-theme .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+body.cat-theme .toast:empty { display: none; }
 
 /* ---- 画面の切り替え（View Transitions） ---- */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
 
 /* ---- 狭い画面 ---- */
 @media (max-width: 560px) {
-  body.customer .cat { width: 72px; }
-  body.customer .hero-balance { justify-items: start; width: 100%; }
+  body.cat-theme .cat { width: 72px; }
+  body.cat-theme .hero-balance { justify-items: start; width: 100%; }
 }
 
 /* ---- 「視差効果を減らす」設定なら動きを止める ---- */
 @media (prefers-reduced-motion: reduce) {
-  body.customer *, body.customer *::before, body.customer *::after {
+  body.cat-theme *, body.cat-theme *::before, body.cat-theme *::after {
     animation: none !important;
     transition: none !important;
   }

@@ -1,5 +1,6 @@
-# ルートパッケージ: レイアウト・JS（Stimulus）・CSS・ヘルパー、画面へのライブ更新（BroadcastRefreshJob）、
-# イベントストア本体とアプリ全体の設定。画面そのものは packs/admin・packs/customer
+# ルートパッケージ: JS（Stimulus）・CSS、画面へのライブ更新（BroadcastRefreshJob）、
+# イベントストア本体とアプリ全体の設定。画面そのものは packs/admin・packs/customer・packs/shop、
+# レイアウトとヘルパーは packs/ui
 enforce_dependencies: true
 enforce_privacy: false
 

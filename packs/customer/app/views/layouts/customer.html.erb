@@ -1,18 +1,7 @@
-<%# 利用者画面: かわいいテーマ（packs/customer/app/assets/stylesheets/customer/theme.css）とメニューを入れて、
-    ルートの application レイアウトで描く。管理画面には影響しない（body.customer の下だけに効く） %>
-<% content_for :body_class, "customer" %>
-<% content_for :head do %>
-  <%# ページ遷移を View Transitions API でつなぐ（Turbo 8 が対応） %>
-  <meta name="view-transition" content="same-origin">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet"
-        data-turbo-track="dynamic">
-  <%# dynamic: 管理画面へ移ったら Turbo がこの CSS を外す %>
-  <%= stylesheet_link_tag "customer/theme", "data-turbo-track": "dynamic" %>
-<% end %>
+<%# 利用者画面: メニューを入れて、ねこテーマのレイアウト（packs/ui の layouts/cat）で描く %>
 <% content_for :nav do %>
   <%= link_to "わたしの口座", accounts_path %>
+  <%= link_to "ちゅ〜る商店", shop_root_path %>
   <%= link_to "管理画面", admin_root_path if Current.user&.admin? %>
 <% end %>
-<%= render template: "layouts/application" %>
+<%= render template: "layouts/cat" %>

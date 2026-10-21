@@ -21,12 +21,13 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 
 | パッケージ | 中身 | 依存してよい先 |
 |---|---|---|
-| `.`（ルート） | レイアウト・JS（Stimulus）・CSS・ヘルパー、画面へのライブ更新（`BroadcastRefreshJob`）、イベントストア本体 | platform, banking, identity |
-| `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入出金・振込・凍結、振込一覧。管理者だけ | platform, banking, identity |
-| `packs/customer` | 利用者画面 `/`（`Customer::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込 | platform, banking, identity |
+| `.`（ルート） | JS（Stimulus）・CSS、画面へのライブ更新（`BroadcastRefreshJob`）、イベントストア本体 | platform, banking, identity |
+| `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入出金・振込・凍結、振込一覧。管理者だけ | platform, banking, identity, ui |
+| `packs/customer` | 利用者画面 `/`（`Customer::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込 | platform, banking, identity, ui |
 | `packs/identity` | ログイン（Rails 8 の `generate authentication`）、`User#admin`、利用者と口座のひも付け（`account_ownerships`）。外から使えるのは `app/public`（`User` / `Current` / `Authentication`） | platform |
 | `packs/banking` | 銀行ドメイン。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
-| `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と `/shop` の画面。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking |
+| `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と `/shop` の画面（商品と在庫の管理 `/shop/admin` も）。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking, identity, ui |
+| `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`）、ねこテーマ（`layouts/cat` と `ui/cat.css`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`） | platform, identity |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
@@ -35,16 +36,20 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - パックのテストは `packs/<名前>/test`。`bin/test` でまとめて流れる
 - ルーティングも各パックの `config/routes/<名前>.rb` に書き、`config/routes.rb` から `draw :<名前>` で読む
 - admin と customer は互いに依存しない。銀行は `User` を知らない（口座番号だけでつながる）
+- 画面のパック（admin / customer / shop）は、ベースコントローラで `helper Ui::FormatHelper` して packs/ui に依存する。
+  レイアウトはテンプレート名（`render template: "layouts/application"` / `"layouts/cat"`）で使うので packwerk には見えないが、
+  `Ui::FormatHelper` の参照が「ui を使っている」しるしになり、`bin/packwerk check` で依存の宣言漏れが見つかる
 
 ## 認証と権限
 
 - ログインは `packs/identity`（Rails 8 の `generate authentication` がもと。パスワード再設定は入れていない）。
-  画面のパックのベースコントローラ（`Admin::ApplicationController` / `Customer::ApplicationController`）で
-  `Authentication` を include する
+  画面のパックのベースコントローラ（`Admin::ApplicationController` / `Customer::ApplicationController` /
+  `Shop::ApplicationController`）で `Authentication` を include する
 - 管理画面は `User#admin` だけ。そうでなければ 404（管理画面があることも見せない）。`/res` もルーティングの制約で管理者だけ
 - 利用者画面は `account_ownerships` でひも付いた口座だけ。他人の口座は口座ページ・時点残高・振込とも 404。
   入出金と凍結は行員だけ。振込先には全口座（解約済みを除く）を選べる
-- 利用者画面は見た目も別（ねこ・ちゅ〜るのテーマ、`packs/customer/app/assets/stylesheets/customer/theme.css`）。`body.customer` の下だけに効き、管理画面は今の見た目のまま
+- 利用者画面は見た目も別（ねこ・ちゅ〜るのテーマ、`packs/ui/app/assets/stylesheets/ui/cat.css`。`layouts/cat` が読み込む）。`body.cat-theme` の下だけに効き、管理画面は今の見た目のまま
+- 商店（`/shop`）もログイン必須。権限は「ちゅ〜る商店」の節を参照
 - だれの操作かは、イベントの metadata の actor に `admin:<メール>` / `customer:<メール>` で残る
 - Action Cable もログインが必要（`ApplicationCable::Connection`）。購読できるのは画面に埋め込まれた署名つきのストリームだけ
 
@@ -55,9 +60,12 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - 商店のテストで銀行の非公開ジョブ（`Transfers::SettleJob`）だけを流そうとして privacy 違反になった。
   `perform_enqueued_jobs(except: Shop::PaymentJob)` のように「自分のジョブ以外」と書けば済む
 - 画面の土台（`ApplicationController`・レイアウト・`churu` などのヘルパー・`account_path`）はルートにあり、
-  パックからは依存できない。商店は `ActionController::Base` から直接作り、レイアウトとヘルパーは名前で借りている。
-  定数ではないので packwerk には見えない依存。画面の共通部品は `packs/platform`（か UI 用のパック）に移すのがよさそう
-  （商店は認証より前に作ったので、ログイン・利用者の口座とのつなぎ込みは TODO の N）
+  パックからは依存できない。商店は `ActionController::Base` から直接作り、レイアウトとヘルパーは名前で借りていた。
+  定数ではないので packwerk には見えない依存
+  → TODO の N で、レイアウトとヘルパーを UI 用の土台パック `packs/ui` に移した。packs/platform に置かなかったのは、
+  レイアウトがログイン中の利用者（identity の `Current`）を使うから（platform は「どこにも依存しない」）。
+  ヘルパーは `Ui::FormatHelper` と名前空間つきの定数にして、各ベースコントローラで `helper Ui::FormatHelper` と書く。
+  Rails は既定で全ヘルパーをどの画面にも入れる（`include_all_helpers`）ので書かなくても動くが、書くことで依存が packwerk に見える
 
 ## しくみ
 
@@ -177,8 +185,28 @@ Shop::PaymentJob（銀行のイベントを購読）→ Store#settle_transfer（
 - **二重実行**: 注文IDは確認画面で決めるので、「注文する」が2回送られても2回目は `AlreadyPlaced`。
   ジョブが2回動いても、注文の状態と集約の `expected_version` で1回分しか引き当て・返金しない
 - 注文 → 振込 → 引き当て（返金）は同じ correlation_id を持つ（RES Browser で辿れる）
-- 購入者はいまは画面で口座を選ぶだけ（`Shop::ApplicationController#current_buyer`）。認証ができたら差し替える
 - 開発用の商品は `bin/rails db:seed`（商店の口座も開く）
+
+### 認証と権限（TODO の N）
+
+- `/shop` はログイン必須（`Shop::ApplicationController` で `Authentication` を include）
+- **購入者はログイン中の利用者にひも付いた口座（`account_ownerships`）だけ**。口座が複数あれば「支払う口座」で選べる
+  （選んだ口座はセッションに持つが、使うたびに自分の口座の中から探し直す。他人の口座番号を送っても無視）。
+  ひも付いた口座がなければ注文できない
+- 注文履歴は自分の口座の分だけ。他人の注文ページは 404（あるかどうかも見せない）
+- **行員が商店で買う場合**: 行員も「自分にひも付いた口座」でだけ買える。行員だからといって利用者の口座で
+  代わりに買うことはできない（代理購入は銀行の業務ではないし、他人の口座から引き落とす入口を増やさない）。
+  シードの行員には口座がないので、買うには口座を開いてひも付ける。行員は注文ページを全員分見られる（商品と在庫の管理の「最近の注文」から辿るため）
+- **商品の登録・値段・入荷・商店の口座を開く**のは行員（`User#admin`）だけ。`Shop::Admin::ApplicationController` で、行員でなければ 404
+- だれの操作かは、商店のイベントの metadata の actor に `shop:<メール>` で残る
+- 見た目: 利用者にはねこテーマ（`layouts/shop/customer` → `layouts/cat`）、行員には管理画面と同じ見た目
+  （`layouts/shop/staff` → `layouts/application`）。どちらも packs/ui のレイアウト
+
+**商品の管理を `/admin`（packs/admin）に寄せず、`/shop/admin`（packs/shop）に残した理由**:
+管理画面に寄せると admin → shop の依存ができ、admin はドメインが増えるたびに全部に依存する「何でも屋」になる。
+商店の画面はもともと全部 shop の中（非公開）にあり、管理の画面だけ外に出すと `Shop::Store` の使い方が2か所に割れる。
+shop に残せば、shop が増やす依存は identity（ログインと `User#admin`）と ui（見た目）だけで、admin は shop を知らないまま。
+管理画面のメニューの「商店の管理」はリンク（ルート名）だけで、定数の依存はない
 
 ## Hotwire で使っているもの
 
@@ -243,7 +271,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |
 | L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |
 | ~~M~~ | ~~利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮~~（済） | C | `packs/customer` |
-| N | 商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ | B, D | `packs/shop`・`packs/platform` |
+| ~~N~~ | ~~商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ~~（済） | B, D | `packs/shop`・`packs/ui` |
 | O | 管理画面に取消・組戻し・利息の手動実行のボタン（API は「画面から使う Banking::Bank の API」） | F, G | `packs/admin` |
 
 並行の進め方（フェーズ1）: B+C / D / E→J / F+G+H を別々に進められる。

@@ -5,7 +5,7 @@
   <h2>商店の口座</h2>
   <% if @shop_account %>
     <p>
-      <%= link_to @shop_account.number, account_path(@shop_account) %> <%= @shop_account.holder_name %>
+      <%= link_to @shop_account.number, admin_account_path(@shop_account) %> <%= @shop_account.holder_name %>
       <span class="balance"><%= churu(@shop_account.balance) %></span>
     </p>
   <% else %>

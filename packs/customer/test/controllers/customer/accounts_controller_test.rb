@@ -25,7 +25,7 @@ class Customer::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "120 ちゅ〜る", response.body
     assert_match "turbo-cable-stream-source", response.body # ライブ更新を購読している
-    assert_match "customer/theme", response.body # 利用者画面のテーマ
+    assert_match "ui/cat", response.body # 利用者画面のねこテーマ
     assert_match 'data-controller="count-up"', response.body # 残高のカウントアップ
   end
 

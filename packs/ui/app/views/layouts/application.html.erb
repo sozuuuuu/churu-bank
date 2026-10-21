@@ -24,11 +24,10 @@
   <body class="<%= content_for(:body_class) %>">
     <header class="site-header">
       <%= link_to root_path, class: "brand" do %>🐟 ちゅーる銀行<% end %>
-      <%# メニューは画面のパックごと（packs/admin・packs/customer の layouts）で content_for :nav に入れる %>
+      <%# メニューは画面のパックごと（packs/admin・packs/customer・packs/shop の layouts）で content_for :nav に入れる %>
       <nav>
         <%= yield :nav %>
         <% if Current.user %>
-          <%= link_to "ちゅ〜る商店", "/shop" %>
           <span class="muted"><%= Current.user.name %></span>
           <%= button_to "ログアウト", session_path, method: :delete, class: "link" %>
         <% end %>

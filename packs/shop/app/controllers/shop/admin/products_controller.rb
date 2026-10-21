@@ -1,7 +1,7 @@
 # 商品と在庫の管理（登録・値段の変更）。入荷は Admin::RestocksController
 module Shop
   module Admin
-    class ProductsController < ApplicationController
+    class ProductsController < Admin::ApplicationController
       def index
         @products = ShopProduct.order(:id)
         @orders = ShopOrder.recent.includes(:lines).limit(50)

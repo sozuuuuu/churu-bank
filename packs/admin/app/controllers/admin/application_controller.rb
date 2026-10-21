@@ -2,6 +2,7 @@
 module Admin
   class ApplicationController < ::ApplicationController
     include Authentication
+    helper Ui::FormatHelper
 
     layout "admin"
 

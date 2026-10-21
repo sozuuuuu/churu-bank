@@ -1,24 +1,26 @@
 # 注文。商品一覧ページの Turbo Frame "checkout" の中で動く:
 #   create + preview=1（ドライランの確認。ここで注文IDを決める）→ create（受付して注文ページへ）
 # 支払いの入金と在庫の引き当て（足りなければ返金）は、受付後にジョブが非同期で行う。
+# 見られる注文は自分の口座の分だけ（行員は商品と在庫の管理から全員分を見るので、どの注文も見られる）
 module Shop
   class OrdersController < ApplicationController
     UUID = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
 
     def index
-      @orders = ShopOrder.recent.includes(:lines).limit(100)
-      @orders = @orders.where(buyer_account: current_buyer.number) if current_buyer
+      @orders = ShopOrder.recent.includes(:lines).where(buyer_account: my_account_numbers).limit(100)
     end
 
     def show
-      @order = ShopOrder.find_by!(order_id: params[:order_id])
+      @order = visible_orders.find_by!(order_id: params[:order_id])
       @events = Rails.configuration.event_store.read.stream("Order$#{@order.order_id}").to_a
     end
 
     def create
+      return redirect_to shop_root_path, alert: "買い物に使える口座がありません", status: :see_other unless current_buyer
+
       @items = items
       @order_id = params[:order_id].to_s.match?(UUID) ? params[:order_id] : SecureRandom.uuid
-      @outcome = store.place_order(order_id: @order_id, buyer_account: current_buyer&.number, items: @items,
+      @outcome = store.place_order(order_id: @order_id, buyer_account: current_buyer.number, items: @items,
                                    dry_run: params[:preview].present?)
       return render :confirm if @outcome.dry_run?
 
@@ -35,6 +37,9 @@ module Shop
     end
 
     private
+
+    # 他人の注文は「ない」ものとして 404 にする
+    def visible_orders = staff? ? ShopOrder.all : ShopOrder.where(buyer_account: my_account_numbers)
 
     # 確認画面からはそのときの中身（hidden）、カートからはセッションの中身
     def items

@@ -1,0 +1,15 @@
+<%# ねこテーマ（packs/ui/app/assets/stylesheets/ui/cat.css）を入れて、application レイアウトで描く。
+    利用者向けの画面（customer、利用者が見る商店）用。body.cat-theme の下だけに効くので管理画面には影響しない。
+    メニューは呼び出す側のレイアウトで content_for :nav に入れてから render template: "layouts/cat" する %>
+<% content_for :body_class, "cat-theme" %>
+<% content_for :head do %>
+  <%# ページ遷移を View Transitions API でつなぐ（Turbo 8 が対応） %>
+  <meta name="view-transition" content="same-origin">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet"
+        data-turbo-track="dynamic">
+  <%# dynamic: 管理画面へ移ったら Turbo がこの CSS を外す %>
+  <%= stylesheet_link_tag "ui/cat", "data-turbo-track": "dynamic" %>
+<% end %>
+<%= render template: "layouts/application" %>

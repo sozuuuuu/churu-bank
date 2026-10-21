@@ -1,0 +1,30 @@
+<%= turbo_frame_tag "interest" do %>
+  <div class="confirm">
+    <p class="muted"><%= jp_date(@date) %> の利息の確認です（まだ何も払っていません）。</p>
+
+    <% if @row.pay? %>
+      <dl>
+        <dt>元になる残高</dt><dd><%= churu(@row.base_balance) %> <span class="muted small">（<%= jp_date(@date) %> の終わり）</span></dd>
+        <dt>払う利息</dt><dd class="plus"><%= churu(@row.amount, signed: true) %></dd>
+        <dt>繰り越す端数</dt><dd class="muted"><%= Rational(@row.carry).zero? ? "なし" : @row.carry %></dd>
+        <dt>残高</dt>
+        <dd><%= churu(@account.balance) %> → <strong><%= churu(@account.balance + @row.amount) %></strong></dd>
+        <dt>発生するイベント</dt><dd><code>InterestPaid</code></dd>
+      </dl>
+      <%= form_with url: admin_account_interest_path(@account), data: { turbo_frame: "_top" } do |f| %>
+        <%= f.hidden_field :date, value: @date %>
+        <%= f.submit "この日の利息を払う", class: "button primary" %>
+        <%= link_to "戻る", new_admin_account_interest_path(@account, date: @date), class: "button" %>
+      <% end %>
+    <% else %>
+      <p class="hint">
+        <% if @row.state == :paid %>
+          <span class="badge">支払い済み</span> この日の分はもう払ったので、確定しても何も起きません。
+        <% else %>
+          この日に払う利息はありません（<%= @row.state == :closed ? "解約済み" : "残高が 0" %>）。
+        <% end %>
+      </p>
+      <%= link_to "日付を選び直す", new_admin_account_interest_path(@account, date: @date), class: "button" %>
+    <% end %>
+  </div>
+<% end %>

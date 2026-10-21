@@ -1,0 +1,26 @@
+<%= turbo_frame_tag "reversal" do %>
+  <div class="confirm reversal-panel">
+    <h3>取消（逆仕訳）</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl><%= render "admin/accounts/reversals/entry", entry: @entry %></dl>
+
+    <% if @entry.reversible? %>
+      <%= form_with url: admin_account_reversals_path(@account), class: "form" do |f| %>
+        <%= f.hidden_field :event_id, value: @entry.event_id %>
+        <label>
+          理由（通帳のメモに残ります）
+          <%= f.text_field :reason, value: @reason, required: true, autofocus: true, placeholder: "例: 金額まちがい" %>
+        </label>
+        <div class="actions">
+          <%= f.submit "確認する", name: "preview", class: "button primary" %>
+          <%= link_to "やめる", admin_account_path(@account), class: "button", data: { turbo_frame: "_top" } %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="muted">この取引は取り消せません（取消済み・取消の行・振込や利息の行）。</p>
+      <%= link_to "閉じる", admin_account_path(@account), class: "button", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,5 +1,5 @@
 # 管理画面（行員用、/admin）。管理者（User#admin）だけが入れる。
-# 全口座の一覧・開設・入出金・振込・凍結、振込一覧、RES Browser（/res）
+# 全口座の一覧・開設・入出金・振込・凍結、振込一覧、取消・組戻し・利息の手動実行、RES Browser（/res）
 enforce_dependencies: true
 enforce_privacy: false
 

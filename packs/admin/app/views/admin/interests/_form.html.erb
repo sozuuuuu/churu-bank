@@ -1,0 +1,11 @@
+<%# 利息を払う日の入力（全口座・1口座で共通）。url は送り先 %>
+<%= form_with url:, class: "form" do |f| %>
+  <% if @error %>
+    <p class="flash flash-alert"><%= @error %></p>
+  <% end %>
+  <label>
+    利息を払う日（その日の終わりの残高にかかります）
+    <%= f.date_field :date, value: @date, max: Date.yesterday, required: true %>
+  </label>
+  <%= f.submit "この日の利息を確認する", name: "preview", class: "button primary" %>
+<% end %>

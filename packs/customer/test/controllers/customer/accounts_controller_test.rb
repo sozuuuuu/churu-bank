@@ -29,6 +29,17 @@ class Customer::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_match 'data-controller="count-up"', response.body # 残高のカウントアップ
   end
 
+  test "取り消された行は通帳で分かる（取消のボタンは出さない）" do
+    entry = LedgerEntry.find_by!(account_number: @orca_number, kind: "deposit")
+    Banking::Bank.new(actor: "test").reverse(@orca_number, entry.event_id, reason: "金額まちがい")
+
+    get account_path(@orca_number)
+
+    assert_select "##{dom_id(entry)} .badge-reversed", "取消済み"
+    assert_match "取消（入金）", response.body
+    assert_no_match "/admin/", response.body
+  end
+
   test "他人の口座は口座ページも時点残高も 404" do
     get account_path(@zingiber_number)
     assert_response :not_found

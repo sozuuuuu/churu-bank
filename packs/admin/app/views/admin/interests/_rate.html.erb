@@ -1,0 +1,7 @@
+<%# 利率（年利 ÷ 365 を日割り）。環境変数 CHURU_ANNUAL_INTEREST_RATE で変わる %>
+<% rate = BigDecimal(Banking::Bank.annual_interest_rate) %>
+<p class="interest-rate">
+  年利 <strong><%= number_to_percentage(rate * 100, precision: 4, strip_insignificant_zeros: true) %></strong>
+  <span class="muted">（1日 <%= number_to_percentage(rate * 100 / 365, precision: 4, strip_insignificant_zeros: true) %>。
+  その日の終わりの残高にかけて、1 ちゅ〜る未満は翌日へ繰り越し）</span>
+</p>

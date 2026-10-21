@@ -42,7 +42,30 @@
     </section>
   </div>
 
-  <section class="card pop" style="--i: 3">
+  <% if @pending_transfers.any? %>
+    <section class="card pop" style="--i: 3" id="pending-transfers">
+      <h2><span aria-hidden="true">⏳</span> 予約・保留中の振込</h2>
+      <p class="muted small">まだ実行していない振込です。保留中は、金額が大きいので銀行が確認しています。どちらも取り消せます。</p>
+      <%# 「取り消す」を押すと、確認 → 確定 がこの Frame の中で動く %>
+      <%= turbo_frame_tag "cancellation" %>
+      <ul class="pending-transfers">
+        <% @pending_transfers.each do |transfer| %>
+          <li id="<%= dom_id(transfer, :pending) %>">
+            <span>
+              <%= render "transfers/status", transfer: %>
+              <% if transfer.execute_on %><strong><%= jp_date(transfer.execute_on) %></strong><% end %>
+              <%= transfer.destination.holder_name %> へ <strong><%= churu(transfer.amount) %></strong>
+              <span class="muted"><%= transfer.memo %></span>
+            </span>
+            <%= link_to "取り消す", new_account_transfer_cancellation_path(@account, transfer), class: "button small",
+                        data: { turbo_frame: "cancellation" } %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <section class="card pop" style="--i: 4">
     <h2><span aria-hidden="true">📒</span> 通帳</h2>
     <% if @entries.empty? %>
       <p class="muted">まだ取引はありません。</p>

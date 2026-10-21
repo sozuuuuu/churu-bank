@@ -1,0 +1,24 @@
+<%= turbo_frame_tag "hold" do %>
+  <div class="confirm reversal-panel">
+    <h3>保留中の振込を通す</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl>
+      <%= render "admin/transfers/reversals/transfer", transfer: @transfer %>
+      <% if @transfer.held_at %>
+        <dt>保留</dt><dd><%= jp_time(@transfer.held_at) %>（<%= churu(Banking::Bank.hold_threshold) %> 以上）</dd>
+      <% end %>
+    </dl>
+
+    <% if @transfer.releasable? %>
+      <%= form_with url: admin_transfer_release_path(@transfer) do |f| %>
+        <%= f.submit "確認する", name: "preview", class: "button primary" %>
+        <%= link_to "やめる", admin_transfers_path, class: "button", data: { turbo_frame: "_top" } %>
+      <% end %>
+    <% else %>
+      <p class="muted">通せるのは保留中の振込だけです（この振込は「<%= @transfer.status_label %>」）。</p>
+      <%= link_to "閉じる", admin_transfers_path, class: "button", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

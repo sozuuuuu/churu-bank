@@ -84,6 +84,10 @@ h2 { font-size: 1.1rem; margin: 0 0 12px; }
 .badge-transfer-requested { color: var(--muted); border-style: dashed; }
 .badge-transfer-completed { color: var(--plus); }
 .badge-transfer-failed { color: var(--minus); }
+.badge-transfer-scheduled { color: var(--muted); border-style: dotted; }
+.badge-transfer-held { color: var(--minus); background: var(--warn-bg); border-style: dashed; }
+.badge-transfer-unexecuted, .badge-transfer-cancelled { color: var(--muted); }
+.badge-transfer-stopped { color: var(--minus); }
 .small { font-size: .8rem; }
 
 .account-actions { display: grid; justify-items: end; gap: 6px; }

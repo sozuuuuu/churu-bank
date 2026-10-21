@@ -24,6 +24,8 @@ namespace :admin do
   end
   resources :transfers, only: [] do
     resources :reversals, only: %i[new create], module: :transfers # 完了した振込の組戻し
+    resource :release, only: %i[new create], module: :transfers    # 保留中の振込を通す
+    resource :stop, only: %i[new create], module: :transfers       # 実行前（予約中・保留中）の振込の差し止め
   end
   resource :interest, only: %i[show create] # 利率の表示と、全口座の利息
 end

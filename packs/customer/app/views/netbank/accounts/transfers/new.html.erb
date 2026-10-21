@@ -31,6 +31,12 @@
         <%= f.text_field :memo, value: @form[:memo], placeholder: "例: おやつ代" %>
       </label>
 
+      <label>
+        実行日（空ならすぐ。予約すると、その日に引き落として振り込みます）
+        <%= f.date_field :execute_on, value: @form[:execute_on], min: Date.current + 1,
+                         max: Date.current + Banking::Bank::MAX_SCHEDULE_DAYS %>
+      </label>
+
       <%= f.submit "確認する", name: "preview", class: "button primary" %>
     <% end %>
   <% end %>

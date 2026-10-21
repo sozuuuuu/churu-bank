@@ -155,6 +155,47 @@ Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ�
   `Transfer$<id>` ストリームで、引き落とし → 入金（または組戻し）までを1か所で辿れる
 - 振込先が凍結中だと、確認画面で「組戻しになります」と警告したうえで受け付ける（補償の動きを見るため）
 
+### 予約振込・高額振込の保留・取消と差し止め（TODO の Q3）
+
+いままでの振込は1秒ほどで入金まで終わって止める隙がなかったので、「実行前」の状態を2つ足した。
+
+```
+予約振込  Bank#transfer(…, execute_on: 明日以降)
+  Transfer$<id> … TransferScheduled（予約中。まだ引き落とさない）
+        │ 実行日: Transfers::ExecuteDueJob（recurring、1時間ごと）→ Bank#execute_due_transfers
+        ▼
+  Account$<振込元> TransferDebited → Transfer$<id> TransferStarted（処理中）→ あとはふつうの振込
+  引き落とせない（残高不足・凍結）… Transfer$<id> ScheduledTransferFailed（実行できず。お金は動かない）
+
+高額振込  金額 ≥ しきい値（既定 300、CHURU_TRANSFER_HOLD_THRESHOLD）
+  TransferDebited → TransferRequested → TransferHeld（保留中。SettleJob は何もしない）
+  行員が通す   … TransferReleased（処理中）→ SettleJob が入金 → TransferCompleted
+  行員が差し止め … TransferRefunded（払い戻し）→ TransferStopped
+
+実行前（予約中・保留中）
+  利用者の取消 … （引き落とし済みなら TransferRefunded）→ TransferCancelled（取消済み）
+  行員の差し止め … （同上）→ TransferStopped（差し止め。理由は必須）
+```
+
+| 決めたこと | 中身 |
+|---|---|
+| 予約の引き落とし | **実行日に引き落とす**（受付時は引き落とさない）。本物の銀行の予約振込と同じで、それまでのお金は口座にある（利息もつく）。受付時に残高が足りなくても受け付け、確認画面で「実行日までに入金がないと振り込まれません」と警告する。実行日に足りなければ「実行できず」で終わる（再挑戦しない。お金は動いていないので組戻しもない） |
+| 実行日 | 明日〜365 日先。今日・過去はエラー（今日ならふつうの振込）。実行日の 0 時ちょうどではなく、その日のうちに1時間ごとのジョブが拾う（止まっていた時間があっても次の回で実行する） |
+| 保留の引き落とし | **受付時に引き落とす**（ふつうの振込と同じ）。お金を押さえておかないと、通したときに残高がないことがあるため。だから保留の取消・差し止めは払い戻しになる |
+| 高額の予約振込 | 実行日に引き落としたあと保留になる（しきい値は実行したときの設定）。予約中のうちに差し止めることもできる |
+| 取り消せるのは | 予約中・保留中だけ。処理中（SettleJob の入金待ち）・完了・組戻しなどは不可（完了したものは行員の組戻し） |
+| 競合 | 取消と実行（予約のジョブ・行員の通す）がぶつかったら、`Transfer$<id>` の expected_version で後から書いた方が `ConcurrentModification` になり、トランザクションごと戻る（取消の払い戻しも、実行の引き落としも残らない）。まとめて実行するジョブは負けた1件を飛ばして続ける |
+| 商店の支払い・返金 | **保留の対象外**（`holdable: false`）。相手が決まった加盟店への支払いで、振り込め詐欺対策の保留の目的に合わない。保留すると在庫の引き当てが遅れ、返金まで保留されると利用者を待たせる。商店は予約振込も使わないので、商店のプロセスマネージャ（TransferCompleted / Failed の購読）はそのまま |
+| だれが | 取消は自分の口座からの振込だけ（`cancel_transfer(id, from: 口座番号)`。他人のものは NotFound → 404）。通す・差し止めは行員の画面だけ。actor は取消・差し止めのイベントの metadata（`transfers.cancelled_by`） |
+
+画面:
+
+| だれ | 場所 | できること |
+|---|---|---|
+| 利用者 | 口座ページの振込フォーム | 「実行日」（空ならすぐ）。確認画面に実行日・保留の警告 |
+| 利用者 | 口座ページの「予約・保留中の振込」 | 「取り消す」→ Frame `cancellation` で確認 → 確定（`/accounts/:number/transfers/:id/cancellation/new`） |
+| 行員 | 振込一覧 `/admin/transfers` | 保留中に「通す」「差し止める」、予約中に「差し止める」→ Frame `hold` で確認 → 確定。保留が何件あるかを一覧の上に出す |
+
 ## 利息（日次）
 
 `Interest::PayJob` が `config/recurring.yml` で毎日 0:05（東京）に動き、`Bank#pay_interest` で前日分を払う。
@@ -209,9 +250,20 @@ bin/rails churu:rebuild_projections
 | 振込の組戻し | `bank.reverse_transfer(transfer.transfer_id, reason:, dry_run:)` | `Transfer#reversible?`（完了）の振込に「組戻し」。Outcome は振込元の口座 |
 | 利息を手で払う | `bank.pay_interest(date:, dry_run:)` → `[Outcome]` / 1口座なら `bank.pay_interest_to(number, date:, dry_run:)` → `Outcome` か `nil` | 行員の画面向け。ふだんはジョブに任せる |
 | 利率の表示 | `Banking::Bank.annual_interest_rate`（文字列。例 `"0.365"`） | |
+| 予約振込 | `bank.transfer(from, to, amount, memo:, execute_on: Date, dry_run:)` | 実行日は明日以降（`Banking::Bank::MAX_SCHEDULE_DAYS` 日先まで）。Outcome の残高は変わらない |
+| 振込の取消（利用者） | `bank.cancel_transfer(transfer.transfer_id, from: 自分の口座番号, dry_run:)` | `Transfer#pending?`（予約中・保留中）の振込に「取り消す」。Outcome は振込元（保留中なら払い戻しで残高が増える） |
+| 振込の差し止め（行員） | `bank.stop_transfer(transfer.transfer_id, reason:, dry_run:)` | `Transfer#pending?` に「差し止める」。理由は必須 |
+| 保留を通す（行員） | `bank.release_transfer(transfer.transfer_id, dry_run:)` | `Transfer#releasable?`（保留中）に「通す」。Outcome は振込先（`balance_after` は入金後の額） |
+| 保留のしきい値 | `Banking::Bank.hold_threshold`（整数） | 商店などの支払いは `transfer(…, holdable: false)` で対象外 |
+| 予約の実行 | `bank.execute_due_transfers(date:)` / 1件なら `bank.execute_transfer(id, date:)` | ふだんはジョブに任せる。何度呼んでも1回分 |
 
 通帳の種類（`LedgerEntry::KIND_LABELS`）に `interest`（利息）・`deposit_reversal` / `withdrawal_reversal`（取消）・
-`transfer_reversal`（組戻しの引き戻し）が増えた。振込の状態（`Transfer::STATUS_LABELS`）に `reversed` が増えた。
+`transfer_reversal`（組戻しの引き戻し）が増えた。振込の状態（`Transfer::STATUS_LABELS`）に `reversed` が増え、
+Q3 で `scheduled`（予約中）・`held`（保留中）・`unexecuted`（実行できず）・`cancelled`（取消済み）・`stopped`（差し止め）が増えた。
+`transfers` には `execute_on`・`held_at`・`released_at`・`cancelled_at`・`cancel_reason`・`cancelled_by` の列。
+状態の補足は `Transfer#status_note`（取消・差し止めの理由か、組戻し・実行できずの理由）。
+予約中の振込は引き落としていないので通帳に出ない。保留中は「振込（送金）」の行に「保留中」、取消・差し止めると
+その行が「取消済み」「差し止め」になり、払い戻しは「組戻し」の行（メモに理由）で出る。
 
 ### 管理画面での取消・組戻し・利息（packs/admin）
 
@@ -254,6 +306,7 @@ Shop::PaymentJob（銀行のイベントを購読）→ Store#settle_transfer（
   ジョブが2回動いても、注文の状態と集約の `expected_version` で1回分しか引き当て・返金しない
 - 注文 → 振込 → 引き当て（返金）は同じ correlation_id を持つ（RES Browser で辿れる）
 - 開発用の商品は `bin/rails db:seed`（商店の口座も開く）
+- 支払い・返金の振込は、銀行の高額振込の保留の対象外（`Bank#transfer(…, holdable: false)`。理由は「予約振込・高額振込の保留」の節）
 
 ### 認証と権限（TODO の N、Q0 で行員と利用者を分けた）
 
@@ -351,8 +404,8 @@ Rails の同じプロセスの中に Streamable HTTP のエンドポイント `/
 | `list_accounts` | 口座一覧（口座番号・名義・状態・残高） |
 | `get_account` | 残高と通帳（新しいほうから `limit` 件） |
 | `balance_at` | ある日の終わり時点の残高。起算日基準（`as_of`）と記帳日基準（`as_at`）の両方 |
-| `list_transfers` / `get_transfer` | 振込の一覧・状態（処理中 / 完了 / 組戻し） |
-| `deposit` / `withdraw` / `transfer` | 入金・出金・振込。**既定はドライラン**。`confirm: true` のときだけ書き込む |
+| `list_transfers` / `get_transfer` | 振込の一覧・状態（予約中 / 保留中 / 処理中 / 完了 / 組戻し / 実行できず / 取消済み / 差し止め）。予約は `execute_on` |
+| `deposit` / `withdraw` / `transfer` | 入金・出金・振込。**既定はドライラン**。`confirm: true` のときだけ書き込む。`transfer` は `execute_on`（YYYY-MM-DD）で予約振込 |
 
 - 書き込みは `Banking::Bank`（actor `"mcp"`）だけを通す。ドライランでは残高の変化・警告・発生するイベントを返す
 - サーバーの instructions とツールの説明で「ドライランを見せて OK をもらってから `confirm: true`」と指示している
@@ -395,7 +448,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~N~~ | ~~商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ~~（済） | B, D | `packs/shop`・`packs/ui` |
 | ~~O~~ | ~~管理画面に取消・組戻し・利息の手動実行のボタン~~（済。「管理画面での取消・組戻し・利息」） | F, G | `packs/admin` |
 | P | 利用者画面に銀行からのお知らせ・お願い・キャンペーン（**お知らせ・お願いは済**。キャンペーン = 条件を満たすと特典が自動入金、は未） | C, N（キャンペーンは L） | `packs/notices`（キャンペーンは新しいパック） |
-| Q | 行員の権限を本物の銀行に寄せる。~~**Q0** 行員と利用者の完全な分離: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける~~（済。「認証と権限」）。Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）。Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」。Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
+| Q | 行員の権限を本物の銀行に寄せる。~~**Q0** 行員と利用者の完全な分離: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける~~（済。「認証と権限」）。Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）。Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」。~~Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる~~（**済**。「予約振込・高額振込の保留・取消と差し止め」） | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
 | R | 日本語のイベントビューア（RES Browser の代わり）: イベント名・ストリーム名を日本語に、中身を表で、correlation / causation の連鎖を図で。管理画面の中、行員だけ | Q0 | 新しいパック（例 `packs/event_viewer`） |
 | S | WebSocket（Action Cable）を自分で書く: 窓口の整理券（番号札を取ると順番がライブで進み、呼ばれたらねこが知らせる）と、利用者と行員の窓口チャット（入力中の表示・在席表示）。自作チャンネル・presence・双方向。Q1 の窓口取引とつなげる | Q0, Q1 | 新しいパック（例 `packs/counter`） |
 | T | デビットカード決済（二段階）: 商店での購入はまずオーソリ（お金を押さえる）→ 発送で売上確定 → キャンセルなら押さえを解除。残高と「使えるお金」を分ける。押さえの期限切れはジョブで解除 | D, Q0 | `packs/banking`（カード）・`packs/shop`（支払い） |

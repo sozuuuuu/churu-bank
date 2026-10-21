@@ -1,0 +1,11 @@
+<%# 取り消す振込（入力・確認の両方で出す） %>
+<dt>振込先</dt>
+<dd><%= transfer.to_account %> <%= transfer.destination.holder_name %></dd>
+<dt>金額</dt>
+<dd><strong><%= churu(transfer.amount) %></strong> <%= render "transfers/status", transfer: %></dd>
+<% if transfer.execute_on %>
+  <dt>実行日</dt><dd><%= jp_date(transfer.execute_on) %></dd>
+<% end %>
+<% if transfer.memo %>
+  <dt>メモ</dt><dd><%= transfer.memo %></dd>
+<% end %>

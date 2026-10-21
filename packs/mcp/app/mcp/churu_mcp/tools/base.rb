@@ -58,6 +58,7 @@ module ChuruMcp
           { transfer_id: transfer.transfer_id, from_account: transfer.from_account, to_account: transfer.to_account,
             amount: transfer.amount, memo: transfer.memo, status: transfer.status, status_label: transfer.status_label,
             failure_reason: transfer.failure_reason, requested_at: transfer.requested_at.iso8601,
+            execute_on: transfer.execute_on&.iso8601, cancel_reason: transfer.cancel_reason,
             settled_at: transfer.settled_at&.iso8601, actor: transfer.actor }.compact
         end
 

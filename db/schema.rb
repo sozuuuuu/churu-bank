@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_300000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_300001) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "customer_id", null: false
     t.string "account_number", null: false
@@ -207,7 +207,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_300000) do
     t.datetime "updated_at", null: false
     t.datetime "reversed_at"
     t.string "reversal_reason"
+    t.date "execute_on"
+    t.datetime "held_at"
+    t.datetime "released_at"
+    t.datetime "cancelled_at"
+    t.string "cancel_reason"
+    t.string "cancelled_by"
     t.index ["from_account"], name: "index_transfers_on_from_account"
+    t.index ["status", "execute_on"], name: "index_transfers_on_status_and_execute_on"
     t.index ["to_account"], name: "index_transfers_on_to_account"
     t.index ["transfer_id"], name: "index_transfers_on_transfer_id", unique: true
   end

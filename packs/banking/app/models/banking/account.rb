@@ -58,11 +58,16 @@ module Banking
       )
     end
 
-    # 振込の引き落とし。出金と同じく、残高不足ならその場で失敗する
-    def debit_for_transfer(transfer_id:, amount:, to:, memo: nil)
+    # この口座から振り込めるか（残高は見ない）。予約振込の受付は、引き落とさないのでこれだけ確かめる
+    def ensure_can_transfer!(amount:, to:)
       ensure_active!
       ensure_positive!(amount)
       raise ArgumentError, "自分の口座には振り込めません" if to == number
+    end
+
+    # 振込の引き落とし。出金と同じく、残高不足ならその場で失敗する
+    def debit_for_transfer(transfer_id:, amount:, to:, memo: nil)
+      ensure_can_transfer!(amount:, to:)
       if amount > balance
         raise InsufficientFunds, "残高不足です（残高 #{balance} / 振込 #{amount}）"
       end

@@ -16,6 +16,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - ログイン: 開発用のアカウントとパスワードは `db/seeds.rb`（管理者 1 人と、オルカ・ジンジベル・ミケ）
 - `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員。管理者だけ）
 - `/res` … RES Browser（イベントストアの中身を見る。管理者だけ）
+- `/notices` … 銀行からのお知らせ（利用者）、`/admin/notices` … お知らせを出す・直す・掲載終了（行員）
 
 ## パッケージ（packwerk）
 
@@ -23,11 +24,12 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 |---|---|---|
 | `.`（ルート） | JS（Stimulus）・CSS、画面へのライブ更新（`BroadcastRefreshJob`）、イベントストア本体 | platform, banking, identity |
 | `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入出金・振込・凍結、振込一覧。管理者だけ | platform, banking, identity, ui |
-| `packs/customer` | 利用者画面 `/`（`Customer::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込 | platform, banking, identity, ui |
+| `packs/customer` | 利用者画面 `/`（`Customer::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込。お知らせはレイアウトで `notices_inbox` を1回呼ぶだけ | platform, banking, identity, ui, notices |
 | `packs/identity` | ログイン（Rails 8 の `generate authentication`）、`User#admin`、利用者と口座のひも付け（`account_ownerships`）。外から使えるのは `app/public`（`User` / `Current` / `Authentication`） | platform |
 | `packs/banking` | 銀行ドメイン。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
 | `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と `/shop` の画面（商品と在庫の管理 `/shop/admin` も）。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking, identity, ui |
-| `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`）、ねこテーマ（`layouts/cat` と `ui/cat.css`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`） | platform, identity |
+| `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`。`content_for :nav` と `:page_top` で差し込む）、ねこテーマ（`layouts/cat` と `ui/cat.css`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`） | platform, identity |
+| `packs/notices` | 銀行からのお知らせ・お願い・メンテナンス（ふつうの ActiveRecord）。行員の画面 `/admin/notices`、利用者の `/notices`。外から使えるのは `app/public`（`Notices::InboxHelper` / `Notices::Board`） | platform, identity, ui |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
@@ -208,6 +210,54 @@ Shop::PaymentJob（銀行のイベントを購読）→ Store#settle_transfer（
 shop に残せば、shop が増やす依存は identity（ログインと `User#admin`）と ui（見た目）だけで、admin は shop を知らないまま。
 管理画面のメニューの「商店の管理」はリンク（ルート名）だけで、定数の依存はない
 
+## 銀行からのお知らせ（packs/notices）
+
+行員が出したお知らせを、利用者画面でねこが吹き出しで知らせる。キャンペーン（条件を満たすと特典が自動入金）はまだで、あとで足せる形にだけしてある。
+
+| だれ | 場所 | できること |
+|---|---|---|
+| 行員 | `/admin/notices`（管理画面のメニュー「お知らせ」） | 出す・直す・掲載終了。種類（お知らせ / お願い / メンテナンス）、タイトル・本文、掲載期間（終了は空なら終わりなし）、対象（全員 / 選んだ利用者）、重要 |
+| 利用者 | 利用者画面のどのページにも | ページの頭にねこの吹き出し（最大3件、ほかは「ほかに N 件」）、メニューの「お知らせ」に未読のバッジ |
+| 利用者 | `/notices`・`/notices/:id` | 一覧（未読は NEW）と本文。開くと既読 |
+
+- **見えるもの**: いま掲載中（`starts_at <= 今 < ends_at`）で、自分が対象のものだけ。期間外・対象外は一覧に出ず、開いても閉じても 404
+- **既読と「閉じる」**: 利用者ごとに `notice_receipts`（`read_at` / `dismissed_at`）。ふつうのお知らせは未読のあいだ吹き出しに出て、開くか × で消える。
+  **重要なものは開いて既読になっても、× で閉じるまで吹き出しに出し続ける**（本文のページにも「読んだにゃ（吹き出しを閉じる）」）
+- **掲載終了**は消さずに `ends_at` を今にする（だれが読んだかは残る）。始まる前のものを終えたら、始まりも今にする
+- **ライブ更新**: `Notices::Board` が保存したら `Notices::RefreshJob` が Turbo の refresh（morph）を `"notices"`（全員）に送る。
+  掲載の始まり・終わりが先なら、その時刻にも送る（`set(wait_until:)`。Solid Queue）。既読・閉じたは `[user, :notices]` に送ってほかのタブにも映す。
+  refresh は「取り直して」という合図だけで中身を運ばないので、対象外の人に届いても何も漏れない
+- **動き**: morph で新しく入った吹き出しだけが「ぽよん」と出る（CSS。すでにある要素は morph で残るので動き直さない）。
+  ねこが跳ねてトースト（「銀行からお知らせが届いたにゃ！」）は Stimulus の `notices--inbox`。未読のバッジはぴょこぴょこ。
+  `prefers-reduced-motion` なら跳ねる・ぽよん・バッジの動きを止める（トーストは出す）
+- **Turbo の prefetch に注意**: Turbo 8 はリンクにホバーすると先読みする。「開いたら既読」の GET が先読みされて、マウスを乗せただけで既読になった。
+  吹き出しと一覧に `data-turbo-prefetch="false"` を付け、サーバーでも `X-Sec-Purpose: prefetch` のときは既読にしない（応答は `no-store`）
+
+### パッケージの境目
+
+- customer からは `helper Notices::InboxHelper` して、レイアウトで `<%= notices_inbox %>` を1回呼ぶだけ。中で `content_for` の
+  `:head`（CSS）・`:nav`（バッジ）・`:page_top`（吹き出し。packs/ui の `layouts/application` が main の頭に出す）を入れる。
+  ヘルパーの定数が「notices を使っている」しるしになって、packwerk で customer → notices の依存が見える
+- 行員の画面も packs/notices の中（`Notices::Admin::`、`/admin/notices`）。商店の管理を `/shop/admin` に置いたのと同じ理由で、
+  admin が notices に依存しないよう、管理画面のメニューはリンク（ルート名）1つだけ
+- CSS と Stimulus もパックの中（`app/assets/stylesheets/notices`・`app/javascript/controllers/notices`）。読み込み先は
+  `packs/notices/config/initializers/assets.rb`、JS の pin はルートの `config/importmap.rb`（`pin_all_from … under: "controllers/notices"`）
+
+### イベントソーシングにしなかった理由
+
+お知らせは行員が書いて直す「文面」で、お金も業務ルール（不変条件）もなく、直した履歴をたどる必要もない。読む画面と書く画面のモデルも同じ。
+RES の集約にすると、読み取りモデル・プロジェクション・作り直しまで要るのに、得るものがない。既読も利用者ごとの小さな状態で、ふつうの行で足りる。
+
+キャンペーン（TODO の P の後半・L）で要るのは「振込が完了した → 条件を満たした → 特典を入金 → お祝いを知らせる」という**連鎖**で、
+そこはイベント（銀行の `TransferCompleted` などを購読し、correlation / causation でたどる）にする。ただし連鎖の正は**キャンペーンのパック**が持ち、
+お知らせはその最後に `Notices::Board#post(kind: …, users: [user])` で「特典が届いたにゃ」を出すだけ。お知らせ側はイベントを知らなくてよい。
+
+キャンペーンを足すとき:
+
+- `Notice::KINDS` に `"campaign"` を足す（ラベルと絵文字。CSS は `.notice-kind-campaign` の色）
+- キャンペーンのパック（例: `packs/campaigns`、依存は banking・notices）が条件と特典を持ち、銀行のイベントを購読して `Banking::Bank` で入金し、`Notices::Board` で知らせる
+- お知らせから「参加する」ボタンなどへつなぐなら、そのときに `notices` にリンク先の列を足す
+
 ## Hotwire で使っているもの
 
 | 機能 | 場所 |
@@ -218,6 +268,7 @@ shop に残せば、shop が増やす依存は identity（ログインと `User#
 | Stimulus | `amount_controller`（+10 / +50 ボタン）、`autosubmit_controller`（日付を変えたら送信） |
 | 利用者画面の動き（Stimulus + CSS、外部ライブラリなし） | `count_up_controller`（残高のカウントアップ。morph で値が変わると前の値から数える）、`arrival_controller`（morph で届いた通帳の行をふわっと出す）、`transfer_status_controller` → `celebrate_controller`（振込完了・入金で紙吹雪とトースト）。`prefers-reduced-motion` なら止める |
 | View Transitions | 利用者画面だけ `<meta name="view-transition">`。一覧と口座ページで残高がつながる |
+| Turbo の refresh（morph）+ Solid Queue の予約 | 銀行からのお知らせ。出した・直した・掲載の始まり / 終わりの時刻に `Notices::RefreshJob`。新しい吹き出しだけ CSS で出る。`data-turbo-prefetch="false"`（開くと既読のため） |
 
 ## MCP（packs/mcp）
 
@@ -273,6 +324,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~M~~ | ~~利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮~~（済） | C | `packs/customer` |
 | ~~N~~ | ~~商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ~~（済） | B, D | `packs/shop`・`packs/ui` |
 | O | 管理画面に取消・組戻し・利息の手動実行のボタン（API は「画面から使う Banking::Bank の API」） | F, G | `packs/admin` |
+| P | 利用者画面に銀行からのお知らせ・お願い・キャンペーン（**お知らせ・お願いは済**。キャンペーン = 条件を満たすと特典が自動入金、は未） | C, N（キャンペーンは L） | `packs/notices`（キャンペーンは新しいパック） |
 
 並行の進め方（フェーズ1）: B+C / D / E→J / F+G+H を別々に進められる。
 各自 `jj workspace add ../churu-bank-<名前>` で作業ディレクトリを分け、`bin/dev -p 300X` でポートも分ける

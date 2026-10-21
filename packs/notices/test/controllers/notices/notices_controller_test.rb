@@ -41,6 +41,17 @@ class Notices::NoticesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#notice-board[hidden]" # ふつうのものは、読んだら吹き出しから消える
   end
 
+  test "ホバーでの先読み（Turbo の prefetch）では既読にしない。リンク側でも先読みを止めている" do
+    notice = @board.post(kind: "info", title: "まだ読んでない")
+
+    get root_path
+    assert_select "#notice-board[data-turbo-prefetch='false']"
+    get notice_path(notice), headers: { "X-Sec-Purpose" => "prefetch" }
+
+    assert_response :success
+    assert_not NoticeReceipt.exists?(notice:, user: @orca)
+  end
+
   test "重要なものは読んでも吹き出しに残り、閉じたら消える" do
     notice = @board.post(kind: "request", title: "だいじ", important: true)
     get notice_path(notice)

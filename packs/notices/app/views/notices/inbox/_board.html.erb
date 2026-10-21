@@ -1,11 +1,12 @@
-<%# ねこの吹き出し。新しいお知らせが出たら Notices::RefreshJob の refresh で morph され、
+<%# ねこの吹き出し。開くと既読になるので、ホバーでの先読み（Turbo の prefetch）はしない。
+    新しいお知らせが出たら Notices::RefreshJob の refresh で morph され、
     新しく入った吹き出しだけが「ぽよん」と出る（CSS）。ねこが跳ねてトーストを出すのは notices--inbox（Stimulus） %>
 <%= turbo_stream_from "notices" %>
 <%= turbo_stream_from Current.user, :notices %>
 <% notices = bubble ? inbox.bubble : [] %>
 <% shown = notices.first(3) %>
 <section id="notice-board" class="notice-board" aria-label="銀行からのお知らせ"
-         data-controller="notices--inbox" <%= "hidden" if shown.empty? %>>
+         data-controller="notices--inbox" data-turbo-prefetch="false" <%= "hidden" if shown.empty? %>>
   <div class="notice-cat-wrap" data-notices--inbox-target="cat">
     <%= render "notices/inbox/cat" %>
   </div>

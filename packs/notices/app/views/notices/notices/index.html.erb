@@ -11,7 +11,8 @@
 <% if @notices.empty? %>
   <p class="empty">いまはお知らせがありません。のんびりしてにゃ。</p>
 <% else %>
-  <ul class="notice-list">
+  <%# 開くと既読になるので、ホバーでの先読み（Turbo の prefetch）はしない %>
+  <ul class="notice-list" data-turbo-prefetch="false">
     <% @notices.each_with_index do |notice, i| %>
       <% inbox_read = inbox.read?(notice) %>
       <li id="<%= dom_id(notice) %>" style="--i: <%= i %>"

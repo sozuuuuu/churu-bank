@@ -1,5 +1,11 @@
 <%= turbo_frame_tag "transfer" do %>
   <div class="confirm">
+    <% if @outcome.warnings.any? %>
+      <%= cat_say_tag "ちょっと待ってにゃ… 黄色いところを読んでから決めてほしいにゃ。", face: :sad %>
+    <% else %>
+      <%= cat_say_tag "まだ振り込んでないにゃ！ 内容を確かめて、よければ下のボタンを押してにゃ。", face: :surprised %>
+    <% end %>
+    <h3>振込の内容の確認</h3>
     <p class="muted">まだ振り込んでいません。内容を確認してください。</p>
     <% @outcome.warnings.each do |warning| %>
       <p class="hint"><%= warning %></p>

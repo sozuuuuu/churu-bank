@@ -1,264 +1,482 @@
 /*
- * 利用者向けのテーマ（ねこ・ちゅ〜る）。packs/ui の layouts/cat だけが読み込む（利用者画面と、利用者が見る商店）。
+ * 利用者向けのテーマ「日本アニメ的 kawaii」（ねこのちゅーる）。packs/ui の layouts/cat だけが読み込む
+ * （利用者画面・利用者が見る商店とお知らせ・利用者のログイン）。
  * すべて body.cat-theme の下に書いて、管理画面には効かないようにする。
- * ルートの application.css の色の変数（--bg など）もここで上書きする。
+ * ルートの application.css の色の変数（--bg など）もここで上書きするので、.card .form .button などの
+ * 共通のクラスで書いた画面には、そのままこの見た目が乗る。
+ *
+ * 決まりごと
+ *   - 色: 桜ピンク・空色・クリーム（地）・紺（主線と文字）。ダークは紺の地にクリームの主線。文字は 4.5:1 以上
+ *   - セル画っぽさ: 2〜2.5px の主線と、ぼかさない影（0 4px 0）。角丸 16〜20px。グラデーションと水玉はなし。
+ *     アクセントにスクリーントーンの網点（空色の小さな点）を少しだけ。見出しはマーカー線
+ *   - 文字: Zen Maru Gothic。数字は等幅
+ *   - 動きは出来事のときだけ（入金・振込完了・ねこの表情が変わったとき）。常時の動き・ホバーで傾く、はしない。
+ *     prefers-reduced-motion なら止める
  */
 body.cat-theme {
-  --bg: #fff6f1;
-  --surface: #ffffff;
-  --text: #4a3540;
-  --muted: #9b8391;
-  --border: #f7dce3;
-  --accent: #ff7a9c;
-  --accent-text: #ffffff;
-  --churu: #ff9f43;
-  --plus: #2e9f78;
-  --minus: #e0567a;
-  --warn-bg: #fff1d6;
-  --shadow: 0 6px 20px rgb(255 122 156 / .14);
-  --dot: rgb(255 159 67 / .14);
-  --cat-fur: #ffc48a;
-  --cat-stripe: #f09a4f;
-  --cat-ear: #ffb3c4;
-  --cat-eye: #4a3540;
-  --cat-cheek: #ff9fb6;
-  --radius: 22px;
+  /* テーマの色 */
+  --ink: #2B2D52;          /* 主線と文字 */
+  --paper: #FFF8EC;        /* 地（クリーム） */
+  --panel: #FFFFFF;        /* カードの面 */
+  --pink: #FFB7C9;
+  --pink-soft: #FFE3EA;
+  --sky: #9ED8F5;
+  --sky-soft: #D7F0FC;
+  --star: #FFD84D;
+  --sub: #5B5E85;          /* 補足の文字 */
+  --in: #1F6FA8;           /* 入金の金額 */
+  --out: #C2365E;          /* 出金の金額 */
+  --on-pink: #2B2D52;      /* ピンクの上の文字 */
+  --cel: #2B2D52;          /* ぼかさない影の色 */
+  --tone: #9ED8F5;         /* スクリーントーンの網点 */
+  --note: #FFF1C2;         /* 注意書きの地 */
+  --line: 2.5px;
+  --line-thin: 2px;
+  --radius: 20px;
 
-  font-family: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Hiragino Sans", system-ui, sans-serif;
-  background-color: var(--bg);
-  /* うっすら肉球っぽい水玉 */
-  background-image:
-    radial-gradient(var(--dot) 18%, transparent 19%),
-    radial-gradient(var(--dot) 18%, transparent 19%);
-  background-size: 56px 56px;
-  background-position: 0 0, 28px 28px;
+  /* ねこ（キャラクターの色。ダークでも変えない） */
+  --cat-fur: #FFE2B8;
+  --cat-line: #2B2D52;
+  --cat-ear: #FFB7C9;
+  --cat-stripe: #F6A55B;
+  --cat-cheek: #FF9EB5;
+  --cat-iris: #6FB8E6;
+  --cat-nose: #FF7A9C;
+  --cat-tear: #9ED8F5;
+
+  /* application.css の共通部品が使う変数 */
+  --bg: var(--paper);
+  --surface: var(--panel);
+  --text: var(--ink);
+  --muted: var(--sub);
+  --border: var(--ink);
+  --accent: var(--ink);
+  --accent-text: var(--on-pink);
+  --plus: var(--in);
+  --minus: var(--out);
+  --warn-bg: var(--note);
+
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", system-ui, sans-serif;
+  font-weight: 500;
+  background: var(--paper);
+  color: var(--ink);
 }
 
 @media (prefers-color-scheme: dark) {
   body.cat-theme {
-    --bg: #231b26;
-    --surface: #2f2534;
-    --text: #fbeff4;
-    --muted: #bea8b8;
-    --border: #45374c;
-    --accent: #ff94b0;
-    --accent-text: #2a1d24;
-    --churu: #ffb067;
-    --plus: #7fdcb9;
-    --minus: #ff8fa8;
-    --warn-bg: #43361f;
-    --shadow: 0 6px 20px rgb(0 0 0 / .35);
-    --dot: rgb(255 176 103 / .06);
-    --cat-fur: #e9a66b;
-    --cat-stripe: #c7783d;
-    --cat-ear: #f39bb2;
-    --cat-eye: #2a1d24;
-    --cat-cheek: #f48aa6;
+    --ink: #FFF8EC;
+    --paper: #1B1C38;
+    --panel: #26284A;
+    --pink: #FFB7C9;
+    --pink-soft: #4A2D45;
+    --sky: #9ED8F5;
+    --sky-soft: #1F3B57;
+    --sub: #C3C5E6;
+    --in: #8ED0F7;
+    --out: #FF9FB8;
+    --on-pink: #1B1C38;
+    --cel: #0D0E20;
+    --tone: rgb(158 216 245 / .45);
+    --note: #4A4020;
   }
 }
 
-/* ---- 共通の部品をまるく、やわらかく ---- */
+body.cat-theme a { color: var(--ink); text-underline-offset: 3px; text-decoration-thickness: 2px; }
+body.cat-theme a:hover { color: var(--out); }
+body.cat-theme :focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; border-radius: 8px; }
+body.cat-theme code { font-size: .85em; }
+body.cat-theme .visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---- アイコン（Ui::ThemeHelper#icon） ---- */
+body.cat-theme .icon { flex: none; vertical-align: -4px; }
+body.cat-theme .sparkle path { fill: var(--star); stroke: var(--cat-line); stroke-width: 1.6; stroke-linejoin: round; }
+body.cat-theme .sparkle.sky path { fill: var(--sky); }
+body.cat-theme .sparkle.pink path { fill: var(--pink); }
+
+/* ---- ヘッダー ---- */
 body.cat-theme .site-header {
-  background: color-mix(in srgb, var(--surface) 85%, transparent);
-  backdrop-filter: blur(8px);
-  border-bottom: 2px dashed var(--border);
-  position: sticky; top: 0; z-index: 10;
+  background: var(--panel); border-bottom: var(--line) solid var(--ink);
+  position: sticky; top: 0; z-index: 10; padding: 10px 16px;
 }
-body.cat-theme .site-header .brand { color: var(--accent); font-weight: 800; letter-spacing: .02em; }
-body.cat-theme .site-header nav a { text-decoration: none; font-weight: 700; }
+body.cat-theme .site-header .brand {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ink); font-weight: 900; letter-spacing: .04em; font-size: 1.15rem;
+}
+body.cat-theme .site-header nav { gap: 8px; flex-wrap: wrap; }
+body.cat-theme .site-header nav > a, body.cat-theme .site-header nav .link {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px;
+  border: var(--line-thin) solid var(--ink); background: var(--panel); color: var(--ink);
+  font-weight: 700; font-size: .9rem; text-decoration: none; line-height: 1.6;
+}
+body.cat-theme .site-header nav > a:hover, body.cat-theme .site-header nav .link:hover { background: var(--pink-soft); color: var(--ink); }
+body.cat-theme .site-header nav > a[aria-current="page"] { background: var(--sky-soft); }
+body.cat-theme .site-header nav > .muted { font-weight: 700; color: var(--sub); font-size: .9rem; }
 
-body.cat-theme h1, body.cat-theme h2 { font-weight: 800; }
+/* ---- 本文。下はセリフ窓のぶん空ける ---- */
+body.cat-theme .container { padding: 20px 16px 220px; }
 
+/* ---- 見出し: マーカー線（下だけ色を引く） ---- */
+body.cat-theme h1, body.cat-theme h2, body.cat-theme h3 { font-weight: 900; letter-spacing: .02em; }
+body.cat-theme h1 { font-size: 1.6rem; }
+body.cat-theme h2 { display: flex; align-items: center; gap: 8px; font-size: 1.15rem; }
+body.cat-theme h3 { font-size: 1.05rem; margin: 0 0 8px; }
+body.cat-theme .marker {
+  background: linear-gradient(transparent 62%, var(--sky) 62%); padding: 0 2px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) {
+  body.cat-theme .marker { background: linear-gradient(transparent 62%, color-mix(in srgb, var(--sky) 45%, transparent) 62%); }
+}
+body.cat-theme .page-title { margin: 4px 0 18px; }
+body.cat-theme .page-title p { margin: 4px 0 0; color: var(--sub); font-weight: 700; font-size: .9rem; }
+body.cat-theme .page-title h1 { margin: 0; }
+
+/* ---- カード ---- */
 body.cat-theme .card {
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--panel); border: var(--line) solid var(--ink); border-radius: var(--radius);
+  box-shadow: 0 5px 0 var(--cel); padding: 18px; margin-bottom: 20px;
 }
+body.cat-theme .grid { gap: 20px; }
+body.cat-theme .grid + .card { margin-top: 20px; }
+/* スクリーントーンの網点（カードの右上にだけ） */
+body.cat-theme .tone { position: relative; overflow: hidden; }
+body.cat-theme .tone::before {
+  content: ""; position: absolute; top: 0; right: 0; width: 150px; height: 110px; pointer-events: none;
+  background-image: radial-gradient(var(--tone) 1.8px, transparent 2.2px); background-size: 8px 8px;
+  -webkit-mask-image: linear-gradient(225deg, #000 30%, transparent 80%); mask-image: linear-gradient(225deg, #000 30%, transparent 80%);
+}
+body.cat-theme .tone > * { position: relative; }
 
-body.cat-theme .button {
-  border-radius: 999px; border-width: 2px; font-weight: 700;
-  transition: transform .15s ease, box-shadow .15s ease;
+/* ---- ボタン ---- */
+body.cat-theme .button, body.cat-theme button.button, body.cat-theme input.button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 8px 20px; border-radius: 16px;
+  border: var(--line) solid var(--ink); background: var(--panel); color: var(--ink);
+  box-shadow: 0 4px 0 var(--cel); font: inherit; font-weight: 900; text-decoration: none; cursor: pointer;
+  transition: transform .08s ease, box-shadow .08s ease;
 }
-body.cat-theme .button:hover { transform: translateY(-2px); }
-body.cat-theme .button:active { transform: scale(.96); }
-body.cat-theme .button.primary {
-  background: linear-gradient(135deg, var(--accent), var(--churu));
-  border-color: transparent;
-  box-shadow: 0 4px 12px rgb(255 122 156 / .35);
-}
+body.cat-theme .button:hover { background: var(--sky-soft); color: var(--ink); }
+body.cat-theme .button:active { transform: translateY(4px); box-shadow: 0 0 0 var(--cel); }
+body.cat-theme .button.primary { background: var(--pink); color: var(--on-pink); }
+body.cat-theme .button.primary:hover { background: color-mix(in srgb, var(--pink) 85%, #fff); }
+body.cat-theme .button.small { min-height: 36px; padding: 4px 12px; font-size: .85rem; border-radius: 12px; box-shadow: 0 3px 0 var(--cel); }
+body.cat-theme .button.small:active { transform: translateY(3px); }
+body.cat-theme .button.link, body.cat-theme button.link { cursor: pointer; font: inherit; }
+body.cat-theme form.button_to { display: inline; }
+body.cat-theme .actions, body.cat-theme .confirm form { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 
+/* ---- 入力 ---- */
+body.cat-theme .form { gap: 14px; }
+body.cat-theme .form label { font-weight: 700; font-size: .9rem; gap: 6px; }
 body.cat-theme input[type="text"], body.cat-theme input[type="number"], body.cat-theme input[type="date"],
-body.cat-theme select {
-  border-radius: 14px; border-width: 2px;
+body.cat-theme input[type="email"], body.cat-theme input[type="password"], body.cat-theme select, body.cat-theme textarea {
+  font: inherit; font-weight: 700; min-height: 46px; padding: 8px 12px; border-radius: 14px;
+  border: var(--line) solid var(--ink); background: var(--panel); color: var(--ink); width: 100%;
 }
-body.cat-theme input:focus, body.cat-theme select:focus {
-  outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 1px;
+body.cat-theme input[type="number"] { font-variant-numeric: tabular-nums; }
+body.cat-theme input::placeholder { color: var(--sub); font-weight: 500; }
+body.cat-theme input:focus, body.cat-theme select:focus, body.cat-theme textarea:focus {
+  outline: 3px solid var(--sky); outline-offset: 1px;
 }
-
+@media (prefers-color-scheme: dark) {
+  body.cat-theme input[type="date"] { color-scheme: dark; }
+}
+body.cat-theme .presets { gap: 8px; }
 body.cat-theme .chip {
-  border-width: 2px; font-weight: 700;
-  transition: transform .15s ease, background .15s ease;
+  font: inherit; font-weight: 700; font-size: .85rem; padding: 2px 12px; border-radius: 999px; cursor: pointer;
+  border: var(--line-thin) solid var(--ink); background: var(--panel); color: var(--ink); box-shadow: 0 2px 0 var(--cel);
 }
-body.cat-theme .chip:hover { background: color-mix(in srgb, var(--churu) 20%, var(--bg)); transform: translateY(-1px) rotate(-2deg); }
+body.cat-theme .chip:hover { background: var(--sky-soft); }
+body.cat-theme .chip:active { transform: translateY(2px); box-shadow: none; }
 
-body.cat-theme .badge { border-width: 2px; font-weight: 700; }
-body.cat-theme .flash { border-radius: 16px; border-width: 2px; }
-body.cat-theme .hint { border-radius: 14px; }
-body.cat-theme .confirm dl { background: var(--bg); border-radius: 16px; padding: 12px; }
-
-body.cat-theme .muted { color: var(--muted); }
-body.cat-theme .plus { color: var(--plus); }
-body.cat-theme .minus { color: var(--minus); }
-
-/* ---- ねこ ---- */
-body.cat-theme .cat { width: 96px; height: auto; flex: none; overflow: visible; }
-body.cat-theme .cat .cat-fur { fill: var(--cat-fur); }
-body.cat-theme .cat .cat-ear { fill: var(--cat-ear); }
-body.cat-theme .cat .cat-stripe { fill: none; stroke: var(--cat-stripe); stroke-width: 4; stroke-linecap: round; }
-body.cat-theme .cat .cat-eye { fill: var(--cat-eye); }
-body.cat-theme .cat .cat-shine { fill: #fff; }
-body.cat-theme .cat .cat-cheek { fill: var(--cat-cheek); opacity: .7; }
-body.cat-theme .cat .cat-nose { fill: var(--accent); }
-body.cat-theme .cat .cat-line { fill: none; stroke: var(--cat-eye); stroke-width: 2; stroke-linecap: round; opacity: .7; }
-body.cat-theme .cat .cat-tail { fill: var(--cat-fur); stroke: var(--cat-stripe); stroke-width: 3; }
-
-body.cat-theme .cat-eyes { transform-box: fill-box; transform-origin: center; animation: cat-blink 5s infinite; }
-body.cat-theme .cat-tail { transform-box: fill-box; transform-origin: 0% 100%; animation: cat-tail 2.4s ease-in-out infinite; }
-body.cat-theme .cat { animation: cat-float 3.2s ease-in-out infinite; }
-body.cat-theme .cat.happy { animation: cat-jump .8s cubic-bezier(.3, 1.6, .5, 1) 2; }
-
-@keyframes cat-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
-@keyframes cat-tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
-@keyframes cat-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes cat-jump {
-  0% { transform: translateY(0) scale(1, 1); }
-  20% { transform: translateY(2px) scale(1.08, .9); }
-  50% { transform: translateY(-22px) scale(.95, 1.06) rotate(-4deg); }
-  100% { transform: translateY(0) scale(1, 1); }
+/* ---- 札（バッジ）。色は地で分けて、文字はいつも主線の色 ---- */
+body.cat-theme .badge {
+  display: inline-block; font-size: .75rem; font-weight: 700; line-height: 1.5; padding: 0 8px; border-radius: 999px;
+  border: 1.5px solid var(--ink); color: var(--ink); background: var(--panel); vertical-align: 2px; white-space: nowrap;
 }
+body.cat-theme .badge-active, body.cat-theme .badge-transfer-completed, body.cat-theme .badge-order-fulfilled,
+body.cat-theme .badge-order-refunded { background: var(--sky-soft); }
+body.cat-theme .badge-frozen, body.cat-theme .badge-transfer-failed, body.cat-theme .badge-transfer-stopped,
+body.cat-theme .badge-transfer-held, body.cat-theme .badge-order-payment_failed, body.cat-theme .badge-order-refund_failed,
+body.cat-theme .badge-reversed { background: var(--pink-soft); }
+body.cat-theme .badge-transfer-requested, body.cat-theme .badge-transfer-scheduled, body.cat-theme .badge-order-placed,
+body.cat-theme .badge-order-payment_pending, body.cat-theme .badge-order-paid, body.cat-theme .badge-order-refunding { border-style: dashed; }
+body.cat-theme .badge-closed, body.cat-theme .badge-transfer-unexecuted, body.cat-theme .badge-transfer-cancelled,
+body.cat-theme .badge-order-cancelled { color: var(--sub); border-color: var(--sub); }
+body.cat-theme .tag {
+  display: inline-block; font-size: .8rem; font-weight: 700; padding: 1px 10px; border-radius: 999px;
+  border: var(--line-thin) solid var(--ink); background: var(--panel); white-space: nowrap;
+}
+body.cat-theme .tag.sky { background: var(--sky); color: #2B2D52; }
+
+/* ---- 知らせ・注意 ---- */
+body.cat-theme .flash {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 16px; font-weight: 700;
+  border: var(--line) solid var(--ink); background: var(--panel); color: var(--ink); box-shadow: 0 4px 0 var(--cel);
+}
+body.cat-theme .flash-notice { background: var(--sky-soft); color: var(--ink); }
+body.cat-theme .flash-alert { background: var(--pink-soft); color: var(--ink); border-color: var(--ink); }
+body.cat-theme .hint {
+  background: var(--note); color: var(--ink); border: var(--line-thin) dashed var(--ink); border-radius: 14px; padding: 8px 12px;
+}
+body.cat-theme .muted { color: var(--sub); }
+body.cat-theme .empty { color: var(--sub); font-weight: 700; }
+body.cat-theme .plus { color: var(--in); }
+body.cat-theme .minus { color: var(--out); }
+body.cat-theme .backdated { background: var(--note); color: var(--ink); border-radius: 999px; padding: 0 6px; }
+
+/* ---- 確認画面（dl） ---- */
+body.cat-theme .confirm dl, body.cat-theme .confirm-like {
+  background: var(--paper); border: var(--line-thin) solid var(--ink); border-radius: 16px; padding: 12px 14px; gap: 6px 16px;
+}
+body.cat-theme .confirm dt, body.cat-theme .confirm-like dt { color: var(--sub); font-weight: 700; }
+body.cat-theme .confirm dd, body.cat-theme .confirm-like dd { font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+body.cat-theme .confirm > p { margin: 0 0 10px; }
+
+/* ---- 表 ---- */
+body.cat-theme .table th, body.cat-theme .table td { border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 35%, transparent); }
+body.cat-theme .table th { color: var(--sub); font-weight: 700; }
+body.cat-theme .table tfoot th { color: var(--ink); font-weight: 900; border-bottom: 0; }
+
+/* ---- 金額（数字は等幅、単位は小さく） ---- */
+body.cat-theme .amount { display: inline-flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+body.cat-theme .amount-num { font-weight: 900; letter-spacing: -.02em; }
+body.cat-theme .amount-unit { font-weight: 900; font-size: .4em; }
 
 /* ---- 口座一覧 ---- */
-body.cat-theme .hello { display: flex; align-items: center; gap: 12px; margin: 8px 0 20px; }
-body.cat-theme .bubble {
-  position: relative; background: var(--surface); border: 2px solid var(--border);
-  border-radius: var(--radius); padding: 10px 18px; box-shadow: var(--shadow);
-}
-body.cat-theme .bubble::before { /* 吹き出しのしっぽ */
-  content: ""; position: absolute; left: -10px; top: 50%; width: 16px; height: 16px;
-  background: var(--surface); border-left: 2px solid var(--border); border-bottom: 2px solid var(--border);
-  transform: translateY(-50%) rotate(45deg);
-}
-body.cat-theme .bubble h1 { margin: 0; }
-body.cat-theme .bubble-sub { margin: 0; color: var(--accent); font-weight: 700; font-size: .9rem; }
-
 body.cat-theme .account-cards {
   list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;
 }
-body.cat-theme .account-cards li { animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 80ms); }
 body.cat-theme .account-card {
-  display: grid; gap: 6px; padding: 18px; text-decoration: none; color: var(--text);
-  background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--shadow); transition: transform .2s ease, border-color .2s ease;
+  display: grid; gap: 4px; padding: 16px 18px; text-decoration: none; color: var(--ink);
+  background: var(--panel); border: var(--line) solid var(--ink); border-radius: var(--radius); box-shadow: 0 5px 0 var(--cel);
 }
-body.cat-theme .account-card:hover { transform: translateY(-4px) rotate(-.5deg); border-color: var(--accent); }
-body.cat-theme .account-card-head { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
-body.cat-theme .account-card-head .badge { margin-left: auto; }
-body.cat-theme .account-card-name { font-size: 1.2rem; font-weight: 800; }
-body.cat-theme .account-card .amount { font-size: 1.8rem; font-weight: 800; color: var(--churu); }
-body.cat-theme .paw { display: inline-block; animation: paw-wiggle 2.8s ease-in-out infinite; }
-@keyframes paw-wiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-16deg); } 90% { transform: rotate(12deg); } }
+body.cat-theme .account-card:hover { color: var(--ink); background: color-mix(in srgb, var(--sky-soft) 50%, var(--panel)); }
+body.cat-theme .account-card:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--cel); }
+body.cat-theme .account-card-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+body.cat-theme .account-card-name { font-size: 1.05rem; font-weight: 700; margin-top: 6px; }
+body.cat-theme .account-card .amount { font-size: 2.4rem; line-height: 1.1; }
+body.cat-theme .account-card-go { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-weight: 700; font-size: .85rem; color: var(--sub); }
 
 /* ---- 口座ページ ---- */
-body.cat-theme .hero {
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--churu) 22%, transparent), transparent 55%),
-    var(--surface);
-  animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both;
-}
-body.cat-theme .hero h1 { margin: 0; }
-body.cat-theme .hero p { margin: 0; }
-body.cat-theme .hero-body { flex: 1 1 200px; }
-body.cat-theme .hero-balance { display: grid; justify-items: end; }
-body.cat-theme .hero-balance small { color: var(--muted); font-weight: 700; }
-body.cat-theme .hero-balance .amount { font-size: clamp(2rem, 6vw, 2.8rem); font-weight: 800; color: var(--churu); }
+body.cat-theme .hero { display: grid; gap: 4px; padding: 16px 18px 18px; }
+body.cat-theme .hero-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+body.cat-theme .hero-who { margin: 10px 0 0; font-size: .9rem; font-weight: 700; }
+body.cat-theme .hero .amount { font-size: clamp(3rem, 12vw, 3.8rem); line-height: 1.05; }
+body.cat-theme .hero .amount-unit { font-size: 1.1rem; }
+body.cat-theme .hero-note { margin: 6px 0 0; font-size: .8rem; color: var(--sub); font-weight: 700; }
+body.cat-theme .hero-star { position: absolute; top: 14px; right: 18px; }
 
-body.cat-theme .amount { display: inline-block; font-variant-numeric: tabular-nums; }
-body.cat-theme .amount.up { animation: amount-up .7s cubic-bezier(.3, 1.6, .5, 1); }
-body.cat-theme .amount.down { animation: amount-down .6s ease; }
-@keyframes amount-up {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.18); color: var(--plus); }
-  100% { transform: scale(1); }
-}
-@keyframes amount-down {
-  0%, 100% { transform: translateX(0); }
-  30% { transform: translateX(-4px); color: var(--minus); }
-  60% { transform: translateX(3px); }
-}
+body.cat-theme .quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; }
+body.cat-theme .quick-actions .button { min-height: 52px; font-size: 1rem; }
 
-body.cat-theme .pop { animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 80ms); }
-@keyframes pop-in {
-  from { opacity: 0; transform: translateY(14px) scale(.97); }
-  to { opacity: 1; transform: none; }
-}
+body.cat-theme .card > h2 { margin-bottom: 14px; }
+/* ページ内リンク（「振り込む」など）で飛んだとき、上に固定したヘッダーに隠れないように */
+body.cat-theme [id] { scroll-margin-top: 80px; }
 
-/* Frame の中身（振込の入力 → 確認）が入れ替わるたびに、ふわっと */
-body.cat-theme turbo-frame > * { animation: fade-up .35s ease both; }
-@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* 予約・保留中の振込 */
+body.cat-theme .pending-transfers { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+body.cat-theme .pending-transfers li {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; background: var(--paper); border: var(--line-thin) solid var(--ink); border-radius: 16px;
+}
+body.cat-theme turbo-frame#cancellation:not(:empty) { display: block; margin: 12px 0; }
+
+/* 時点指定の残高 */
+body.cat-theme .as-of div { padding: 8px 0; border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 35%, transparent); }
+body.cat-theme .as-of div:last-child { border-bottom: 0; }
+body.cat-theme .as-of dt { font-weight: 700; }
+body.cat-theme .as-of dt small { color: var(--sub); font-weight: 500; }
+body.cat-theme .as-of dd { font-weight: 900; font-size: 1.1rem; }
 
 /* ---- 通帳 ---- */
-body.cat-theme .passbook { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+body.cat-theme .passbook { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 body.cat-theme .passbook li {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
-  padding: 10px 14px; border-radius: 16px; background: var(--bg); border: 2px solid transparent;
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 16px; background: var(--panel); border: var(--line-thin) solid var(--ink);
 }
-body.cat-theme .passbook li.in { border-left: 6px solid color-mix(in srgb, var(--plus) 55%, transparent); }
-body.cat-theme .passbook li.out { border-left: 6px solid color-mix(in srgb, var(--minus) 45%, transparent); }
 body.cat-theme .passbook-icon {
-  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
-  background: var(--surface); font-size: 1.3rem; box-shadow: var(--shadow);
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
+  border: var(--line-thin) solid var(--ink); background: var(--sky-soft); color: var(--ink);
 }
+body.cat-theme .passbook li.out .passbook-icon { background: var(--pink-soft); }
 body.cat-theme .passbook-main { display: grid; min-width: 0; }
-body.cat-theme .passbook-title { font-weight: 800; }
-body.cat-theme .passbook-sub { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
-body.cat-theme .passbook-date { color: var(--muted); font-size: .75rem; }
-body.cat-theme .passbook-date .backdated { border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+body.cat-theme .passbook-title { font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+body.cat-theme .passbook-sub { color: var(--sub); font-size: .85rem; overflow-wrap: anywhere; }
+body.cat-theme .passbook-date { color: var(--sub); font-size: .75rem; font-variant-numeric: tabular-nums; }
 body.cat-theme .passbook-amount { display: grid; justify-items: end; font-variant-numeric: tabular-nums; }
-body.cat-theme .passbook-amount small { color: var(--muted); font-size: .75rem; }
+body.cat-theme .passbook-amount strong { font-size: 1.05rem; font-weight: 900; }
+body.cat-theme .passbook-amount small { color: var(--sub); font-size: .75rem; }
 
-/* morph で新しく届いた行 */
-body.cat-theme .passbook li.arrived { animation: arrive .9s cubic-bezier(.3, 1.5, .5, 1) both; }
+/* ---- 商店（利用者） ---- */
+body.cat-theme .shop-head h1 { display: flex; align-items: center; gap: 8px; }
+body.cat-theme .shop-nav a { font-weight: 700; }
+body.cat-theme .shop-products { gap: 20px; }
+body.cat-theme .shop-product { display: grid; gap: 4px; align-content: start; }
+body.cat-theme .shop-product-icon {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%;
+  border: var(--line-thin) solid var(--ink); background: var(--pink-soft);
+}
+body.cat-theme .shop-product .balance { font-size: 1.4rem; font-weight: 900; }
+body.cat-theme .shop-add input[type="number"], body.cat-theme .shop-inline input[type="number"] { width: 5.5em; }
+body.cat-theme .shop-cart h2 { margin-bottom: 8px; }
+
+/* ================================================================
+ * ねこのちゅーる（ui/_cat）。data-face で表情を1つだけ出す
+ * ================================================================ */
+body.cat-theme .cat { display: block; height: auto; overflow: visible; }
+body.cat-theme .cat .cat-face { display: none; }
+body.cat-theme .cat[data-face="normal"] .cat-face-normal,
+body.cat-theme .cat[data-face="happy"] .cat-face-happy,
+body.cat-theme .cat[data-face="surprised"] .cat-face-surprised,
+body.cat-theme .cat[data-face="sad"] .cat-face-sad { display: inline; }
+body.cat-theme .cat .cat-body { fill: var(--cat-fur); stroke: var(--cat-line); stroke-width: 3; stroke-linejoin: round; }
+body.cat-theme .cat .cat-ear { fill: var(--cat-ear); }
+body.cat-theme .cat .cat-stripe { fill: none; stroke: var(--cat-stripe); stroke-width: 3; stroke-linecap: round; }
+body.cat-theme .cat .cat-cheek { fill: var(--cat-cheek); }
+body.cat-theme .cat .cat-whisker { fill: none; stroke: var(--cat-line); stroke-width: 2; stroke-linecap: round; }
+body.cat-theme .cat .cat-mark { stroke-width: 4; }
+body.cat-theme .cat .cat-ink { fill: var(--cat-line); }
+body.cat-theme .cat .cat-iris { fill: var(--cat-iris); }
+body.cat-theme .cat .cat-shine { fill: #fff; }
+body.cat-theme .cat .cat-eye-white { fill: #fff; stroke: var(--cat-line); stroke-width: 2.5; }
+body.cat-theme .cat .cat-closed-eye { fill: none; stroke: var(--cat-line); stroke-width: 3.5; stroke-linecap: round; }
+body.cat-theme .cat .cat-brow { fill: none; stroke: var(--cat-line); stroke-width: 2.5; stroke-linecap: round; }
+body.cat-theme .cat .cat-nose { fill: var(--cat-nose); stroke: var(--cat-line); stroke-width: 1.5; stroke-linejoin: round; }
+body.cat-theme .cat .cat-mouth { fill: none; stroke: var(--cat-line); stroke-width: 2.2; stroke-linecap: round; }
+body.cat-theme .cat .cat-open-mouth { fill: var(--cat-nose); stroke: var(--cat-line); stroke-width: 2.2; stroke-linejoin: round; }
+body.cat-theme .cat .cat-tear { fill: var(--cat-tear); stroke: var(--cat-line); stroke-width: 1.5; stroke-linejoin: round; }
+body.cat-theme .cat .cat-star { stroke: var(--cat-line); stroke-width: 1.4; stroke-linejoin: round; }
+body.cat-theme .cat .cat-star-yellow { fill: var(--star); }
+body.cat-theme .cat .cat-star-sky { fill: var(--sky); }
+
+/* うれしいときの弾む動き（つぶれて伸びる）。JS が .bounce を付け直す */
+body.cat-theme .cat.bounce { transform-origin: 50% 100%; animation: cat-bounce .9s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes cat-bounce {
+  0% { transform: translateY(0) scale(1, 1); }
+  15% { transform: translateY(0) scale(1.18, .78); }
+  40% { transform: translateY(-26px) scale(.88, 1.14); }
+  62% { transform: translateY(0) scale(1.12, .86); }
+  78% { transform: translateY(-6px) scale(.97, 1.03); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+/* びっくり・しょんぼりは、表情が変わるときに小さく */
+body.cat-theme .cat.jolt { transform-origin: 50% 100%; animation: cat-jolt .35s ease-out; }
+@keyframes cat-jolt { 0% { transform: translateY(0); } 35% { transform: translateY(-8px) scale(1.04); } 100% { transform: none; } }
+body.cat-theme .cat.droop { transform-origin: 50% 100%; animation: cat-droop .6s ease-out; }
+@keyframes cat-droop { 0% { transform: none; } 40% { transform: translateY(4px) scale(1.03, .94); } 100% { transform: none; } }
+
+/* キラッ（JS が置いて、終わったら消す） */
+.kira {
+  position: fixed; z-index: 1002; pointer-events: none; width: 22px; height: 22px;
+  transform: translate(-50%, -50%) scale(0);
+}
+.kira path { fill: #FFD84D; stroke: #2B2D52; stroke-width: 1.6; stroke-linejoin: round; }
+.kira.sky path { fill: #9ED8F5; }
+.kira.pink path { fill: #FFB7C9; }
+
+/* ================================================================
+ * セリフ窓（ui/_serif）。画面下に固定。名札「ちゅーる」と ▼
+ * ================================================================ */
+body.cat-theme .serif {
+  position: fixed; z-index: 20; left: 12px; right: 12px; bottom: 16px;
+  max-width: 760px; margin: 0 auto; cursor: pointer;
+}
+body.cat-theme .serif-cat { position: absolute; right: 6px; bottom: calc(100% - 5px); line-height: 0; }
+body.cat-theme .serif-box {
+  position: relative; background: var(--panel); border: var(--line) solid var(--ink); border-radius: 18px;
+  box-shadow: 0 5px 0 var(--cel); padding: 22px 40px 16px 18px; min-height: 92px;
+}
+body.cat-theme .serif-name {
+  position: absolute; top: -15px; left: 16px; padding: 1px 14px; border-radius: 999px;
+  background: var(--pink); color: var(--on-pink); border: var(--line) solid var(--ink); font-size: .82rem; font-weight: 900;
+}
+body.cat-theme .serif-text { margin: 0; font-size: .98rem; font-weight: 700; line-height: 1.75; min-height: 1.75em; overflow-wrap: anywhere; }
+body.cat-theme .serif-next { position: absolute; right: 16px; bottom: 12px; visibility: hidden; }
+body.cat-theme .serif-next path { fill: var(--pink); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+body.cat-theme .serif.is-done .serif-next { visibility: visible; }
+
+/* ================================================================
+ * 振込完了の演出（口座ページの dialog.hooray）。集中線・キラッ・ねこが弾む・はんこ
+ * ================================================================ */
+body.cat-theme dialog.hooray {
+  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0;
+  border: 0; color: #2B2D52; overflow: auto;
+  background: repeating-conic-gradient(from 0deg at 50% 32%, #FFE3EA 0deg 5deg, #FFF8EC 5deg 11deg);
+}
+body.cat-theme dialog.hooray::backdrop { background: #FFF8EC; }
+@media (prefers-color-scheme: dark) {
+  body.cat-theme dialog.hooray {
+    color: #FFF8EC;
+    background: repeating-conic-gradient(from 0deg at 50% 32%, #3A2846 0deg 5deg, #1B1C38 5deg 11deg);
+  }
+  body.cat-theme dialog.hooray::backdrop { background: #1B1C38; }
+}
+body.cat-theme .hooray-inner {
+  position: relative; max-width: 420px; min-height: 100%; margin: 0 auto; padding: 48px 20px 190px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+body.cat-theme .hooray-title {
+  margin: 0; font-size: 2.75rem; font-weight: 900; letter-spacing: .04em; color: #FFFFFF;
+  -webkit-text-stroke: 2.5px #2B2D52; paint-order: stroke fill; text-shadow: 0 4px 0 #2B2D52;
+}
+body.cat-theme .hooray-cat { line-height: 0; margin-top: 4px; }
+body.cat-theme .hooray-star { position: absolute; }
+body.cat-theme .hooray-card {
+  position: relative; width: 100%; margin-top: 12px; display: grid; gap: 6px;
+  background: var(--panel); color: var(--ink); border: var(--line) solid var(--ink); border-radius: 20px;
+  box-shadow: 0 5px 0 var(--cel); padding: 16px 18px;
+}
+body.cat-theme .hooray-card p { margin: 0; }
+body.cat-theme .hooray-to { font-size: .85rem; font-weight: 700; }
+body.cat-theme .hooray-card .amount { font-size: 2.75rem; line-height: 1.1; }
+body.cat-theme .hooray-card .amount-unit { font-size: 1rem; }
+body.cat-theme .hooray-meta { font-size: .78rem; color: var(--sub); }
+body.cat-theme .hooray-stamp {
+  position: absolute; top: -18px; right: 14px; width: 64px; height: 64px; border-radius: 50%;
+  border: 3px solid var(--out); color: var(--out); background: var(--panel);
+  display: grid; place-items: center; font-size: 1.1rem; font-weight: 900; transform: rotate(-14deg);
+}
+body.cat-theme .hooray form { width: 100%; margin-top: 14px; }
+body.cat-theme .hooray form .button { width: 100%; min-height: 52px; font-size: 1rem; }
+body.cat-theme .hooray .serif { position: absolute; left: 12px; right: 12px; bottom: 16px; cursor: default; }
+
+/* 開いた瞬間の演出（出来事なので動かす） */
+body.cat-theme dialog.hooray[open] { animation: hooray-lines .5s ease-out; }
+body.cat-theme dialog.hooray[open] .hooray-title { animation: hooray-pop .55s cubic-bezier(.3, 1.6, .5, 1) both; }
+body.cat-theme dialog.hooray[open] .hooray-cat .cat { transform-origin: 50% 100%; animation: cat-bounce .9s .15s cubic-bezier(.3, 1.4, .5, 1) both; }
+body.cat-theme dialog.hooray[open] .hooray-stamp { animation: hooray-stamp .45s .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+body.cat-theme dialog.hooray[open] .hooray-star { animation: hooray-twinkle .8s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: calc(var(--i, 0) * 90ms + .2s); }
+@keyframes hooray-lines { from { background-size: 140% 140%; opacity: .4; } to { opacity: 1; } }
+@keyframes hooray-pop { 0% { transform: scale(.3); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes hooray-stamp { 0% { transform: rotate(-14deg) scale(2.2); opacity: 0; } 100% { transform: rotate(-14deg) scale(1); opacity: 1; } }
+@keyframes hooray-twinkle { 0% { transform: scale(0) rotate(-45deg); } 60% { transform: scale(1.3) rotate(10deg); } 100% { transform: none; } }
+
+/* ---- 出来事のときの動き ---- */
+/* morph で新しく届いた通帳の行 */
+body.cat-theme .passbook li.arrived { animation: arrive .7s cubic-bezier(.3, 1.5, .5, 1) both; }
 @keyframes arrive {
-  0% { opacity: 0; transform: translateY(-16px) scale(.9); background: color-mix(in srgb, var(--churu) 30%, var(--bg)); }
-  60% { opacity: 1; transform: translateY(2px) scale(1.02); }
-  100% { transform: none; }
+  0% { opacity: 0; transform: translateY(-12px) scale(.94); }
+  100% { opacity: 1; transform: none; }
 }
-
-/* ---- お祝い ---- */
-.confetti {
-  position: fixed; z-index: 1000; pointer-events: none; font-size: 1.4rem;
-  transform: translate(-50%, -50%);
-}
-body.cat-theme .toast {
-  position: fixed; left: 50%; bottom: 24px; z-index: 1001;
-  padding: 12px 20px; border-radius: 999px; font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), var(--churu)); color: var(--accent-text);
-  box-shadow: 0 8px 24px rgb(255 122 156 / .4);
-  opacity: 0; pointer-events: none; transform: translate(-50%, 20px) scale(.9);
-  transition: opacity .3s ease, transform .4s cubic-bezier(.3, 1.6, .5, 1);
-}
-body.cat-theme .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
-body.cat-theme .toast:empty { display: none; }
+/* 残高が変わったとき（増えたら「ぽよん」、減ったら「しゅん」） */
+body.cat-theme .amount.up { animation: amount-up .6s cubic-bezier(.3, 1.6, .5, 1); }
+body.cat-theme .amount.down { animation: amount-down .5s ease; }
+@keyframes amount-up { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes amount-down { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-4px); } 60% { transform: translateX(3px); } }
 
 /* ---- 画面の切り替え（View Transitions） ---- */
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; }
 
 /* ---- 狭い画面 ---- */
 @media (max-width: 560px) {
-  body.cat-theme .cat { width: 72px; }
-  body.cat-theme .hero-balance { justify-items: start; width: 100%; }
+  body.cat-theme h1 { font-size: 1.4rem; }
+  body.cat-theme .serif-cat .cat { width: 72px; }
+  body.cat-theme .serif-text { font-size: .92rem; }
+  body.cat-theme .site-header nav > a, body.cat-theme .site-header nav .link { padding: 2px 10px; font-size: .82rem; }
 }
 
 /* ---- 「視差効果を減らす」設定なら動きを止める ---- */
@@ -267,12 +485,6 @@ body.cat-theme .toast:empty { display: none; }
     animation: none !important;
     transition: none !important;
   }
+  .kira { display: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
-}
-
-/* 予約・保留中の振込（口座ページ）。「取り消す」は右に */
-body.cat-theme .pending-transfers { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
-body.cat-theme .pending-transfers li {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 8px 12px; background: var(--bg); border-radius: 14px;
 }

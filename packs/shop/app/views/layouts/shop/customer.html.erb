@@ -1,7 +1,7 @@
 <%# 利用者が見る商店: 利用者画面と同じメニューで、ねこテーマ（packs/ui の layouts/cat）で描く %>
 <%= customer_header %>
 <% content_for :nav do %>
-  <%= link_to "わたしの口座", root_path %>
-  <%= link_to "ちゅ〜る商店", shop_root_path %>
+  <%= link_to root_path, "aria-current": ("page" if controller_path.start_with?("netbank")) do %><%= icon(:wallet, size: 18) %> わたしの口座<% end %>
+  <%= link_to shop_root_path, "aria-current": ("page" if controller_path.start_with?("shop")) do %><%= icon(:cart, size: 18) %> ちゅ〜る商店<% end %>
 <% end %>
 <%= render template: "layouts/cat" %>

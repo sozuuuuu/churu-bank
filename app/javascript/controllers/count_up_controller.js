@@ -1,16 +1,20 @@
 import { Controller } from "@hotwired/stimulus"
 import { prefersReducedMotion } from "controllers/motion"
 
-// 金額をカウントアップで見せる。最初は 0 から、morph（Turbo の refresh）で
-// data-count-up-amount-value が変わったら、前の値から新しい値まで数える
+// 残高。動くのは出来事のときだけ: 最初はそのまま出し、morph（Turbo の refresh）で
+// data-count-up-amount-value が変わったら、前の値から新しい値まで数える。
+// 数字は number ターゲット（単位は別の要素）。ターゲットがなければ要素に「数字 + 単位」を書く
 export default class extends Controller {
+  static targets = ["number"]
   static values = { amount: Number, unit: String, duration: { type: Number, default: 900 } }
 
   amountValueChanged(amount) {
     const first = this.shown === undefined
-    const from = first ? 0 : this.shown
+    const from = first ? amount : this.shown
     this.shown = amount
-    if (!first && from !== amount) this.#bump(amount > from ? "up" : "down")
+    if (first || from === amount) return this.#render(amount)
+
+    this.#bump(amount > from ? "up" : "down")
     this.#animate(from, amount)
   }
 
@@ -20,7 +24,7 @@ export default class extends Controller {
 
   #animate(from, to) {
     cancelAnimationFrame(this.frame)
-    if (prefersReducedMotion() || from === to) return this.#render(to)
+    if (prefersReducedMotion()) return this.#render(to)
 
     const start = performance.now()
     const tick = (now) => {
@@ -33,7 +37,9 @@ export default class extends Controller {
   }
 
   #render(n) {
-    this.element.textContent = `${n.toLocaleString("ja-JP")}${this.unitValue}`
+    const text = n.toLocaleString("ja-JP")
+    if (this.hasNumberTarget) this.numberTarget.textContent = text
+    else this.element.textContent = `${text}${this.unitValue}`
   }
 
   // 増えたら「ぽよん」、減ったら「しゅん」（CSS の .up / .down）

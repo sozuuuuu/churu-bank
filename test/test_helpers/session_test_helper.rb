@@ -25,7 +25,7 @@ module SessionTestHelper
   end
 
   def sign_in_as_customer(customer)
-    post customer_session_path, params: { email_address: customer.email_address, password: TEST_PASSWORD }
+    post customer_session_path, params: { customer_id: customer.id } # 利用者のログインはドロップダウンで選ぶだけ（パスワードなし）
     raise "利用者としてログインできませんでした" if cookies[:customer_session_id].blank?
   end
 end

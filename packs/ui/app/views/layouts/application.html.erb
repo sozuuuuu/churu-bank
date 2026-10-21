@@ -22,9 +22,12 @@
   </head>
 
   <body class="<%= content_for(:body_class) %>">
+    <%# 本文の上に重ねる部品（ねこテーマのセリフ窓。layouts/cat が入れる） %>
+    <%= yield :overlay %>
     <header class="site-header">
-      <%# ロゴのリンク先は、行員の画面なら管理画面、利用者の画面なら利用者画面（staff_header / customer_header が入れる） %>
-      <%= link_to content_for(:home_path) || "/", class: "brand" do %>🐟 ちゅーる銀行<% end %>
+      <%# ロゴのリンク先は、行員の画面なら管理画面、利用者の画面なら利用者画面（staff_header / customer_header が入れる）。
+          ロゴの印はねこテーマだけキラッ（content_for :brand_mark） %>
+      <%= link_to content_for(:home_path) || "/", class: "brand" do %><%= content_for?(:brand_mark) ? yield(:brand_mark) : "🐟" %> ちゅーる銀行<% end %>
       <%# メニューは画面のパックごと（packs/admin・packs/customer・packs/shop の layouts）で content_for :nav に入れる %>
       <nav>
         <%= yield :nav %>
@@ -34,7 +37,8 @@
     </header>
 
     <main class="container">
-      <% flash.each do |type, message| %>
+      <%# 出すのは notice と alert だけ（ほかのキーは画面の部品が使う。例: 振込完了の演出の flash[:celebrate]） %>
+      <% flash.to_hash.slice("notice", "alert").each do |type, message| %>
         <p class="flash flash-<%= type %>"><%= message %></p>
       <% end %>
       <%# ページの頭に差し込む部品（利用者画面のお知らせのねこ。packs/notices の notices_inbox が入れる） %>

@@ -1,22 +1,26 @@
 <% content_for :title, "ログイン | ちゅーる銀行" %>
 <% content_for :home_path, new_customer_session_path %>
+<% if flash[:alert] %>
+  <% cat_says "だれの口座を見るか、えらんでほしいにゃ。", face: :sad %>
+<% else %>
+  <% cat_says "いらっしゃいにゃ。ちゅーる銀行のねこ、ちゅーるにゃ。だれの口座を見るにゃ？" %>
+<% end %>
 
-<section class="hello login-hello">
-  <div class="bubble">
-    <p class="bubble-sub">いらっしゃいにゃ</p>
-    <h1>ちゅーる銀行にログイン</h1>
-  </div>
-</section>
+<header class="page-title">
+  <p>ようこそ</p>
+  <h1><span class="marker">ちゅーる銀行に入る</span></h1>
+</header>
 
-<%= form_with url: customer_session_path, class: "card form login" do |form| %>
-  <label>
-    メールアドレス
-    <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username",
-                         value: params[:email_address] %>
-  </label>
-  <label>
-    パスワード
-    <%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72 %>
-  </label>
-  <%= form.submit "ログイン 🐾", class: "button primary" %>
+<%# パスワードは使わない（学習用）。利用者を選ぶだけで、その人としてログインする %>
+<%= form_with url: customer_session_path, class: "card tone form login" do |form| %>
+  <% if @customers.empty? %>
+    <p class="muted">利用者がまだいません。<code>bin/rails db:seed</code> で開発用の利用者が入ります。</p>
+  <% else %>
+    <label>
+      だれとして入る？
+      <%= form.select :customer_id, @customers.map { [ "#{it.name} さん", it.id ] },
+                      { include_blank: "選んでください" }, required: true, autofocus: true %>
+    </label>
+    <%= form.button class: "button primary" do %><%= icon(:key) %> この人で入る<% end %>
+  <% end %>
 <% end %>

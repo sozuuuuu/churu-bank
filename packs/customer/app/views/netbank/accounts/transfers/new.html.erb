@@ -4,7 +4,8 @@
   <% else %>
     <%= form_with url: account_transfers_path(@account), class: "form", data: { controller: "amount" } do |f| %>
       <% if @error %>
-        <p class="flash flash-alert"><%= @error %></p>
+        <%= cat_say_tag "うまくいかなかったにゃ… 上のメッセージを読んで、もう一度入れてほしいにゃ。", face: :sad %>
+        <p class="flash flash-alert"><%= icon(:alert) %> <%= @error %></p>
       <% end %>
 
       <label>

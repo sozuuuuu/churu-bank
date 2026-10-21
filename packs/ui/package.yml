@@ -1,10 +1,12 @@
 # 画面の共通部品: どの画面のパック（admin / customer / shop）も使う見た目の土台。ドメインのコードは置かない
 #   - Ui::FormatHelper            … churu（金額）・jp_date・jp_time。画面のパックのベースで helper Ui::FormatHelper する
+#   - Ui::ThemeHelper             … 利用者画面（ねこテーマ）の部品: icon（線画のアイコン）・cat（表情4種のねこ。ui/_cat）・
+#                                   cat_says（ページのセリフ）・cat_say_tag（Frame の中からセリフを変える）。利用者向けのパックのベースで helper する
 #   - layouts/application         … 全画面の外枠（ヘッダー・フラッシュ）。メニューは各パックが content_for :nav で入れる。
 #                                   ログイン中の人の名前とログアウトは content_for :account、ロゴのリンク先は :home_path
 #                                   （行員と利用者でログインが別なので、ここはどちらも知らない。staff_header / customer_header が入れる）。
 #                                   content_for :page_top は main の頭に出る（利用者画面のお知らせのねこなど）
-#   - layouts/cat                 … ねこテーマ（ui/cat.css とフォント）を足してから application で描く。利用者向けの画面用
+#   - layouts/cat                 … ねこテーマ（ui/cat.css とフォント、画面下のセリフ窓 ui/_serif）を足してから application で描く。利用者向けの画面用
 # レイアウトはテンプレート名で使うので packwerk には見えない。ベースコントローラの helper Ui::FormatHelper を
 # 「ui を使っている」しるしにして、package.yml の dependencies にも packs/ui を書く
 enforce_dependencies: true

@@ -1,9 +1,11 @@
 <%= turbo_frame_tag "checkout" do %>
   <div class="confirm">
     <% if @error %>
-      <p class="flash flash-alert"><%= @error %></p>
+      <%= cat_say_tag "注文できなかったにゃ… 上のメッセージを読んでほしいにゃ。", face: :sad %>
+      <p class="flash flash-alert"><%= icon(:alert) %> <%= @error %></p>
       <%= link_to "カートに戻る", shop_root_path, class: "button", data: { turbo_frame: "_top" } %>
     <% else %>
+      <%= cat_say_tag "まだ注文してないにゃ！ 内容を確かめて、よければ「注文する」を押してにゃ。", face: :surprised %>
       <p class="muted">まだ注文していません。内容を確認してください。</p>
       <% @outcome.warnings.each do |warning| %>
         <p class="hint"><%= warning %></p>

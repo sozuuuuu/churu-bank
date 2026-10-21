@@ -6,7 +6,7 @@
 
 <div class="shop-head">
   <div>
-    <h1>🛒 <%= title %></h1>
+    <h1><%= icon(:cart, size: 26) %><span class="marker"><%= title %></span></h1>
     <nav class="shop-nav">
       <%= link_to "商品", shop_root_path %>
       <%= link_to "注文履歴", shop_orders_path %>

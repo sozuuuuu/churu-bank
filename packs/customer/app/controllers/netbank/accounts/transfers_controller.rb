@@ -17,6 +17,8 @@ module Netbank
         if @outcome.dry_run?
           render :confirm
         else
+          # すぐの振込なら、口座ページで「完了」になった瞬間に振込完了の演出を出す（もう完了していても出す）
+          flash[:celebrate] = @outcome.transfer_id unless @form[:execute_on]
           redirect_to account_path(@account), notice: done_message, status: :see_other
         end
       rescue Banking::Error, ArgumentError => e

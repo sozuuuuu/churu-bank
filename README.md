@@ -14,8 +14,8 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 
 - 環境: WSL の Ubuntu 24.04、Ruby は mise（`mise.toml`）、バージョン管理は jj
 - ログイン: 開発用のアカウントは `db/seeds.rb`（行員の たま・くろ と、利用者のオルカ・ジンジベル・ミケ）。
-  **行員と利用者はアカウントもログイン画面も別**: 行員は `/admin/session/new`（ドロップダウンで行員を選んで入るだけ。パスワードなし）、
-  利用者は `/session/new`
+  **行員と利用者はアカウントもログイン画面も別**。どちらも学習用なのでパスワードなしで、ドロップダウンで選んで入るだけ:
+  行員は `/admin/session/new`、利用者は `/session/new`
 - `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員だけ）。`/admin/counter` … 窓口（出金依頼の処理）、
   `/admin/approvals` … 承認待ち（二人承認）
 - `/res` … RES Browser（イベントストアの中身を見る。行員だけ）
@@ -36,7 +36,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/approvals` | **二人承認**: 取消・組戻し・凍結の解除の「申請 → 別の行員が承認 → 実行」（却下・取り下げ）。外から使えるのは `app/public`（`Approvals::Desk` / `Approvals::Events` / `ApprovalRequest`） | platform, banking |
 | `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と、利用者の買い物の画面 `/shop`。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking, customer_identity, ui |
 | `packs/shop_admin` | 商品と在庫の管理 `/shop/admin`（`ShopAdmin::`）。商品の登録・値段・入荷・商店の口座を開く、注文を全員分見る。行員だけ | platform, banking, shop, staff_identity, ui |
-| `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`。`content_for :nav` / `:account` / `:home_path` / `:page_top` で差し込む）、ねこテーマ（`layouts/cat` と `ui/cat.css`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`）。だれがログインしているかは知らない | platform |
+| `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`。`content_for :nav` / `:account` / `:home_path` / `:page_top` で差し込む）、ねこテーマ（`layouts/cat` と `ui/cat.css`、画面下のセリフ窓 `ui/_serif`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`）、`Ui::ThemeHelper`（線画のアイコン・表情4種のねこ・ねこのセリフ）。だれがログインしているかは知らない | platform |
 | `packs/notices` | 銀行からのお知らせ・お願い・メンテナンス（ふつうの ActiveRecord）と、利用者の `/notices`・ねこの吹き出し。外から使えるのは `app/public`（`Notices::InboxHelper` / `Notices::Board` / `Notice`） | platform, customer_identity, customer_registry, ui |
 | `packs/notices_admin` | お知らせの管理 `/admin/notices`（`NoticesAdmin::`）。出す・直す・掲載終了。行員だけ | platform, notices, staff_identity, customer_registry, ui |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
@@ -62,7 +62,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 |---|---|---|
 | モデル・テーブル | `Staff`（`staffs`）・`staff_sessions` | `Customer`（`customers`、顧客台帳）・`customer_sessions` |
 | パック | `packs/staff_identity` | `packs/customer_identity`（ログイン）＋ `packs/customer_registry`（台帳） |
-| ログイン画面 | `/admin/session/new`（管理画面と同じ見た目。行員をドロップダウンで選ぶだけ） | `/session/new`（ねこテーマ） |
+| ログイン画面 | `/admin/session/new`（管理画面と同じ見た目。行員をドロップダウンで選ぶだけ） | `/session/new`（ねこテーマ。**学習用なのでパスワードなし**: 利用者をドロップダウンで選んで入る。パスワードの列と検証は残してあるが使わない） |
 | セッションの Cookie | `staff_session_id` | `customer_session_id` |
 | ベースコントローラで include | `StaffAuthentication`（`current_staff`） | `CustomerAuthentication`（`current_customer`） |
 | ライブ更新の購読 | `staff_stream_from` → `StaffStreamsChannel` | `customer_stream_from` → `CustomerStreamsChannel` |
@@ -86,7 +86,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
   出金は依頼を出すだけ（行員が窓口で処理する）。入金と凍結は行員だけ。振込先には全口座（解約済みを除く）を選べる
 - 行員は口座の開設のときに持ち主（利用者）を選んでひも付ける。台帳（`Customer`）は packs/customer_registry にあり、
   行員の画面（admin・notices_admin）はここに依存するが、利用者のログイン（customer_identity）には依存しない
-- 利用者画面は見た目も別（ねこ・ちゅ〜るのテーマ、`packs/ui/app/assets/stylesheets/ui/cat.css`。`layouts/cat` が読み込む）。`body.cat-theme` の下だけに効き、管理画面は今の見た目のまま
+- 利用者画面は見た目も別（日本アニメ的 kawaii のねこテーマ、`packs/ui/app/assets/stylesheets/ui/cat.css`。`layouts/cat` が読み込む。「利用者画面の見た目」の節）。`body.cat-theme` の下だけに効き、管理画面は今の見た目のまま
 - 商店の買い物（`/shop`）は利用者のログイン、商品と在庫の管理（`/shop/admin`）は行員のログイン。「ちゅ〜る商店」の節を参照
 - だれの操作かは、イベントの metadata の actor に `staff:<id>` / `customer:<id>` で残る（メールアドレスは変わりうるので id）。
   Q0 より前のイベントは `admin:<メール>` / `customer:<メール>` / `shop:<メール>` のまま（過去のイベントは書き換えない）
@@ -395,24 +395,23 @@ Shop::PaymentJob（銀行のイベントを購読）→ Store#settle_transfer（
 
 ## 銀行からのお知らせ（packs/notices）
 
-行員が出したお知らせを、利用者画面でねこが吹き出しで知らせる。キャンペーン（条件を満たすと特典が自動入金）はまだで、あとで足せる形にだけしてある。
+行員が出したお知らせを、利用者画面のページの頭の吹き出しと、ねこのセリフ窓で知らせる。キャンペーン（条件を満たすと特典が自動入金）はまだで、あとで足せる形にだけしてある。
 
 | だれ | 場所 | できること |
 |---|---|---|
 | 行員 | `/admin/notices`（管理画面のメニュー「お知らせ」） | 出す・直す・掲載終了。種類（お知らせ / お願い / メンテナンス）、タイトル・本文、掲載期間（終了は空なら終わりなし）、対象（全員 / 選んだ利用者）、重要 |
-| 利用者 | 利用者画面のどのページにも | ページの頭にねこの吹き出し（最大3件、ほかは「ほかに N 件」）、メニューの「お知らせ」に未読のバッジ |
+| 利用者 | 利用者画面のどのページにも | ページの頭にお知らせの吹き出し（最大3件、ほかは「ほかに N 件のお知らせ」）、メニューの「お知らせ」（ベル）に未読のバッジ |
 | 利用者 | `/notices`・`/notices/:id` | 一覧（未読は NEW）と本文。開くと既読 |
 
 - **見えるもの**: いま掲載中（`starts_at <= 今 < ends_at`）で、自分が対象のものだけ。期間外・対象外は一覧に出ず、開いても閉じても 404
 - **既読と「閉じる」**: 利用者ごとに `notice_receipts`（`read_at` / `dismissed_at`）。ふつうのお知らせは未読のあいだ吹き出しに出て、開くか × で消える。
-  **重要なものは開いて既読になっても、× で閉じるまで吹き出しに出し続ける**（本文のページにも「読んだにゃ（吹き出しを閉じる）」）
+  **重要なものは開いて既読になっても、× で閉じるまで吹き出しに出し続ける**（本文のページにも「読みました（吹き出しを閉じる）」）
 - **掲載終了**は消さずに `ends_at` を今にする（だれが読んだかは残る）。始まる前のものを終えたら、始まりも今にする
 - **ライブ更新**: `Notices::Board` が保存したら `Notices::RefreshJob` が Turbo の refresh（morph）を `"notices"`（全員）に送る。
   掲載の始まり・終わりが先なら、その時刻にも送る（`set(wait_until:)`。Solid Queue）。既読・閉じたは `[customer, :notices]` に送ってほかのタブにも映す。
   refresh は「取り直して」という合図だけで中身を運ばないので、対象外の人に届いても何も漏れない
-- **動き**: morph で新しく入った吹き出しだけが「ぽよん」と出る（CSS。すでにある要素は morph で残るので動き直さない）。
-  ねこが跳ねてトースト（「銀行からお知らせが届いたにゃ！」）は Stimulus の `notices--inbox`。未読のバッジはぴょこぴょこ。
-  `prefers-reduced-motion` なら跳ねる・ぽよん・バッジの動きを止める（トーストは出す）
+- **動き**: morph で新しく入った吹き出しだけが「ぽん」と出る（Stimulus の `notices--inbox` が `.is-fresh` を付ける）。
+  ねこのセリフ窓にも知らせる（`cat:say`。重要なものはびっくり顔）。ページを開いたときやバッジは動かさない。`prefers-reduced-motion` なら止める
 - **Turbo の prefetch に注意**: Turbo 8 はリンクにホバーすると先読みする。「開いたら既読」の GET が先読みされて、マウスを乗せただけで既読になった。
   吹き出しと一覧に `data-turbo-prefetch="false"` を付け、サーバーでも `X-Sec-Purpose: prefetch` のときは既読にしない（応答は `no-store`）
 
@@ -443,6 +442,41 @@ RES の集約にすると、読み取りモデル・プロジェクション・�
 - キャンペーンのパック（例: `packs/campaigns`、依存は banking・notices）が条件と特典を持ち、銀行のイベントを購読して `Banking::Bank` で入金し、`Notices::Board` で知らせる
 - お知らせから「参加する」ボタンなどへつなぐなら、そのときに `notices` にリンク先の列を足す
 
+## 利用者画面の見た目（日本アニメ的 kawaii、TODO の M）
+
+最初の「ねこ・ちゅ〜る」のテーマは「かわいいというより幼い」ので、方向を**日本アニメ的 kawaii**に変えた
+（見本はデザインキャンバスの Main / Happy / Faces / Cat）。行員の画面の見た目は変えていない。
+
+- **色**: 桜ピンク `#FFB7C9`・空色 `#9ED8F5`・クリーム `#FFF8EC`（地）・紺 `#2B2D52`（主線と文字）。ちゅ〜るのオレンジは使わない（残高も紺）。
+  金額は入金 `#1F6FA8`・出金 `#C2365E`、補足の文字 `#5B5E85`（どれも白とクリームの上で 4.5:1 以上）
+- **ダーク**: 紺の地 `#1B1C38`・カードの面 `#26284A` に、主線と文字はクリーム `#FFF8EC`。補足 `#C3C5E6`、入金 `#8ED0F7`、出金 `#FF9FB8`。
+  ピンクのボタンの文字は紺の地の色、ぼかさない影は地より暗い `#0D0E20`。ねこはキャラクターの色なので変えない（どれも 4.5:1 以上）
+- **セル画っぽさ**: カード・ボタン・入力欄に 2〜2.5px の主線と、ぼかさない影（`0 4px 0` / `0 5px 0`）。角丸 16〜20px。
+  グラデーションと水玉はやめ、アクセントにスクリーントーンの網点（`.tone`、カードの右上だけ）。見出しはマーカー線（`.marker`）
+- **文字**: Zen Maru Gothic（500 / 700 / 900）、数字は等幅。残高は数字を大きく、単位「ちゅ〜る」を小さく
+- **アイコン**: 絵文字はやめて線画（`Ui::ThemeHelper#icon`、インラインの stroke SVG）。商品の絵文字・お知らせの種類の絵文字は行員の画面だけで使う
+- **ねこ**（`cat(face:)`、`ui/_cat`）: 主線つき、大きなキラキラの目。表情は 4 つ（ふつう・うれしい・びっくり・しょんぼり）を 1 つの SVG に描いておき、
+  `data-face` で出し分ける。出来事で切り替える:
+
+  | 表情 | いつ |
+  |---|---|
+  | うれしい（弾む・キラッ） | 入金が届いた（morph で通帳に入った行）、振込が完了した、お買いもの完了 |
+  | びっくり | 確認の画面（振込・取消・注文。まだ確定していない）、重要なお知らせ |
+  | しょんぼり | 残高不足などで振込・注文ができなかった、組戻しで引き戻された・入金が取り消された、口座が凍結中・解約済み |
+  | ふつう | それ以外（あいさつ・ふだんのセリフ） |
+
+- **セリフ窓**（`ui/_serif`、Stimulus の `serif`）: ノベルゲーム風に画面の下に固定（名札「ちゅーる」と ▼）。文字を 1 文字ずつ出す（クリックで全部出る）。
+  **猫語はここだけ**で、ほかの文（見出し・ボタン・メッセージ）は普通の日本語。
+  ページのセリフはテンプレートで `cat_says "…", face: :sad`、Turbo Frame の中（確認画面など）からは `cat_say_tag`（Stimulus の `cat-say`。
+  消えるとページのセリフに戻る）、JS からは `window` に `cat:say`（`{ text, face, bounce }`）。読み上げには全文を 1 回だけ（`role="status"`）
+- **振込完了の演出**: すぐの振込を確定すると `flash[:celebrate]` に振込 ID を入れ、口座ページの通帳の行（`transfer_status`）が「完了」になった瞬間に
+  `dialog.hooray`（集中線・「振込完了！」・うれしいねこ・はんこ・セリフ窓）を開く。描いた時点でもう完了していても出す。
+  ジョブの refresh の配信は自分のリクエストのものとして無視されることがあるので、直後だけ自分で数回描き直して完了を拾う
+- **動きは出来事のときだけ**: うれしいときの弾む動き（つぶれて伸びる）とキラッ、表情が変わるときの小さな動き、振込完了の集中線、
+  届いた通帳の行・残高の変化。常時ふわふわ・まばたき・ホバーで傾く・ページを開くたびのカウントアップはやめた。`prefers-reduced-motion` で全部止まる
+- **出金依頼などのフォームを足すとき**: `.card` `.form` `.button`（`.primary` / `.small`）・`.confirm`・`.badge`・`.flash`・`.hint` をそのまま使えば
+  この見た目になる。見出しは `<h2><%= icon(:send, size: 22) %><span class="marker">…</span></h2>`、確認画面には `cat_say_tag "…", face: :surprised`
+
 ## Hotwire で使っているもの
 
 | 機能 | 場所 |
@@ -451,7 +485,7 @@ RES の集約にすると、読み取りモデル・プロジェクション・�
 | Turbo Frame + `data-turbo-action="advance"` | 時点指定の残高（URL の `?date=` も進む） |
 | Turbo 8 の refresh（morph） | `turbo_refreshes_with` + `turbo_stream_from`。ほかのプロセスからの入出金も即反映 |
 | Stimulus | `amount_controller`（+10 / +50 ボタン）、`autosubmit_controller`（日付を変えたら送信） |
-| 利用者画面の動き（Stimulus + CSS、外部ライブラリなし） | `count_up_controller`（残高のカウントアップ。morph で値が変わると前の値から数える）、`arrival_controller`（morph で届いた通帳の行をふわっと出す）、`transfer_status_controller` → `celebrate_controller`（振込完了・入金で紙吹雪とトースト）。`prefers-reduced-motion` なら止める |
+| 利用者画面の動き（Stimulus + CSS、外部ライブラリなし） | `serif_controller`（ねこのセリフ窓。1文字ずつ・表情の切り替え）、`cat_say_controller`（Frame の中からセリフを変える）、`count_up_controller`（morph で残高が変わると前の値から数える）、`arrival_controller`（morph で届いた通帳の行を出し、種類に合わせてねこのセリフ）、`transfer_status_controller` → `celebrate_controller`（振込完了の演出 `dialog.hooray`）。`prefers-reduced-motion` なら止める |
 | View Transitions | 利用者画面だけ `<meta name="view-transition">`。一覧と口座ページで残高がつながる |
 | Turbo の refresh（morph）+ Solid Queue の予約 | 銀行からのお知らせ。出した・直した・掲載の始まり / 終わりの時刻に `Notices::RefreshJob`。新しい吹き出しだけ CSS で出る。`data-turbo-prefetch="false"`（開くと既読のため） |
 
@@ -506,7 +540,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~J~~ | ~~Zingiber から銀行の MCP を使う~~（やらない。2026-10-21 決定） | E | Zingiber 側 |
 | K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |
 | L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |
-| ~~M~~ | ~~利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮~~（済） | C | `packs/customer` |
+| ~~M~~ | ~~利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮~~（済。アニメ kawaii に作り直し済み。「利用者画面の見た目」） | C | `packs/customer` |
 | ~~N~~ | ~~商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ~~（済） | B, D | `packs/shop`・`packs/ui` |
 | ~~O~~ | ~~管理画面に取消・組戻し・利息の手動実行のボタン~~（済。「管理画面での取消・組戻し・利息」） | F, G | `packs/admin` |
 | P | 利用者画面に銀行からのお知らせ・お願い・キャンペーン（**お知らせ・お願いは済**。キャンペーン = 条件を満たすと特典が自動入金、は未） | C, N（キャンペーンは L） | `packs/notices`（キャンペーンは新しいパック） |

@@ -1,6 +1,7 @@
-<%# メニューの「お知らせ」。未読があればバッジ（ぴょこぴょこ動く） %>
-<%= link_to notices_path, id: "notice-nav", class: "notice-nav" do %>
-  お知らせ
+<%# メニューの「お知らせ」（ベルのアイコン）。未読があればバッジ %>
+<%= link_to notices_path, id: "notice-nav", class: "notice-nav",
+            "aria-current": ("page" if controller_path.start_with?("notices")) do %>
+  <%= icon(:bell, size: 18) %> お知らせ
   <% if inbox.unread_count.positive? %>
     <span class="notice-badge" aria-label="未読 <%= inbox.unread_count %> 件"><%= inbox.unread_count %></span>
   <% end %>

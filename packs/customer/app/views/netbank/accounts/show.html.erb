@@ -1,26 +1,50 @@
 <% content_for :title, "#{@account.holder_name} の口座 | ちゅーる銀行" %>
+<% case @account.status %>
+<% when "frozen" %>
+  <% cat_says "この口座はいま凍結中にゃ… 振込はできないにゃ。くわしくは窓口に相談してにゃ。", face: :sad %>
+<% when "closed" %>
+  <% cat_says "この口座は解約済みにゃ。通帳はいつでも見られるにゃ。", face: :sad %>
+<% else %>
+  <% if flash[:celebrate] %>
+    <% cat_says "振込を受け付けたにゃ。届いたらすぐ知らせるにゃ。" %>
+  <% else %>
+    <% cat_says "おかえりにゃ。振込も通帳も、このページでできるにゃ。" %>
+  <% end %>
+<% end %>
+
+<%# 通帳の行の種類ごとのアイコン（ほかの種類 = 組戻し・取消は「戻す」の矢印） %>
+<% passbook_icons = { "deposit" => :fish, "withdrawal" => :arrow_out, "transfer_out" => :send, "transfer_in" => :letter,
+                      "interest" => :sprout } %>
 
 <%# 行員の操作や振込のジョブ、MCP から更新があっても、この画面が morph で更新される %>
 <%= customer_stream_from @account %>
 
-<%# celebrate: 通帳に入金が届いたとき・振込が完了したときに、お祝いの演出とトーストを出す %>
+<%# celebrate: 通帳に入金が届いたとき・振込が完了したときに、ねこのセリフと表情を変え、振込完了なら「振込完了！」の画面を出す %>
 <div data-controller="celebrate"
      data-action="arrival:arrived->celebrate#burst transfer-status:settled->celebrate#burst">
-  <section class="hero card">
-    <%= render "netbank/cat", class: "hero-cat" %>
-    <div class="hero-body">
-      <p class="muted">口座番号 <%= @account.number %> ・ 開設 <%= jp_date(@account.opened_on) %></p>
-      <h1><%= @account.holder_name %> <span class="badge badge-<%= @account.status %>"><%= @account.status_label %></span></h1>
+  <section class="hero card tone">
+    <%= sparkle(size: 26, css: "hero-star") %>
+    <div class="hero-tags">
+      <span class="tag sky">口座 <%= @account.number %></span>
+      <span class="badge badge-<%= @account.status %>"><%= @account.status_label %></span>
     </div>
-    <p class="hero-balance">
-      <small>いまの残高</small>
-      <%= render "netbank/accounts/amount", account: @account %>
-    </p>
+    <h1 class="hero-who"><%= @account.holder_name %> さんの いまの残高</h1>
+    <p class="hero-balance"><%= render "netbank/accounts/amount", account: @account %></p>
+    <p class="hero-note">開設 <%= jp_date(@account.opened_on) %></p>
   </section>
 
+  <nav class="quick-actions" aria-label="この口座でできること">
+    <% if @account.active? %>
+      <a href="#transfer-card" class="button primary"><%= icon(:send) %> 振り込む</a>
+    <% else %>
+      <span class="button" aria-disabled="true"><%= icon(:lock) %> <%= @account.status_label %></span>
+    <% end %>
+    <a href="#as-of-card" class="button"><%= icon(:calendar) %> 時点の残高</a>
+  </nav>
+
   <div class="grid">
-    <section class="card pop" style="--i: 1">
-      <h2><span aria-hidden="true">💌</span> 振込</h2>
+    <section class="card" id="transfer-card">
+      <h2><%= icon(:send, size: 22) %><span class="marker">振込</span></h2>
       <% if @account.active? %>
         <%# 入力 → 確認 → 確定 の画面遷移は、この Frame の中だけで起きる %>
         <%= turbo_frame_tag "transfer", src: new_account_transfer_path(@account) do %>
@@ -31,12 +55,12 @@
       <% end %>
     </section>
 
-    <section class="card pop" style="--i: 2">
-      <h2><span aria-hidden="true">📅</span> 時点指定の残高</h2>
+    <section class="card" id="as-of-card">
+      <h2><%= icon(:calendar, size: 22) %><span class="marker">時点指定の残高</span></h2>
       <%# Frame だけ差し替えつつ、URL（?date=）も進める。morph で更新されても同じ日付で描き直される %>
       <%= form_with url: balance_account_path(@account), method: :get,
                     data: { turbo_frame: "balance", turbo_action: "advance", controller: "autosubmit" } do |f| %>
-        <%= f.date_field :date, value: @date, data: { action: "change->autosubmit#submit" } %>
+        <%= f.date_field :date, value: @date, "aria-label": "日付", data: { action: "change->autosubmit#submit" } %>
       <% end %>
       <%= turbo_frame_tag "balance", src: balance_account_path(@account, date: @date) %>
     </section>
@@ -45,8 +69,8 @@
   <%= render "netbank/accounts/withdrawal_requests", account: @account, requests: @withdrawal_requests %>
 
   <% if @pending_transfers.any? %>
-    <section class="card pop" style="--i: 3" id="pending-transfers">
-      <h2><span aria-hidden="true">⏳</span> 予約・保留中の振込</h2>
+    <section class="card" id="pending-transfers">
+      <h2><%= icon(:clock, size: 22) %><span class="marker">予約・保留中の振込</span></h2>
       <p class="muted small">まだ実行していない振込です。保留中は、金額が大きいので銀行が確認しています。どちらも取り消せます。</p>
       <%# 「取り消す」を押すと、確認 → 確定 がこの Frame の中で動く %>
       <%= turbo_frame_tag "cancellation" %>
@@ -67,23 +91,29 @@
     </section>
   <% end %>
 
-  <section class="card pop" style="--i: 4">
-    <h2><span aria-hidden="true">📒</span> 通帳</h2>
+  <section class="card">
+    <h2><%= icon(:passbook, size: 22) %><span class="marker">通帳</span></h2>
     <% if @entries.empty? %>
       <p class="muted">まだ取引はありません。</p>
     <% else %>
-      <%# arrival: morph で新しく入ってきた行だけ、ふわっと出す %>
+      <%# arrival: morph で新しく入ってきた行だけ「ぽん」と出し、種類に合わせてねこのセリフを頼む %>
       <ol class="passbook" data-controller="arrival">
         <% @entries.each do |entry| %>
           <li id="<%= dom_id(entry) %>" class="<%= entry.amount.negative? ? "out" : "in" %>"
-              data-incoming="<%= entry.amount.positive? %>">
-            <span class="passbook-icon" aria-hidden="true"><%= entry.amount.negative? ? "🐾" : "🐟" %></span>
+              data-kind="<%= entry.kind %>" data-amount="<%= entry.amount %>">
+            <span class="passbook-icon"><%= icon(passbook_icons.fetch(entry.kind, :undo), size: 22) %></span>
             <span class="passbook-main">
               <span class="passbook-title">
                 <%= entry.kind_label %>
                 <% if (transfer = @transfers[entry.transfer_id]) && entry.kind == "transfer_out" %>
-                  <%# transfer-status: 「処理中」→「完了」に変わったらお祝い %>
-                  <span data-controller="transfer-status" data-transfer-status-status-value="<%= transfer.status %>">
+                  <%# transfer-status: 「処理中」→「完了」に変わったら振込完了の演出（相手・金額などはその材料） %>
+                  <span data-controller="transfer-status" data-transfer-status-status-value="<%= transfer.status %>"
+                        data-transfer-status-just-created-value="<%= flash[:celebrate] == transfer.transfer_id %>"
+                        data-transfer-status-to-value="<%= @holders.fetch(entry.counterparty, entry.counterparty) %>（<%= entry.counterparty %>）"
+                        data-transfer-status-amount-value="<%= -entry.amount %>"
+                        data-transfer-status-memo-value="<%= entry.memo %>"
+                        data-transfer-status-at-value="<%= entry.booked_at.in_time_zone.strftime("%-m/%-d %H:%M") %>"
+                        data-transfer-status-balance-value="<%= entry.balance_after %>">
                     <%= render "transfers/status", transfer: %>
                   </span>
                 <% end %>
@@ -113,5 +143,32 @@
     <% end %>
   </section>
 
-  <div id="celebrate-toast" class="toast" data-turbo-permanent data-celebrate-target="toast" role="status" aria-live="polite"></div>
+  <%# 振込完了の瞬間の演出（集中線・「振込完了！」・うれしいねこ・はんこ）。中身は celebrate が入れて showModal する。
+      開いているあいだに morph が来ても閉じないように data-turbo-permanent %>
+  <dialog id="hooray" class="hooray" data-celebrate-target="hooray" data-turbo-permanent aria-labelledby="hooray-title">
+    <div class="hooray-inner">
+      <%= sparkle(size: 34, css: "hooray-star", style: "top: 70px; left: 24px; --i: 0") %>
+      <%= sparkle(size: 22, css: "hooray-star sky", style: "top: 210px; left: 10px; --i: 1") %>
+      <%= sparkle(size: 28, css: "hooray-star pink", style: "top: 120px; right: 20px; --i: 2") %>
+      <%= sparkle(size: 18, css: "hooray-star", style: "top: 250px; right: 38px; --i: 3") %>
+      <p id="hooray-title" class="hooray-title">振込完了！</p>
+      <div class="hooray-cat"><%= cat face: :happy, size: 200 %></div>
+      <section class="hooray-card">
+        <span class="hooray-stamp" aria-hidden="true">完了</span>
+        <p class="hooray-to" data-celebrate-target="hoorayTo"></p>
+        <p class="amount"><span class="amount-num" data-celebrate-target="hoorayAmount"></span> <span class="amount-unit">ちゅ〜る</span></p>
+        <p class="hooray-meta" data-celebrate-target="hoorayMeta"></p>
+      </section>
+      <form method="dialog"><button class="button primary" autofocus>通帳にもどる</button></form>
+      <%# 演出の中のセリフ窓（文字を1文字ずつ出すのは同じ serif。セリフは celebrate が入れる） %>
+      <div class="serif" data-controller="serif" data-serif-text-value="" data-celebrate-target="hooraySerif">
+        <div class="serif-box">
+          <span class="serif-name">ちゅーる</span>
+          <p class="serif-text" aria-hidden="true" data-serif-target="text"></p>
+          <p class="visually-hidden" role="status" data-serif-target="live"></p>
+          <svg class="serif-next" width="14" height="10" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 1 h12 l-6 8 z" /></svg>
+        </div>
+      </div>
+    </div>
+  </dialog>
 </div>

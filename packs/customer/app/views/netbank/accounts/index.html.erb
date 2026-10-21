@@ -1,32 +1,34 @@
 <% content_for :title, "わたしの口座 | ちゅーる銀行" %>
+<% if @accounts.empty? %>
+  <% cat_says "まだ口座がないにゃ。口座は窓口の行員さんに開いてもらってにゃ。", face: :sad %>
+<% else %>
+  <% cat_says "おかえりにゃ、#{current_customer.name} さん。見たい口座をえらんでにゃ。" %>
+<% end %>
 
 <%# 自分の口座のどれかが更新されたら、この一覧が morph で更新される %>
 <% @accounts.each do |account| %>
   <%= customer_stream_from account %>
 <% end %>
 
-<section class="hello">
-  <%= render "netbank/cat" %>
-  <div class="bubble">
-    <p class="bubble-sub">おかえりにゃ</p>
-    <h1><%= current_customer.name %> さんの口座</h1>
-  </div>
-</section>
+<header class="page-title">
+  <p>おかえりなさい</p>
+  <h1><span class="marker"><%= current_customer.name %> さんの口座</span></h1>
+</header>
 
 <% if @accounts.empty? %>
   <p class="empty">まだ口座がありません。口座の開設は窓口（行員）にご相談ください。</p>
 <% else %>
   <ul class="account-cards">
-    <% @accounts.each_with_index do |account, i| %>
-      <li id="<%= dom_id(account) %>" style="--i: <%= i %>">
-        <%= link_to account_path(account), class: "account-card" do %>
+    <% @accounts.each do |account| %>
+      <li id="<%= dom_id(account) %>">
+        <%= link_to account_path(account), class: "account-card tone" do %>
           <span class="account-card-head">
-            <span class="paw" aria-hidden="true">🐾</span>
-            <span class="muted">口座番号 <%= account.number %></span>
+            <span class="tag sky">口座 <%= account.number %></span>
             <span class="badge badge-<%= account.status %>"><%= account.status_label %></span>
           </span>
           <span class="account-card-name"><%= account.holder_name %></span>
           <%= render "netbank/accounts/amount", account: %>
+          <span class="account-card-go">通帳を見る <%= icon(:send, size: 16) %></span>
         <% end %>
       </li>
     <% end %>

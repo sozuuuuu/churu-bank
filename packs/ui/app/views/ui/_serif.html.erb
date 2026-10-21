@@ -1,0 +1,17 @@
+<%# 画面下のセリフ窓（ノベルゲーム風）。ねこのちゅーるのセリフはここに集める（猫語はここだけ）。
+    ページのセリフは cat_says で決め、出来事（入金・振込完了・確認画面など）では Stimulus の cat:say で入れ替わる。
+    文字を1文字ずつ出すのは serif（Stimulus）。読み上げには全文を1回だけ伝える（role="status" の方）。
+    出来事のセリフを出しているあいだは、Turbo の refresh（morph）でも文字とねこを書き換えない（serif#keep） %>
+<% line = content_for(:cat_line).presence || "なにかあったら、ここでお知らせするにゃ。" %>
+<% face = content_for(:cat_face).presence || "normal" %>
+<aside id="serif" class="serif" aria-label="ねこのちゅーる"
+       data-controller="serif" data-serif-text-value="<%= line %>" data-serif-face-value="<%= face %>"
+       data-action="cat:say@window->serif#say cat:reset@window->serif#reset click->serif#skip turbo:before-morph-element@document->serif#keep">
+  <div class="serif-cat"><%= cat face: face.to_sym, size: 84, data: { serif_target: "cat" } %></div>
+  <div class="serif-box">
+    <span class="serif-name">ちゅーる</span>
+    <p class="serif-text" aria-hidden="true" data-serif-target="text"><%= line %></p>
+    <p class="visually-hidden" role="status" data-serif-target="live"><%= line %></p>
+    <svg class="serif-next" width="14" height="10" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 1 h12 l-6 8 z" /></svg>
+  </div>
+</aside>

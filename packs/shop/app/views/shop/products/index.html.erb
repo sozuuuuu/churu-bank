@@ -1,4 +1,5 @@
 <% content_for :title, "ちゅ〜る商店" %>
+<% cat_says "ちゅ〜る商店へようこそにゃ。カートに入れて、カートの「注文内容を確認」から買えるにゃ。" %>
 <%= render "shop/header", title: "ちゅ〜る商店" %>
 
 <% if @products.empty? %>
@@ -8,7 +9,7 @@
     <div class="shop-products">
       <% @products.each do |product| %>
         <div class="card shop-product" id="<%= dom_id(product) %>">
-          <div class="shop-emoji"><%= product.emoji || "📦" %></div>
+          <span class="shop-product-icon"><%= icon(:bag, size: 26) %></span>
           <h2><%= product.name %></h2>
           <p class="balance"><%= churu(product.price) %></p>
           <p class="muted small">
@@ -24,7 +25,7 @@
     </div>
 
     <aside class="card shop-cart">
-      <h2>カート</h2>
+      <h2><%= icon(:cart, size: 22) %><span class="marker">カート</span></h2>
       <% if @cart_lines.empty? %>
         <p class="muted">カートは空です</p>
       <% else %>
@@ -32,9 +33,9 @@
           <tbody>
             <% @cart_lines.each do |product, quantity| %>
               <tr>
-                <td><%= product.display_name %> × <%= quantity %></td>
+                <td><%= product.name %> × <%= quantity %></td>
                 <td class="num"><%= churu(product.price * quantity) %></td>
-                <td><%= button_to "×", shop_cart_item_path(product.sku), method: :delete, class: "chip", title: "カートから出す" %></td>
+                <td><%= button_to shop_cart_item_path(product.sku), method: :delete, class: "chip", title: "カートから出す", "aria-label": "#{product.name}をカートから出す" do %><%= icon(:close, size: 14) %><% end %></td>
               </tr>
             <% end %>
           </tbody>

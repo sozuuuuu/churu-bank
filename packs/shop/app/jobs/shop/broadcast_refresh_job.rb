@@ -1,4 +1,4 @@
-# 商店のイベントがコミットされたら、商店の画面（turbo_stream_from "shop"）に Turbo の refresh を配信する。
+# 商店のイベントがコミットされたら、商店の画面（買い物は customer_stream_from "shop"、管理は staff_stream_from "shop"）に Turbo の refresh を配信する。
 # 銀行の画面への配信はルートの BroadcastRefreshJob が銀行のイベントから行う（商店からは触らない）
 module Shop
   class BroadcastRefreshJob < ApplicationJob

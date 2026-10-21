@@ -1,0 +1,14 @@
+# ちゅ〜る商店の管理（/shop/admin）: 商品の登録・値段・入荷・商店の口座を開く、注文を全員分見る。行員だけ（packs/staff_identity）。
+# 商店のドメイン（packs/shop）の公開 API（Shop::Store・読み取りモデル）だけを使う。
+# packs/shop は利用者の買い物の画面も持っていて利用者のログインに依存するので、行員の画面をそこに置くと
+# 1つのパックが行員と利用者の両方のログインに依存してしまう。だから画面を分けてパックも分けた
+# 注文の状態のバッジは packs/shop の部品（shop/orders/_status）を名前で借りる
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/banking
+  - packs/shop
+  - packs/staff_identity
+  - packs/ui

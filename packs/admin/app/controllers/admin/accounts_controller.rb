@@ -11,16 +11,16 @@ module Admin
       @transfers = Transfer.where(transfer_id: @entries.filter_map(&:transfer_id)).index_by(&:transfer_id)
       @holders = Account.pluck(:number, :holder_name).to_h
       @date = parse_date(params[:date]) || Date.current
-      @owners = User.owning(@account.number).order(:id)
+      @owners = Customer.owning(@account.number).order(:id)
     end
 
     def new
-      @users = User.order(:id)
+      @customers = Customer.order(:id)
     end
 
-    # 開設して、持ち主（利用者）を選んでいればひも付ける
+    # 開設して、持ち主（利用者。顧客台帳 packs/customer_registry）を選んでいればひも付ける
     def create
-      owner = User.find_by(id: params[:owner_id]) if params[:owner_id].present?
+      owner = Customer.find_by(id: params[:owner_id]) if params[:owner_id].present?
       outcome = ActiveRecord::Base.transaction do
         bank.open_account(holder_name: params[:holder_name].to_s.strip).tap do |opened|
           owner&.grant_account(opened.account_number)
@@ -29,7 +29,7 @@ module Admin
       redirect_to admin_account_path(outcome.account_number), notice: "口座を開設しました"
     rescue Banking::Error, ArgumentError => e
       flash.now[:alert] = e.message
-      @users = User.order(:id)
+      @customers = Customer.order(:id)
       render :new, status: :unprocessable_entity
     end
 

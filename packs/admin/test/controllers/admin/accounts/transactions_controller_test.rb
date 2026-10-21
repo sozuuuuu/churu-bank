@@ -2,7 +2,7 @@ require "test_helper"
 
 class Admin::Accounts::TransactionsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    sign_in_as(@admin = create_user(name: "行員", admin: true))
+    sign_in_as_staff(@admin = create_staff)
     @number = Banking::Bank.new(actor: "test").open_account(holder_name: "オルカ").account_number
   end
 
@@ -15,7 +15,7 @@ class Admin::Accounts::TransactionsControllerTest < ActionDispatch::IntegrationT
     post admin_account_transactions_path(@number), params: { kind: "deposit", amount: "100" }
     assert_redirected_to admin_account_path(@number)
     assert_equal 100, Account.find_by!(number: @number).balance
-    assert_equal "admin:#{@admin.email_address}", LedgerEntry.last.actor
+    assert_equal @admin.actor, LedgerEntry.last.actor
   end
 
   test "残高不足は入力画面に戻ってエラーを出す" do

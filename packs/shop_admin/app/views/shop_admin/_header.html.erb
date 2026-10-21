@@ -1,0 +1,10 @@
+<%# 商店の管理のページ共通: 見出し。商店のイベントがあると morph で更新される %>
+<%= staff_stream_from "shop" %>
+<div class="shop-head">
+  <div>
+    <h1>🛒 <%= title %></h1>
+    <nav class="shop-nav">
+      <%= link_to "商品と在庫の管理", shop_admin_products_path %>
+    </nav>
+  </div>
+</div>

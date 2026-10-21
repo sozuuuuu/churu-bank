@@ -1,0 +1,56 @@
+<%= form_with model: notice, url: notice.persisted? ? notices_admin_notice_path(notice) : notices_admin_notices_path,
+              class: "card form notice-form" do |f| %>
+  <% if notice.errors.any? %>
+    <ul class="flash flash-alert notice-errors">
+      <% notice.errors.each do |error| %><li><%= error.message %></li><% end %>
+    </ul>
+  <% end %>
+
+  <div class="grid">
+    <label>
+      種類
+      <%= f.select :kind, Notice::KINDS.map { |kind, v| [ "#{v[:icon]} #{v[:label]}", kind ] } %>
+    </label>
+    <label class="notice-check">
+      <%= f.check_box :important %>
+      重要（利用者が閉じるまで、ねこの吹き出しに出し続ける）
+    </label>
+  </div>
+  <label>
+    タイトル
+    <%= f.text_field :title, required: true, maxlength: 80, placeholder: "例: 住所変更のお届けをお願いします" %>
+  </label>
+  <label>
+    本文
+    <%= f.text_area :body, rows: 6 %>
+  </label>
+  <div class="grid">
+    <label>
+      掲載開始
+      <%= f.datetime_local_field :starts_at, required: true %>
+    </label>
+    <label>
+      掲載終了（空なら終わりなし）
+      <%= f.datetime_local_field :ends_at %>
+    </label>
+  </div>
+  <fieldset class="notice-audience">
+    <legend>対象</legend>
+    <div class="segmented">
+      <% Notice::AUDIENCES.each do |audience, label| %>
+        <label><%= f.radio_button :audience, audience %> <%= label %></label>
+      <% end %>
+    </div>
+    <div class="notice-users">
+      <%= f.collection_check_boxes :target_customer_ids, customers, :id, :name do |b| %>
+        <label><%= b.check_box %> <%= b.text %></label>
+      <% end %>
+    </div>
+    <p class="muted small">「選んだ利用者」のときだけ、チェックした人に出します。</p>
+  </fieldset>
+
+  <div class="notice-actions">
+    <%= f.submit notice.persisted? ? "直す" : "出す", class: "button primary" %>
+    <%= link_to "もどる", notices_admin_notices_path, class: "button" %>
+  </div>
+<% end %>

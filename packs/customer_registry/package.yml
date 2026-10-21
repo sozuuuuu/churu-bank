@@ -1,0 +1,13 @@
+# 顧客台帳: 利用者（Customer）と、利用者と口座のひも付け（AccountOwnership）。ログインのしくみは持たない。
+# 利用者の画面（ログインは packs/customer_identity）と、行員の画面（口座の開設で持ち主を選ぶ・お知らせの対象を選ぶ）の両方が使う。
+# 本物の銀行でも、顧客の台帳（行員が窓口で引く）とネットバンキングのログインは別のもの。
+# ここをログインと同じパックにすると、行員の画面が「利用者のログイン」にまで依存できてしまう
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - Customer … 利用者（account_numbers / owns_account? / grant_account / owning / actor は customer:<id>）
+# 銀行パックは Customer を知らない（口座番号だけでつなぐ）
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform

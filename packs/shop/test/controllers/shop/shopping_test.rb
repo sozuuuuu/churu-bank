@@ -8,15 +8,14 @@ class Shop::ShoppingTest < ActionDispatch::IntegrationTest
     @store = Shop::Store.new(actor: "test")
     @shop = @store.open_shop
     bank = Banking::Bank.new(actor: "test")
-    @orca = create_user(name: "オルカ")
+    @orca = create_customer(name: "オルカ")
     @orca_number = bank.open_account(holder_name: "オルカ").account_number
     @orca.grant_account(@orca_number)
     bank.deposit(@orca_number, 1000)
-    @mike = create_user(name: "ミケ")
+    @mike = create_customer(name: "ミケ")
     @mike_number = bank.open_account(holder_name: "ミケ").account_number
     @mike.grant_account(@mike_number)
     bank.deposit(@mike_number, 1000)
-    @staff = create_user(name: "行員", admin: true)
     @store.register_product(sku: "churu", name: "ちゅ〜る", emoji: "🐟", price: 30)
     @store.restock("churu", 5)
   end
@@ -36,15 +35,15 @@ class Shop::ShoppingTest < ActionDispatch::IntegrationTest
 
   test "ログインしていなければログイン画面へ" do
     get shop_root_path
-    assert_redirected_to new_session_path
+    assert_redirected_to new_customer_session_path
 
     post shop_orders_path, params: { items: { churu: 1 } }
-    assert_redirected_to new_session_path
+    assert_redirected_to new_customer_session_path
     assert_equal 0, ShopOrder.count
   end
 
   test "注文して、支払いが終わると完了になる" do
-    sign_in_as @orca
+    sign_in_as_customer @orca
     get shop_root_path
     assert_response :success
     assert_select ".shop-product h2", "ちゅ〜る"
@@ -79,7 +78,7 @@ class Shop::ShoppingTest < ActionDispatch::IntegrationTest
   end
 
   test "確認で残高不足ならその場でエラーを出す" do
-    sign_in_as @orca
+    sign_in_as_customer @orca
     post shop_orders_path, params: { preview: "1", items: { churu: 40 } }
 
     assert_response :unprocessable_entity
@@ -87,7 +86,7 @@ class Shop::ShoppingTest < ActionDispatch::IntegrationTest
   end
 
   test "他人の口座は支払う口座に選べず、他人の口座で注文できない" do
-    sign_in_as @orca
+    sign_in_as_customer @orca
     patch shop_buyer_path, params: { account_number: @mike_number }
     assert_equal "その口座では買えません", flash[:alert]
 
@@ -99,7 +98,7 @@ class Shop::ShoppingTest < ActionDispatch::IntegrationTest
   end
 
   test "口座がひも付いていなければ注文できない" do
-    sign_in_as create_user(name: "口座なし")
+    sign_in_as_customer create_customer(name: "口座なし")
     place_order
 
     assert_redirected_to shop_root_path
@@ -108,9 +107,9 @@ class Shop::ShoppingTest < ActionDispatch::IntegrationTest
   end
 
   test "注文履歴は自分の口座の分だけ。他人の注文は 404" do
-    sign_in_as @mike
+    sign_in_as_customer @mike
     mike_order = place_order
-    sign_in_as @orca
+    sign_in_as_customer @orca
     orca_order = place_order
 
     get shop_orders_path
@@ -122,51 +121,17 @@ class Shop::ShoppingTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "利用者は商品と在庫の管理ができない（404）" do
-    sign_in_as @orca
-
-    get shop_admin_products_path
-    assert_response :not_found
-    post shop_admin_products_path, params: { sku: "jarashi", name: "猫じゃらし", price: "120" }
-    assert_response :not_found
-    post shop_admin_product_restock_path("churu"), params: { quantity: "3" }
-    assert_response :not_found
-    patch shop_admin_product_path("churu"), params: { price: "1" }
-    assert_response :not_found
-    post shop_admin_opening_path
-    assert_response :not_found
-
-    product = ShopProduct.find_by!(sku: "churu")
-    assert_equal [ 30, 5 ], [ product.price, product.stock ]
-    assert_not ShopProduct.exists?(sku: "jarashi")
-  end
-
-  test "行員は商品を登録して入荷できる。見た目は管理画面、注文は全員分見られる" do
-    sign_in_as @mike
-    mike_order = place_order
-    sign_in_as @staff
-
-    post shop_admin_products_path, params: { sku: "jarashi", name: "猫じゃらし", emoji: "🪶", price: "120" }
-    post shop_admin_product_restock_path("jarashi"), params: { quantity: "3" }
-    patch shop_admin_product_path("jarashi"), params: { price: "100" }
-    follow_redirect!
-
-    assert_response :success
-    product = ShopProduct.find_by!(sku: "jarashi")
-    assert_equal [ 100, 3 ], [ product.price, product.stock ]
-    assert_select "#shop_product_#{product.id}", /猫じゃらし/
-    assert_no_match "ui/cat", response.body
-
-    get shop_order_path(mike_order)
-    assert_response :success
-  end
-
-  test "行員も自分にひも付いた口座でだけ買える" do
-    sign_in_as @staff
-    patch shop_buyer_path, params: { account_number: @orca_number }
-    place_order
-
-    assert_redirected_to shop_root_path
+  test "行員のログインでは買い物の画面に入れない（利用者のログイン画面へ）。管理へのリンクも出さない" do
+    sign_in_as_staff create_staff
+    get shop_root_path
+    assert_redirected_to new_customer_session_path
+    post shop_orders_path, params: { items: { churu: 1 } }
+    assert_redirected_to new_customer_session_path
     assert_equal 0, ShopOrder.count
+
+    sign_in_as_customer @orca
+    get shop_root_path
+    assert_select "a[href=?]", shop_admin_products_path, count: 0
+    assert_select "turbo-cable-stream-source[channel=CustomerStreamsChannel]"
   end
 end

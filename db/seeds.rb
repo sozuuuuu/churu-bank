@@ -1,11 +1,17 @@
-# 開発用のデータ: 管理者（行員）1人と、利用者とその口座。何度流しても増えない。
+# 開発用のデータ: 行員2人（二人承認で使う）と、利用者とその口座。何度流しても増えない。
+# 行員と利用者は別のアカウント（行員は /admin/session、利用者は /session でログイン）。
 # パスワードは開発用のテスト値（本番では使わない）
 DEV_PASSWORD = "churu-dev-pass"
 
-admin = User.find_or_create_by!(email_address: "admin@churu.test") do |user|
-  user.name = "行員"
-  user.admin = true
-  user.password = DEV_PASSWORD
+# [名前, メール]
+staffs = [
+  [ "窓口のたま", "tama@staff.churu.test" ],
+  [ "係長のくろ", "kuro@staff.churu.test" ]
+].map do |name, email_address|
+  Staff.find_or_create_by!(email_address:) do |staff|
+    staff.name = name
+    staff.password = DEV_PASSWORD
+  end
 end
 
 bank = Banking::Bank.new(actor: "seed")
@@ -18,18 +24,18 @@ customers = [
 ]
 
 customers.each do |name, email_address, deposit|
-  user = User.find_or_create_by!(email_address:) do |u|
-    u.name = name
-    u.password = DEV_PASSWORD
+  customer = Customer.find_or_create_by!(email_address:) do |c|
+    c.name = name
+    c.password = DEV_PASSWORD
   end
-  next if user.account_numbers.any?
+  next if customer.account_numbers.any?
 
   number = bank.open_account(holder_name: name).account_number
-  user.grant_account(number)
+  customer.grant_account(number)
   bank.deposit(number, deposit, memo: "はじめてのちゅ〜る")
 end
 
-puts "seed: 管理者 #{admin.email_address}、利用者 #{customers.size} 人（パスワードは db/seeds.rb）"
+puts "seed: 行員 #{staffs.map(&:email_address).join("・")}、利用者 #{customers.size} 人（パスワードは db/seeds.rb）"
 
 # ---- ちゅ〜る商店（packs/shop）: 商店の口座と商品。何度流しても同じになる ----
 shop = Shop::Store.new(actor: "seed")

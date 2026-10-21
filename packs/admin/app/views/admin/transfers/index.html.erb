@@ -1,7 +1,7 @@
 <% content_for :title, "振込一覧 | ちゅーる銀行" %>
 
 <%# 振込のジョブが「処理中」→「完了 / 組戻し」に進めると、この一覧が morph で更新される %>
-<%= turbo_stream_from "transfers" %>
+<%= staff_stream_from "transfers" %>
 
 <h1>振込一覧</h1>
 

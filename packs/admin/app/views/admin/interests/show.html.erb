@@ -1,7 +1,7 @@
 <% content_for :title, "利息 | ちゅーる銀行" %>
 
 <%# 利息のジョブやほかのタブで口座が動いたら、この画面も morph で更新される %>
-<%= turbo_stream_from "accounts" %>
+<%= staff_stream_from "accounts" %>
 
 <h1>利息</h1>
 

@@ -1,8 +1,8 @@
 # ちゅ〜る商店: 商品・在庫・注文（Rails Event Store でイベントソーシング）。銀行とは別のドメイン
 #
 # 支払いと返金は Banking::Bank（銀行の公開 API）だけを使う。銀行は商店を知らない。
-# 画面（/shop）はログイン必須（identity の Authentication）。購入者はログイン中の利用者の口座、
-# 商品・在庫の管理（/shop/admin）は行員（User#admin）だけ。見た目の土台は packs/ui
+# 画面（/shop）は買い物だけで、利用者としてのログインが必須（packs/customer_identity）。購入者はログイン中の利用者の口座。
+# 商品・在庫の管理（/shop/admin）は別のパック packs/shop_admin（行員のログイン）。見た目の土台は packs/ui
 #
 # 外から使ってよいのは app/public にあるものだけ:
 #   - Shop::Store   … 書き込みの唯一の入口（dry_run あり）
@@ -16,5 +16,5 @@ enforce_privacy: true
 dependencies:
   - packs/platform
   - packs/banking
-  - packs/identity
+  - packs/customer_identity
   - packs/ui

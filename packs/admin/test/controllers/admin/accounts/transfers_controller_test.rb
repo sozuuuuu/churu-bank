@@ -4,7 +4,7 @@ class Admin::Accounts::TransfersControllerTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
   setup do
-    sign_in_as(@admin = create_user(name: "行員", admin: true))
+    sign_in_as_staff(@admin = create_staff)
     bank = Banking::Bank.new(actor: "test")
     @orca = bank.open_account(holder_name: "オルカ").account_number
     @zingiber = bank.open_account(holder_name: "ジンジベル").account_number

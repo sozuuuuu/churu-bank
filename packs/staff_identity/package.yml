@@ -1,0 +1,16 @@
+# 行員のログイン（Rails 8 の generate authentication がもと）。利用者のログイン（packs/customer_identity）とは
+# テーブル・ログイン画面（/admin/session）・セッションの Cookie（staff_session_id）・Action Cable のチャンネルまで別。
+# 行員の画面のパック（admin / shop_admin / notices_admin）だけがここに依存する。利用者の画面のパックが依存したら設計ミス
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - StaffAuthentication  … 行員の画面のベースコントローラに include する。current_staff・StaffHelper が使えるようになる。
+#                            StaffAuthentication.staff_from(cookies)（Action Cable の接続）と ::Constraint（RES Browser）も
+#   - StaffHelper          … staff_header（ヘッダーに名前とログアウト）・staff_stream_from（行員用のライブ更新の購読）
+#   - StaffStreamsChannel  … 行員だけが購読できる Turbo のチャンネル（署名の鍵も利用者用と別）
+#   - Staff                … 行員（actor は staff:<id>）
+# セッション（StaffSession / StaffCurrent）とログイン画面は非公開
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform

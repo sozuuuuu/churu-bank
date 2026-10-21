@@ -1,4 +1,4 @@
-# 管理画面（行員用）。コントローラ側で管理者だけに絞る
+# 管理画面（行員用）。コントローラ側で行員だけに絞る（StaffAuthentication）
 namespace :admin do
   root "accounts#index"
 
@@ -28,7 +28,7 @@ namespace :admin do
   resource :interest, only: %i[show create] # 利率の表示と、全口座の利息
 end
 
-# イベントストアの中身を見るブラウザ（RES Browser）。管理者以外には 404
-constraints(Authentication::AdminConstraint) do
+# イベントストアの中身を見るブラウザ（RES Browser）。行員としてログインしていなければ 404
+constraints(StaffAuthentication::Constraint) do
   mount RubyEventStore::Browser::App.for(event_store_locator: -> { Rails.configuration.event_store }), at: "/res"
 end

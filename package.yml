@@ -1,10 +1,12 @@
-# ルートパッケージ: JS（Stimulus）・CSS、画面へのライブ更新（BroadcastRefreshJob）、
-# イベントストア本体とアプリ全体の設定。画面そのものは packs/admin・packs/customer・packs/shop、
-# レイアウトとヘルパーは packs/ui
+# ルートパッケージ: JS（Stimulus）・CSS、画面へのライブ更新（BroadcastRefreshJob）、Action Cable の接続（行員か利用者か）、
+# イベントストア本体とアプリ全体の設定。画面そのものは packs/admin・packs/customer・packs/shop など、
+# レイアウトとヘルパーは packs/ui。テストのヘルパー（test/test_helpers）は行員と利用者の両方を作る
 enforce_dependencies: true
 enforce_privacy: false
 
 dependencies:
   - packs/platform
   - packs/banking
-  - packs/identity
+  - packs/staff_identity
+  - packs/customer_identity
+  - packs/customer_registry

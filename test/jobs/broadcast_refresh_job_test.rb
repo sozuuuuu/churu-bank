@@ -1,7 +1,10 @@
 require "test_helper"
+require "turbo/broadcastable/test_helper"
 
 class BroadcastRefreshJobTest < ActiveJob::TestCase
-  # assert_turbo_stream_broadcasts は turbo-rails が ActiveSupport::TestCase に自動で入れてくれる
+  # assert_turbo_stream_broadcasts。turbo-rails が自動で入れるのは Action Cable のサーバーが読み込まれた後（on_load(:action_cable)）で、
+  # ほかのテストが先に配信していないと入っていないことがあるので、ここで入れる
+  include Turbo::Broadcastable::TestHelper
   setup do
     @bank = Banking::Bank.new(actor: "test")
     @number = @bank.open_account(holder_name: "オルカ").account_number

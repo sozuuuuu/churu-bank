@@ -1,8 +1,0 @@
-<%# 行員が見る商店: 管理画面と同じ見た目（packs/ui の layouts/application）で描く %>
-<% content_for :nav do %>
-  <span class="badge">行員</span>
-  <%= link_to "管理画面", admin_root_path %>
-  <%= link_to "ちゅ〜る商店", shop_root_path %>
-  <%= link_to "商店の管理", shop_admin_products_path %>
-<% end %>
-<%= render template: "layouts/application" %>

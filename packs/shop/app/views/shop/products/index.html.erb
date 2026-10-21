@@ -2,7 +2,7 @@
 <%= render "shop/header", title: "ちゅ〜る商店" %>
 
 <% if @products.empty? %>
-  <p class="empty">まだ商品がありません。<%= link_to "商品を登録する", shop_admin_products_path if staff? %></p>
+  <p class="empty">まだ商品がありません。</p>
 <% else %>
   <div class="shop-layout">
     <div class="shop-products">

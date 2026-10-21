@@ -1,0 +1,61 @@
+<% content_for :title, "商品と在庫の管理 | ちゅ〜る商店" %>
+<%= render "shop_admin/header", title: "商品と在庫の管理" %>
+
+<div class="card">
+  <h2>商店の口座</h2>
+  <% if @shop_account %>
+    <p>
+      <%= link_to @shop_account.number, admin_account_path(@shop_account) %> <%= @shop_account.holder_name %>
+      <span class="balance"><%= churu(@shop_account.balance) %></span>
+    </p>
+  <% else %>
+    <p class="muted">まだ銀行に口座がありません。支払いを受けるには口座が必要です。</p>
+    <%= button_to "商店の口座を開く", shop_admin_opening_path, class: "button primary" %>
+  <% end %>
+</div>
+
+<div class="card">
+  <h2>商品</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>商品</th><th>コード</th><th>値段</th><th class="num">在庫</th><th>入荷</th></tr></thead>
+      <tbody>
+        <% @products.each do |product| %>
+          <tr id="<%= dom_id(product) %>">
+            <td><%= product.display_name %></td>
+            <td><code><%= product.sku %></code></td>
+            <td>
+              <%= form_with url: shop_admin_product_path(product), method: :patch, class: "shop-inline" do |f| %>
+                <%= f.number_field :price, value: product.price, min: 1, step: 1, required: true, "aria-label": "値段" %>
+                <%= f.submit "変更", class: "button small" %>
+              <% end %>
+            </td>
+            <td class="num"><%= product.stock %></td>
+            <td>
+              <%= form_with url: shop_admin_product_restock_path(product), class: "shop-inline" do |f| %>
+                <%= f.number_field :quantity, value: 1, min: 1, step: 1, required: true, "aria-label": "入荷する数" %>
+                <%= f.submit "入荷", class: "button small" %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <details>
+    <summary>商品を登録する</summary>
+    <%= form_with url: shop_admin_products_path, class: "form" do |f| %>
+      <label>商品コード（英数字）<%= f.text_field :sku, required: true, placeholder: "例: churu-tuna" %></label>
+      <label>商品名<%= f.text_field :name, required: true, placeholder: "例: ちゅ〜る（まぐろ）" %></label>
+      <label>絵文字<%= f.text_field :emoji, placeholder: "例: 🐟" %></label>
+      <label>値段（ちゅ〜る）<%= f.number_field :price, min: 1, step: 1, required: true %></label>
+      <%= f.submit "登録する", class: "button primary" %>
+    <% end %>
+  </details>
+</div>
+
+<div class="card">
+  <h2>最近の注文（全員分）</h2>
+  <%= render "shop_admin/orders/table", orders: @orders %>
+</div>

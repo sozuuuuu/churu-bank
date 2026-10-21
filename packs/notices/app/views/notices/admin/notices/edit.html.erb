@@ -1,8 +1,0 @@
-<% content_for :title, "お知らせを直す | ちゅーる銀行" %>
-
-<h1>お知らせを直す</h1>
-<p class="muted small">
-  <%= @notice.status_label %>・出した人 <%= @notice.posted_by %>。
-  直すと、開いている利用者画面にもすぐ反映されます（既読のままです）。
-</p>
-<%= render "form", notice: @notice, users: @users %>

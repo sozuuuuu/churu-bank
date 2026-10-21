@@ -1,5 +1,5 @@
-# 利用者画面。自分の口座だけ（コントローラ側で Current.user の口座に絞る）
-scope module: :customer do
+# 利用者画面（ネットバンキング。コントローラは Netbank::。利用者のモデル Customer と名前がぶつからないように）。自分の口座だけ（コントローラ側で current_customer の口座に絞る）
+scope module: :netbank do
   root "accounts#index"
 
   resources :accounts, only: %i[index show], param: :number do

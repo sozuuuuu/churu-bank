@@ -1,0 +1,14 @@
+# お知らせの管理（/admin/notices）: 出す・直す・掲載終了。行員だけ（packs/staff_identity）。
+# お知らせのドメインは packs/notices（Notices::Board・Notice）。packs/notices は利用者の画面（吹き出し・/notices）も持っていて
+# 利用者のログインに依存するので、行員の画面をそこに置くと1つのパックが行員と利用者の両方のログインに依存してしまう。
+# だから画面を分けてパックも分けた。対象に選ぶ利用者は顧客台帳（packs/customer_registry）から引く。
+# CSS は packs/notices の notices/notices.css を名前で借りる
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/notices
+  - packs/staff_identity
+  - packs/customer_registry
+  - packs/ui

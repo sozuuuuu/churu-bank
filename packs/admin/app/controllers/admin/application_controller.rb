@@ -1,21 +1,15 @@
-# 管理画面（行員用）のベース。ログインしていて、かつ管理者でなければ入れない
+# 管理画面（行員用）のベース。行員としてログインしていなければ、行員のログイン画面（/admin/session/new）へ。
+# 利用者としてログインしていても入れない（Cookie もセッションも別。packs/staff_identity）
 module Admin
   class ApplicationController < ::ApplicationController
-    include Authentication
+    include StaffAuthentication
     helper Ui::FormatHelper
 
     layout "admin"
 
-    before_action :require_admin
-
     private
 
-    # 管理者以外には、管理画面があること自体を見せない
-    def require_admin
-      head :not_found unless Current.user&.admin?
-    end
-
-    # 誰の操作かをイベントの metadata（actor）に残す
-    def bank = @bank ||= Banking::Bank.new(actor: "admin:#{Current.user.email_address}")
+    # 誰の操作かをイベントの metadata（actor）に残す（staff:<id>）
+    def bank = @bank ||= Banking::Bank.new(actor: current_staff.actor)
   end
 end

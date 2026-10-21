@@ -3,9 +3,9 @@ require "test_helper"
 class Notices::NoticesControllerTest < ActionDispatch::IntegrationTest
   setup do
     @board = Notices::Board.new(actor: "test")
-    @orca = create_user(name: "オルカ")
-    @mike = create_user(name: "ミケ")
-    sign_in_as @orca
+    @orca = create_customer(name: "オルカ")
+    @mike = create_customer(name: "ミケ")
+    sign_in_as_customer @orca
   end
 
   test "利用者画面に、ねこの吹き出しと未読のバッジが出て、ライブ更新を購読している" do
@@ -35,7 +35,7 @@ class Notices::NoticesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "準備中です", response.body
-    assert NoticeReceipt.find_by(notice:, user: @orca).read_at
+    assert NoticeReceipt.find_by(notice:, customer: @orca).read_at
     get root_path
     assert_select ".notice-badge", count: 0
     assert_select "#notice-board[hidden]" # ふつうのものは、読んだら吹き出しから消える
@@ -49,7 +49,7 @@ class Notices::NoticesControllerTest < ActionDispatch::IntegrationTest
     get notice_path(notice), headers: { "X-Sec-Purpose" => "prefetch" }
 
     assert_response :success
-    assert_not NoticeReceipt.exists?(notice:, user: @orca)
+    assert_not NoticeReceipt.exists?(notice:, customer: @orca)
   end
 
   test "重要なものは読んでも吹き出しに残り、閉じたら消える" do
@@ -67,7 +67,7 @@ class Notices::NoticesControllerTest < ActionDispatch::IntegrationTest
 
   test "一覧には自分が対象で掲載中のものだけ" do
     @board.post(kind: "info", title: "みんなへ")
-    @board.post(kind: "info", title: "ミケさんへ", users: [ @mike ])
+    @board.post(kind: "info", title: "ミケさんへ", customers: [ @mike ])
     @board.post(kind: "info", title: "あしたから", starts_at: 1.day.from_now)
 
     get notices_path
@@ -79,7 +79,7 @@ class Notices::NoticesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "対象外・期間外のお知らせは開くのも閉じるのも 404" do
-    for_mike = @board.post(kind: "info", title: "ミケさんへ", users: [ @mike ])
+    for_mike = @board.post(kind: "info", title: "ミケさんへ", customers: [ @mike ])
     ended = @board.post(kind: "info", title: "おわり", starts_at: 2.days.ago, ends_at: 1.day.ago)
 
     get notice_path(for_mike)
@@ -88,12 +88,12 @@ class Notices::NoticesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     post notice_dismissal_path(for_mike)
     assert_response :not_found
-    assert_not NoticeReceipt.exists?(user: @orca)
+    assert_not NoticeReceipt.exists?(customer: @orca)
   end
 
   test "ログインしていなければログイン画面へ" do
-    sign_out
+    delete customer_session_path
     get notices_path
-    assert_redirected_to new_session_path
+    assert_redirected_to new_customer_session_path
   end
 end

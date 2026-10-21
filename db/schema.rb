@@ -10,15 +10,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_300000) do
   create_table "account_ownerships", force: :cascade do |t|
-    t.integer "user_id", null: false
+    t.integer "customer_id", null: false
     t.string "account_number", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_number"], name: "index_account_ownerships_on_account_number"
-    t.index ["user_id", "account_number"], name: "index_account_ownerships_on_user_id_and_account_number", unique: true
-    t.index ["user_id"], name: "index_account_ownerships_on_user_id"
+    t.index ["customer_id", "account_number"], name: "index_account_ownerships_on_customer_id_and_account_number", unique: true
+    t.index ["customer_id"], name: "index_account_ownerships_on_customer_id"
   end
 
   create_table "accounts", force: :cascade do |t|
@@ -30,6 +30,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["number"], name: "index_accounts_on_number", unique: true
+  end
+
+  create_table "customer_sessions", force: :cascade do |t|
+    t.integer "customer_id", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_sessions_on_customer_id"
+  end
+
+  create_table "customers", force: :cascade do |t|
+    t.string "email_address", null: false
+    t.string "password_digest", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_customers_on_email_address", unique: true
   end
 
   create_table "event_store_events", force: :cascade do |t|
@@ -82,24 +100,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
 
   create_table "notice_receipts", force: :cascade do |t|
     t.integer "notice_id", null: false
-    t.integer "user_id", null: false
+    t.integer "customer_id", null: false
     t.datetime "read_at"
     t.datetime "dismissed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["notice_id", "user_id"], name: "index_notice_receipts_on_notice_id_and_user_id", unique: true
+    t.index ["customer_id"], name: "index_notice_receipts_on_customer_id"
+    t.index ["notice_id", "customer_id"], name: "index_notice_receipts_on_notice_id_and_customer_id", unique: true
     t.index ["notice_id"], name: "index_notice_receipts_on_notice_id"
-    t.index ["user_id"], name: "index_notice_receipts_on_user_id"
   end
 
   create_table "notice_targets", force: :cascade do |t|
     t.integer "notice_id", null: false
-    t.integer "user_id", null: false
+    t.integer "customer_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["notice_id", "user_id"], name: "index_notice_targets_on_notice_id_and_user_id", unique: true
+    t.index ["customer_id"], name: "index_notice_targets_on_customer_id"
+    t.index ["notice_id", "customer_id"], name: "index_notice_targets_on_notice_id_and_customer_id", unique: true
     t.index ["notice_id"], name: "index_notice_targets_on_notice_id"
-    t.index ["user_id"], name: "index_notice_targets_on_user_id"
   end
 
   create_table "notices", force: :cascade do |t|
@@ -114,15 +132,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["starts_at", "ends_at"], name: "index_notices_on_starts_at_and_ends_at"
-  end
-
-  create_table "sessions", force: :cascade do |t|
-    t.integer "user_id", null: false
-    t.string "ip_address"
-    t.string "user_agent"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
   create_table "shop_order_lines", force: :cascade do |t|
@@ -165,6 +174,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["sku"], name: "index_shop_products_on_sku", unique: true
   end
 
+  create_table "staff_sessions", force: :cascade do |t|
+    t.integer "staff_id", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["staff_id"], name: "index_staff_sessions_on_staff_id"
+  end
+
+  create_table "staffs", force: :cascade do |t|
+    t.string "email_address", null: false
+    t.string "password_digest", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_staffs_on_email_address", unique: true
+  end
+
   create_table "transfers", force: :cascade do |t|
     t.string "transfer_id", null: false
     t.string "from_account", null: false
@@ -185,21 +212,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["transfer_id"], name: "index_transfers_on_transfer_id", unique: true
   end
 
-  create_table "users", force: :cascade do |t|
-    t.string "email_address", null: false
-    t.string "password_digest", null: false
-    t.string "name", null: false
-    t.boolean "admin", default: false, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["email_address"], name: "index_users_on_email_address", unique: true
-  end
-
-  add_foreign_key "account_ownerships", "users"
+  add_foreign_key "account_ownerships", "customers"
+  add_foreign_key "customer_sessions", "customers", on_delete: :cascade
   add_foreign_key "event_store_events_in_streams", "event_store_events", column: "event_id", primary_key: "event_id"
+  add_foreign_key "notice_receipts", "customers"
   add_foreign_key "notice_receipts", "notices"
-  add_foreign_key "notice_receipts", "users"
+  add_foreign_key "notice_targets", "customers"
   add_foreign_key "notice_targets", "notices"
-  add_foreign_key "notice_targets", "users"
-  add_foreign_key "sessions", "users"
+  add_foreign_key "staff_sessions", "staffs", on_delete: :cascade
 end

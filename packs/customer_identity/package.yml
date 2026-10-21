@@ -1,0 +1,18 @@
+# 利用者のログイン（Rails 8 の generate authentication がもと）。行員のログイン（packs/staff_identity）とは
+# テーブル・ログイン画面（/session、ねこテーマ）・セッションの Cookie（customer_session_id）・Action Cable のチャンネルまで別。
+# 利用者の画面のパック（customer / shop / notices）だけがここに依存する。行員の画面のパックが依存したら設計ミス。
+# 利用者そのもの（Customer）と口座のひも付けは顧客台帳（packs/customer_registry）
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - CustomerAuthentication … 利用者の画面のベースコントローラに include する。current_customer・CustomerHelper が使えるようになる。
+#                              CustomerAuthentication.customer_from(cookies)（Action Cable の接続）も
+#   - CustomerHelper         … customer_header（ヘッダーに名前とログアウト）・customer_stream_from（利用者用のライブ更新の購読）
+#   - CustomerStreamsChannel … 利用者だけが購読できる Turbo のチャンネル（署名の鍵も行員用と別）
+# セッション（CustomerSession / CustomerCurrent）とログイン画面は非公開
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/customer_registry
+  - packs/ui

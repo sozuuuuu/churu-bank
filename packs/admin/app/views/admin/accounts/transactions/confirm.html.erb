@@ -2,7 +2,7 @@
   <div class="confirm">
     <p class="muted">まだ記帳していません。内容を確認してください。</p>
     <dl>
-      <dt><%= kind_label %></dt>
+      <dt>入金（現金の持ち込み）</dt>
       <dd><%= churu(@form[:amount].to_i) %></dd>
       <% if @form[:memo] %>
         <dt>メモ</dt><dd><%= @form[:memo] %></dd>
@@ -21,7 +21,7 @@
       <% @form.each do |key, value| %>
         <%= f.hidden_field key, value: value if value %>
       <% end %>
-      <%= f.submit "#{kind_label}を確定する", class: "button primary" %>
+      <%= f.submit "入金を確定する", class: "button primary" %>
       <%= link_to "戻る", new_admin_account_transaction_path(@account, @form.compact), class: "button" %>
     <% end %>
   </div>

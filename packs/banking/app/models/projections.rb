@@ -4,7 +4,8 @@ module Projections
   def self.all
     {
       AccountProjection.new => Banking::Events::ACCOUNT,
-      TransferProjection.new => Banking::Events::TRANSFER
+      TransferProjection.new => Banking::Events::TRANSFER,
+      WithdrawalRequestProjection.new => Banking::Events::WITHDRAWAL_REQUEST
     }
   end
 end

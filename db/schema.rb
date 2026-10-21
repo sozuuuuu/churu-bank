@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_300001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_400001) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "customer_id", null: false
     t.string "account_number", null: false
@@ -30,6 +30,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_300001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["number"], name: "index_accounts_on_number", unique: true
+  end
+
+  create_table "approval_requests", force: :cascade do |t|
+    t.string "approval_id", null: false
+    t.string "kind", null: false
+    t.string "account_number"
+    t.string "ledger_event_id"
+    t.string "transfer_id"
+    t.string "target_key", null: false
+    t.string "summary", null: false
+    t.string "reason", null: false
+    t.string "status", null: false
+    t.string "requested_by", null: false
+    t.datetime "requested_at", null: false
+    t.string "decided_by"
+    t.datetime "decided_at"
+    t.datetime "executed_at"
+    t.string "reject_reason"
+    t.index ["account_number"], name: "index_approval_requests_on_account_number"
+    t.index ["approval_id"], name: "index_approval_requests_on_approval_id", unique: true
+    t.index ["status"], name: "index_approval_requests_on_status"
+    t.index ["target_key"], name: "index_approval_requests_pending_target", unique: true, where: "status = 'pending'"
   end
 
   create_table "customer_sessions", force: :cascade do |t|
@@ -217,6 +239,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_300001) do
     t.index ["status", "execute_on"], name: "index_transfers_on_status_and_execute_on"
     t.index ["to_account"], name: "index_transfers_on_to_account"
     t.index ["transfer_id"], name: "index_transfers_on_transfer_id", unique: true
+  end
+
+  create_table "withdrawal_requests", force: :cascade do |t|
+    t.string "request_id", null: false
+    t.string "account_number", null: false
+    t.integer "amount", null: false
+    t.string "memo"
+    t.string "status", null: false
+    t.datetime "requested_at", null: false
+    t.string "requested_by"
+    t.datetime "closed_at"
+    t.string "closed_by"
+    t.string "reject_reason"
+    t.string "withdrawal_event_id"
+    t.index ["account_number"], name: "index_withdrawal_requests_on_account_number"
+    t.index ["request_id"], name: "index_withdrawal_requests_on_request_id", unique: true
+    t.index ["status"], name: "index_withdrawal_requests_on_status"
   end
 
   add_foreign_key "account_ownerships", "customers"

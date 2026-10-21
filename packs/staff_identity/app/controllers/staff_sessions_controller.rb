@@ -1,4 +1,6 @@
 # 行員のログイン（new / create）とログアウト（destroy）。/admin/session
+# 学習用なのでパスワードは使わない: ドロップダウンで行員を選ぶだけで、その行員のセッション（staff_session_id）を作る。
+# 利用者のセッション（customer_session_id）とは別のまま
 class StaffSessionsController < ApplicationController
   include StaffAuthentication
 
@@ -9,14 +11,16 @@ class StaffSessionsController < ApplicationController
   layout "application" # packs/ui の外枠（管理画面と同じ見た目）
 
   def new
+    @staffs = Staff.order(:id)
   end
 
   def create
-    if staff = Staff.authenticate_by(params.permit(:email_address, :password))
+    if staff = Staff.find_by(id: params[:staff_id])
+      find_staff_session_by_cookie&.destroy # 行員を切り替えたら、前の行員のセッションは消す
       start_new_staff_session_for staff
       redirect_to after_staff_authentication_url
     else
-      redirect_to new_staff_session_path, alert: "メールアドレスかパスワードが違います"
+      redirect_to new_staff_session_path, alert: "行員を選んでください"
     end
   end
 

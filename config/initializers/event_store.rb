@@ -14,5 +14,5 @@ Rails.configuration.to_prepare do
   events = Banking::Events
 
   # 画面のライブ更新（画面はルートのパッケージにあるので、ここで購読する）
-  event_store.subscribe(BroadcastRefreshJob, to: events::ACCOUNT + events::TRANSFER)
+  event_store.subscribe(BroadcastRefreshJob, to: events::ACCOUNT + events::TRANSFER + events::WITHDRAWAL_REQUEST)
 end

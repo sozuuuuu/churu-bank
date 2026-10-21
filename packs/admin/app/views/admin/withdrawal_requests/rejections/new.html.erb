@@ -1,0 +1,25 @@
+<%= turbo_frame_tag "counter" do %>
+  <div class="confirm reversal-panel">
+    <h3>出金依頼を断る</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl><%= render "admin/withdrawal_requests/request", request: @request %></dl>
+
+    <% if @request.open? %>
+      <%= form_with url: admin_withdrawal_request_rejection_path(@request), class: "form" do |f| %>
+        <label>
+          理由（利用者の画面に出ます）
+          <%= f.text_field :reason, value: @reason, required: true, autofocus: true, placeholder: "例: 本人確認ができませんでした" %>
+        </label>
+        <div class="actions">
+          <%= f.submit "確認する", name: "preview", class: "button primary" %>
+          <%= link_to "やめる", admin_withdrawal_requests_path, class: "button", data: { turbo_frame: "_top" } %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="muted">この依頼は「<%= @request.status_label %>」なので断れません。</p>
+      <%= link_to "閉じる", admin_withdrawal_requests_path, class: "button", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

@@ -13,9 +13,11 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 ```
 
 - 環境: WSL の Ubuntu 24.04、Ruby は mise（`mise.toml`）、バージョン管理は jj
-- ログイン: 開発用のアカウントとパスワードは `db/seeds.rb`（行員 2 人と、利用者のオルカ・ジンジベル・ミケ）。
-  **行員と利用者はアカウントもログイン画面も別**: 行員は `/admin/session/new`、利用者は `/session/new`
-- `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員だけ）
+- ログイン: 開発用のアカウントは `db/seeds.rb`（行員の たま・くろ と、利用者のオルカ・ジンジベル・ミケ）。
+  **行員と利用者はアカウントもログイン画面も別**: 行員は `/admin/session/new`（ドロップダウンで行員を選んで入るだけ。パスワードなし）、
+  利用者は `/session/new`
+- `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員だけ）。`/admin/counter` … 窓口（出金依頼の処理）、
+  `/admin/approvals` … 承認待ち（二人承認）
 - `/res` … RES Browser（イベントストアの中身を見る。行員だけ）
 - `/notices` … 銀行からのお知らせ（利用者）、`/admin/notices` … お知らせを出す・直す・掲載終了（行員）
 - `/shop` … ちゅ〜る商店（利用者の買い物）、`/shop/admin` … 商品と在庫の管理（行員）
@@ -28,9 +30,10 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/staff_identity` | **行員のログイン**（`/admin/session`）。`Staff` とセッション、`StaffAuthentication`・`StaffHelper`・`StaffStreamsChannel` を公開 | platform |
 | `packs/customer_identity` | **利用者のログイン**（`/session`、ねこテーマ）。セッション、`CustomerAuthentication`・`CustomerHelper`・`CustomerStreamsChannel` を公開 | platform, customer_registry, ui |
 | `packs/customer_registry` | **顧客台帳**: 利用者 `Customer` と口座のひも付け（`account_ownerships`）。ログインのしくみは持たない。公開は `Customer` だけ | platform |
-| `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入出金・振込・凍結、振込一覧、取消・組戻し・利息。行員だけ | platform, banking, staff_identity, customer_registry, ui |
-| `packs/customer` | 利用者画面 `/`（`Netbank::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込。お知らせはレイアウトで `notices_inbox` を1回呼ぶだけ | platform, banking, customer_identity, ui, notices |
-| `packs/banking` | 銀行ドメイン。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
+| `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入金（現金の持ち込み）・振込・凍結、窓口（出金依頼の処理）、振込一覧、取消・組戻し・凍結の解除の申請と承認待ち、利息。行員だけ | platform, banking, approvals, staff_identity, customer_registry, ui |
+| `packs/customer` | 利用者画面 `/`（`Netbank::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込と出金の依頼。お知らせはレイアウトで `notices_inbox` を1回呼ぶだけ | platform, banking, customer_identity, ui, notices |
+| `packs/banking` | 銀行ドメイン（口座・振込・出金依頼）。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
+| `packs/approvals` | **二人承認**: 取消・組戻し・凍結の解除の「申請 → 別の行員が承認 → 実行」（却下・取り下げ）。外から使えるのは `app/public`（`Approvals::Desk` / `Approvals::Events` / `ApprovalRequest`） | platform, banking |
 | `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と、利用者の買い物の画面 `/shop`。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking, customer_identity, ui |
 | `packs/shop_admin` | 商品と在庫の管理 `/shop/admin`（`ShopAdmin::`）。商品の登録・値段・入荷・商店の口座を開く、注文を全員分見る。行員だけ | platform, banking, shop, staff_identity, ui |
 | `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`。`content_for :nav` / `:account` / `:home_path` / `:page_top` で差し込む）、ねこテーマ（`layouts/cat` と `ui/cat.css`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`）。だれがログインしているかは知らない | platform |
@@ -59,7 +62,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 |---|---|---|
 | モデル・テーブル | `Staff`（`staffs`）・`staff_sessions` | `Customer`（`customers`、顧客台帳）・`customer_sessions` |
 | パック | `packs/staff_identity` | `packs/customer_identity`（ログイン）＋ `packs/customer_registry`（台帳） |
-| ログイン画面 | `/admin/session/new`（管理画面と同じ見た目） | `/session/new`（ねこテーマ） |
+| ログイン画面 | `/admin/session/new`（管理画面と同じ見た目。行員をドロップダウンで選ぶだけ） | `/session/new`（ねこテーマ） |
 | セッションの Cookie | `staff_session_id` | `customer_session_id` |
 | ベースコントローラで include | `StaffAuthentication`（`current_staff`） | `CustomerAuthentication`（`current_customer`） |
 | ライブ更新の購読 | `staff_stream_from` → `StaffStreamsChannel` | `customer_stream_from` → `CustomerStreamsChannel` |
@@ -76,14 +79,65 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
   （`Rails.application.message_verifier("staff_streams")` / `("customer_streams")`）。なので行員の画面に埋め込まれた名前（`"accounts"` 全口座など）を
   利用者が手に入れても購読できない。素の `Turbo::StreamsChannel`（`turbo_stream_from`）は購読を拒否する（`config/initializers/turbo_streams.rb`）。
   配信はどちらも `Turbo::StreamsChannel.broadcast_refresh_to` のまま（ストリームの中身は同じで、購読の入口だけが分かれている）
-- 利用者画面は `account_ownerships` でひも付いた口座だけ。他人の口座は口座ページ・時点残高・振込とも 404。
-  入出金と凍結は行員だけ。振込先には全口座（解約済みを除く）を選べる
+- **行員のログインは厳密にしない**（学習用）: パスワードをやめ、`/admin/session/new` のドロップダウンで行員を選んで「入る」だけ。
+  二人承認を試すのに、たま・くろを切り替えやすくするため。切り替えると前の行員のセッションは消える。
+  入ったあとは今までどおり行員のセッション（`staff_session_id`）で、利用者のセッションとは別のまま（`Staff` の `password_digest` は残っているが使わない）
+- 利用者画面は `account_ownerships` でひも付いた口座だけ。他人の口座は口座ページ・時点残高・振込・出金の依頼とも 404。
+  出金は依頼を出すだけ（行員が窓口で処理する）。入金と凍結は行員だけ。振込先には全口座（解約済みを除く）を選べる
 - 行員は口座の開設のときに持ち主（利用者）を選んでひも付ける。台帳（`Customer`）は packs/customer_registry にあり、
   行員の画面（admin・notices_admin）はここに依存するが、利用者のログイン（customer_identity）には依存しない
 - 利用者画面は見た目も別（ねこ・ちゅ〜るのテーマ、`packs/ui/app/assets/stylesheets/ui/cat.css`。`layouts/cat` が読み込む）。`body.cat-theme` の下だけに効き、管理画面は今の見た目のまま
 - 商店の買い物（`/shop`）は利用者のログイン、商品と在庫の管理（`/shop/admin`）は行員のログイン。「ちゅ〜る商店」の節を参照
 - だれの操作かは、イベントの metadata の actor に `staff:<id>` / `customer:<id>` で残る（メールアドレスは変わりうるので id）。
   Q0 より前のイベントは `admin:<メール>` / `customer:<メール>` / `shop:<メール>` のまま（過去のイベントは書き換えない）
+
+### 行員の権限: 窓口取引と二人承認（TODO の Q1・Q2）
+
+いままでは行員が一人で、利用者の口座から自由に出金・取消・組戻し・凍結の解除ができた。本物の銀行に寄せて、
+**出金は利用者の依頼があるときだけ**、**お金を戻す・止めを外す操作は二人の行員で**にした。
+
+```
+Q1 窓口取引（ストリーム WithdrawalRequest$<依頼ID>）
+  利用者  Bank#request_withdrawal … WithdrawalRequested（受付中。お金はまだ動かない）
+          └ 処理の前なら Bank#cancel_withdrawal … WithdrawalRequestCancelled（取消済み）
+  行員    窓口 /admin/counter
+          ├ 出金する Bank#process_withdrawal … Account$ MoneyWithdrawn（data に request_id）→ WithdrawalRequestProcessed（出金済み）
+          └ 断る    Bank#reject_withdrawal（理由は必須）… WithdrawalRequestRejected（お断り）
+
+Q2 二人承認（ストリーム Approval$<申請ID>、packs/approvals）
+  行員A  Approvals::Desk#request_reversal / request_transfer_reversal / request_unfreeze … ApprovalRequested（承認待ち）
+          └ A 本人は取り下げだけ … ApprovalWithdrawn
+  行員B  承認待ち /admin/approvals
+          ├ 承認 Desk#approve … ApprovalGranted → 銀行のイベント（DepositReversed など）→ ApprovalExecuted（実行済み）を1トランザクションで
+          └ 却下 Desk#reject（理由は必須）… ApprovalRejected（銀行は何も変わらない）
+```
+
+| 決めたこと | 中身 |
+|---|---|
+| 依頼なしの出金 | **入口をなくした**。`Bank#withdraw` を消し、出金は `process_withdrawal(依頼ID)` だけ。管理画面の口座ページは「入金（現金の持ち込み）」だけのフォームになり、出金は窓口へのリンク |
+| 依頼のときのお金 | **押さえない**（凍結・残高が足りるかを確かめるだけ）。窓口で現金を渡すまでは口座のお金のまま（利息もつく）。処理するときに足りなければ `InsufficientFunds` で出金せず、依頼は受付中のまま（行員は断れる）。押さえないので、受付中の依頼の合計が残高を超えることはある |
+| 二重の処理 | 依頼の状態（受付中でなければ `InvalidState`）と `WithdrawalRequest$` の expected_version。処理と利用者の取消が同時なら後の方が `ConcurrentModification` になり、出金も残らない |
+| 出金依頼の置き場 | **銀行のパック**（`Banking::WithdrawalRequest`、読み取りモデル `WithdrawalRequest`）。依頼は口座のお金と同じ不変条件（凍結・残高）に乗っていて、処理は口座の MoneyWithdrawn と同じトランザクションで書く必要がある。別のパックにすると、そのパックが `Bank#withdraw` のような「依頼なしで出金できる入口」を銀行に開けさせることになり、「依頼があるときだけ」を銀行の中で守れない |
+| 二人承認の対象 | 取消（入出金の逆仕訳）・振込の組戻し・凍結の解除。**凍結そのものは一人ですぐ**できるまま（不正の疑いで止めるのは急ぐ。止めすぎても解除で戻せる）。お金を戻す・止めを外すほうが、誤り・なりすましのときの害が大きい |
+| 申請者と承認者 | 申請した本人は承認も却下もできない（取り下げだけ）。承認待ちの画面でも本人にはボタンを出さず、URL を直接たたいても `Approvals::Desk` が断る。却下は申請者以外ならだれでも（理由は必須） |
+| 銀行の確かめ | 銀行は `reverse` / `reverse_transfer` / `unfreeze_account` に `approval: Banking::Bank::Approval(id, requested_by)` を求め、**承認がない・申請者 = 実行者（Bank の actor）なら `InvalidState`**。ドライラン（申請の確認画面の試算）だけは承認なしでよい。イベントの metadata に `approval_id`・`requested_by`・`approved_by` が残る（actor は承認した行員） |
+| 二人承認の置き場 | **新しいパック `packs/approvals`**（依存は banking だけ）。二人承認は行員の業務の決まり（内部統制）で、お金の不変条件ではない。申請の一覧・却下・取り下げを銀行に入れると、銀行が行員の仕事の流れまで持つことになる。銀行は「承認があること」「別人であること」だけを確かめ、流れはこのパックが持つ。行員（`Staff`）は知らず、actor の文字列 `staff:<id>` で比べる |
+| 承認と実行 | 承認したら**その場で実行**（承認と実行を分けない。「承認済みだが未実行」を作らない）。銀行で失敗したら（申請のあとで残高が減った等）全部戻り、申請は承認待ちのまま。申請のときにも銀行でドライランし、いまできない操作（取消済み・理由なしなど）は申請できない |
+| 同じ対象 | 同じ通帳の行・振込・口座の解除の承認待ちは1つだけ（読み取りモデルの一意インデックス `status = 'pending'`）。却下・取り下げのあとはまた申請できる |
+| だれが | 申請・承認・却下・取り下げはそれぞれ `Approval$<申請ID>` のイベントの actor。実行した銀行のイベントもこのストリームにリンクするので、RES Browser で「だれが申請し、だれが承認し、何が起きたか」を1か所で辿れる。出金依頼も `WithdrawalRequest$<依頼ID>` に MoneyWithdrawn をリンク |
+| 画面のライブ更新 | 出金依頼のイベントは `BroadcastRefreshJob` が `"withdrawal_requests"`（窓口）と口座に、申請のイベントは `Approvals::RefreshJob` が `"approvals"`（承認待ち）と口座に refresh を送る。メニューの「窓口」「承認待ち」に件数のバッジ |
+| MCP | `withdraw` をやめ、**`request_withdrawal`（依頼を出すだけ）** にした。MCP にはだれが使っているかの区別がない（actor は `mcp`）ので、行員の操作（処理・断る・承認）は出さない。入金（`deposit`）は今までどおり |
+
+画面:
+
+| だれ | 場所 | できること |
+|---|---|---|
+| 利用者 | 口座ページの「出金の依頼」 | 金額・メモ → 確認 → 「出金を依頼する」（Frame `withdrawal_request`）。最近の依頼の状態（受付中・出金済み・お断り（理由）・取消済み）、受付中なら「取り消す」 |
+| 行員 | 窓口 `/admin/counter` | 受付中の依頼に「出金する」（確認 → 確定）・「断る」（理由 → 確認 → 確定）。Frame `counter`。最近の処理（だれが処理・お断り） |
+| 行員 | 口座ページ | 入金（現金の持ち込み）。通帳の「取消」・「組戻し」は**申請**（確定で申請）。申請中の行は「承認待ち」。凍結中なら理由を書いて「凍結の解除を申請する」。この口座の承認待ちと出金依頼 |
+| 行員 | 承認待ち `/admin/approvals` | 他人の申請に「承認する」（実行するとどうなるかの確認 → 承認して実行）・「却下する」（理由）。自分の申請は「取り下げる」だけ。最近の結果（申請者・承認／却下した人） |
+
+読み取りモデルの作り直し: 出金依頼は `bin/rails churu:rebuild_projections` に入っている。二人承認は `bin/rails approvals:rebuild_projections`（パックが別なので別のタスク）。
 
 ### パックの分け方（Q0）
 
@@ -218,10 +272,12 @@ Transfers::SettleJob → Bank#settle_transfer（何度動いても1回分だけ�
 
 | 対象 | API | イベント | 条件 |
 |---|---|---|---|
-| 入金 | `Bank#reverse(number, event_id, reason:)` | `DepositReversed` | 残高が足りること（使ってしまった入金は取り消せない） |
+| 入金 | `Bank#reverse(number, event_id, reason:, approval:)` | `DepositReversed` | 残高が足りること（使ってしまった入金は取り消せない） |
 | 出金 | 同上 | `WithdrawalReversed` | |
-| 完了した振込 | `Bank#reverse_transfer(transfer_id, reason:)` | 振込先 `TransferCreditReversed` → 振込元 `TransferRefunded` → `Transfer$` `TransferReversed` | 振込先の残高が足りること。処理中・失敗（組戻し済み）は不可 |
+| 完了した振込 | `Bank#reverse_transfer(transfer_id, reason:, approval:)` | 振込先 `TransferCreditReversed` → 振込元 `TransferRefunded` → `Transfer$` `TransferReversed` | 振込先の残高が足りること。処理中・失敗（組戻し済み）は不可 |
 
+- **取消・組戻しは二人承認**（TODO の Q2）: 行員が申請し、別の行員が承認したときに実行する（`Approvals::Desk`。「行員の権限: 窓口取引と二人承認」の節）。
+  銀行は `approval:`（`Banking::Bank::Approval`）がないと、または申請者が実行者と同じだと `InvalidState`。ドライランは承認なしでよい
 - 二重取消・取消の取消はできない（`InvalidState`）。振込のイベントは `reverse` では取り消せない（`NotFound`）
 - 銀行側の訂正なので凍結中の口座でもできる。解約済みは不可。理由（`reason`）は必須
 - 起算日は取消した時点（過去の時点残高は書き換えない）
@@ -246,8 +302,13 @@ bin/rails churu:rebuild_projections
 
 | やりたいこと | 呼び方 | 画面での目安 |
 |---|---|---|
-| 入出金の取消 | `bank.reverse(number, entry.event_id, reason:, dry_run:)` | `LedgerEntry#reversible?` の行に「取消」。取消済みは `reversed?`、取消の行は `reversal?` |
-| 振込の組戻し | `bank.reverse_transfer(transfer.transfer_id, reason:, dry_run:)` | `Transfer#reversible?`（完了）の振込に「組戻し」。Outcome は振込元の口座 |
+| 出金の依頼（利用者） | `bank.request_withdrawal(number, amount, memo:, dry_run:)` | Outcome の `request_id` が依頼ID。`balance_after` は処理されたときの残高（お金はまだ動かない） |
+| 出金依頼の取消（利用者） | `bank.cancel_withdrawal(request_id, from: 自分の口座番号, dry_run:)` | `WithdrawalRequest#open?`（受付中）に「取り消す」。他人の口座の依頼は NotFound |
+| 出金依頼の処理・お断り（行員） | `bank.process_withdrawal(request_id, dry_run:)` / `bank.reject_withdrawal(request_id, reason:, dry_run:)` | 窓口の一覧は `WithdrawalRequest.open`。依頼なしの出金（`withdraw`）はない |
+| 入出金の取消 | `bank.reverse(number, entry.event_id, reason:, approval:, dry_run:)` | `LedgerEntry#reversible?` の行に「取消」。取消済みは `reversed?`、取消の行は `reversal?`。画面からは `Approvals::Desk#request_reversal` で申請する |
+| 振込の組戻し | `bank.reverse_transfer(transfer.transfer_id, reason:, approval:, dry_run:)` | `Transfer#reversible?`（完了）の振込に「組戻し」。Outcome は振込元の口座。画面からは `Desk#request_transfer_reversal` |
+| 凍結の解除 | `bank.unfreeze_account(number, approval:, dry_run:)` | 画面からは `Desk#request_unfreeze(number, reason:)`。凍結（`freeze_account`）は承認なし |
+| 二人承認（packs/approvals） | `Approvals::Desk.new(actor:)` の `request_*`（→ `Submitted(approval_id, outcome)`）/ `approve(id, dry_run:)`（→ 銀行の Outcome）/ `reject(id, reason:)` / `withdraw(id)` | 一覧は `ApprovalRequest.pending`。ボタンは `#decidable_by?(actor)`（本人でない）・`#withdrawable_by?(actor)`（本人） |
 | 利息を手で払う | `bank.pay_interest(date:, dry_run:)` → `[Outcome]` / 1口座なら `bank.pay_interest_to(number, date:, dry_run:)` → `Outcome` か `nil` | 行員の画面向け。ふだんはジョブに任せる |
 | 利率の表示 | `Banking::Bank.annual_interest_rate`（文字列。例 `"0.365"`） | |
 | 予約振込 | `bank.transfer(from, to, amount, memo:, execute_on: Date, dry_run:)` | 実行日は明日以降（`Banking::Bank::MAX_SCHEDULE_DAYS` 日先まで）。Outcome の残高は変わらない |
@@ -268,11 +329,12 @@ Q3 で `scheduled`（予約中）・`held`（保留中）・`unexecuted`（実�
 ### 管理画面での取消・組戻し・利息（packs/admin）
 
 どれも入出金・振込と同じく Turbo Frame の中で「入力 → 確認（ドライラン）→ 確定（`_top` へ）」。
+取消・組戻しは Q2 から**確定が「申請」**になり、別の行員が承認待ち（`/admin/approvals`）で承認すると実行される。
 
 | 画面 | 場所 | 確認画面で見せるもの |
 |---|---|---|
-| 入出金の取消 | 口座ページの通帳の「取消」→ Frame `reversal`（`/admin/accounts/:number/reversals/new?event_id=`） | 理由・残高の変化・発生するイベント |
-| 振込の組戻し | 振込一覧と口座ページの通帳の「組戻し」→ Frame `reversal`（`/admin/transfers/:id/reversals/new`） | 振込元・振込先それぞれの残高の変化・イベント。口座ページから来たら確定後はその口座へ戻る（`back_to`） |
+| 入出金の取消の申請 | 口座ページの通帳の「取消」→ Frame `reversal`（`/admin/accounts/:number/reversals/new?event_id=`） | 理由・承認されたときの残高の変化・発生するイベント |
+| 振込の組戻しの申請 | 振込一覧と口座ページの通帳の「組戻し」→ Frame `reversal`（`/admin/transfers/:id/reversals/new`） | 振込元・振込先それぞれの承認されたときの残高の変化・イベント。口座ページから来たら申請後はその口座へ戻る（`back_to`）。申請中の振込は「組戻しの承認待ち」 |
 | 利息（全口座） | メニューの「利息」（`/admin/interest`）。利率の表示と日付 → Frame `interest` | 口座ごとの元の残高・支払額・繰り越す端数。支払い済み・残高 0・解約済みの口座はその旨 |
 | 利息（1口座） | 口座ページの「利息」カード → Frame `interest` | 同上（1行） |
 
@@ -405,7 +467,7 @@ Rails の同じプロセスの中に Streamable HTTP のエンドポイント `/
 | `get_account` | 残高と通帳（新しいほうから `limit` 件） |
 | `balance_at` | ある日の終わり時点の残高。起算日基準（`as_of`）と記帳日基準（`as_at`）の両方 |
 | `list_transfers` / `get_transfer` | 振込の一覧・状態（予約中 / 保留中 / 処理中 / 完了 / 組戻し / 実行できず / 取消済み / 差し止め）。予約は `execute_on` |
-| `deposit` / `withdraw` / `transfer` | 入金・出金・振込。**既定はドライラン**。`confirm: true` のときだけ書き込む。`transfer` は `execute_on`（YYYY-MM-DD）で予約振込 |
+| `deposit` / `request_withdrawal` / `transfer` | 入金・出金の依頼・振込。**既定はドライラン**。`confirm: true` のときだけ書き込む。`transfer` は `execute_on`（YYYY-MM-DD）で予約振込。出金は依頼を出すだけで、行員が窓口で処理すると出金される（Q1。`withdraw` はなくした） |
 
 - 書き込みは `Banking::Bank`（actor `"mcp"`）だけを通す。ドライランでは残高の変化・警告・発生するイベントを返す
 - サーバーの instructions とツールの説明で「ドライランを見せて OK をもらってから `confirm: true`」と指示している
@@ -448,7 +510,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~N~~ | ~~商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ~~（済） | B, D | `packs/shop`・`packs/ui` |
 | ~~O~~ | ~~管理画面に取消・組戻し・利息の手動実行のボタン~~（済。「管理画面での取消・組戻し・利息」） | F, G | `packs/admin` |
 | P | 利用者画面に銀行からのお知らせ・お願い・キャンペーン（**お知らせ・お願いは済**。キャンペーン = 条件を満たすと特典が自動入金、は未） | C, N（キャンペーンは L） | `packs/notices`（キャンペーンは新しいパック） |
-| Q | 行員の権限を本物の銀行に寄せる。~~**Q0** 行員と利用者の完全な分離: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける~~（済。「認証と権限」）。Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）。Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」。~~Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる~~（**済**。「予約振込・高額振込の保留・取消と差し止め」） | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
+| Q | 行員の権限を本物の銀行に寄せる。~~**Q0** 行員と利用者の完全な分離: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける~~（済。「認証と権限」）。~~Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）~~（**済**）。~~Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」~~（**済**。どちらも「行員の権限: 窓口取引と二人承認」）。~~Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる~~（**済**。「予約振込・高額振込の保留・取消と差し止め」） | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
 | R | 日本語のイベントビューア（RES Browser の代わり）: イベント名・ストリーム名を日本語に、中身を表で、correlation / causation の連鎖を図で。管理画面の中、行員だけ | Q0 | 新しいパック（例 `packs/event_viewer`） |
 | S | WebSocket（Action Cable）を自分で書く: 窓口の整理券（番号札を取ると順番がライブで進み、呼ばれたらねこが知らせる）と、利用者と行員の窓口チャット（入力中の表示・在席表示）。自作チャンネル・presence・双方向。Q1 の窓口取引とつなげる | Q0, Q1 | 新しいパック（例 `packs/counter`） |
 | T | デビットカード決済（二段階）: 商店での購入はまずオーソリ（お金を押さえる）→ 発送で売上確定 → キャンセルなら押さえを解除。残高と「使えるお金」を分ける。押さえの期限切れはジョブで解除 | D, Q0 | `packs/banking`（カード）・`packs/shop`（支払い） |

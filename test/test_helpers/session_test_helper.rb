@@ -20,7 +20,7 @@ module SessionTestHelper
   end
 
   def sign_in_as_staff(staff)
-    post staff_session_path, params: { email_address: staff.email_address, password: TEST_PASSWORD }
+    post staff_session_path, params: { staff_id: staff.id }
     raise "行員としてログインできませんでした" if cookies[:staff_session_id].blank?
   end
 

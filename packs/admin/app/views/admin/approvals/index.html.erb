@@ -1,0 +1,78 @@
+<% content_for :title, "承認待ち | ちゅーる銀行" %>
+
+<%# ほかの行員が申請・承認・却下したら、この一覧が morph で更新される %>
+<%= staff_stream_from "approvals" %>
+
+<h1>承認待ち（二人承認）</h1>
+<p class="muted">取消・組戻し・凍結の解除は、申請した行員とは別の行員が承認したときに実行されます。自分の申請は承認・却下できません（取り下げはできます）。</p>
+
+<%# 「承認する」「却下する」を押すと、確認 → 確定 がこの Frame の中で動く %>
+<%= turbo_frame_tag "approval", autoscroll: true, data: { autoscroll_block: "center" } %>
+
+<section class="card">
+  <h2>承認待ち <span class="badge"><%= @pending.size %></span></h2>
+  <% if @pending.empty? %>
+    <p class="empty">いまは承認待ちの申請はありません。</p>
+  <% else %>
+    <table class="table">
+      <thead>
+        <tr><th>申請日時</th><th>種類</th><th>対象</th><th>理由</th><th>申請した人</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% @pending.each do |request| %>
+          <tr id="<%= dom_id(request) %>">
+            <td><%= jp_time(request.requested_at) %></td>
+            <td><%= request.kind_label %></td>
+            <td>
+              <%= request.summary %>
+              <% if request.account_number %><div class="small"><%= link_to "口座を見る", admin_account_path(request.account_number) %></div><% end %>
+            </td>
+            <td><%= request.reason %></td>
+            <td class="muted"><%= actor_name(request.requested_by) %></td>
+            <td>
+              <% if request.decidable_by?(current_staff.actor) %>
+                <%= link_to "承認する", new_admin_approval_grant_path(request), class: "button small primary",
+                            data: { turbo_frame: "approval" } %>
+                <%= link_to "却下する", new_admin_approval_rejection_path(request), class: "button small",
+                            data: { turbo_frame: "approval" } %>
+              <% else %>
+                <span class="muted small">自分の申請（別の行員の承認待ち）</span>
+                <%= button_to "取り下げる", admin_approval_withdrawal_path(request), class: "button small",
+                              form: { data: { turbo_confirm: "この申請を取り下げますか？" } } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>
+
+<section class="card">
+  <h2>最近の結果</h2>
+  <% if @decided.empty? %>
+    <p class="empty">まだありません。</p>
+  <% else %>
+    <table class="table">
+      <thead>
+        <tr><th>申請日時</th><th>種類</th><th>対象</th><th>申請した人</th><th>結果</th><th>承認・却下した人</th><th>日時</th></tr>
+      </thead>
+      <tbody>
+        <% @decided.each do |request| %>
+          <tr id="<%= dom_id(request) %>">
+            <td><%= jp_time(request.requested_at) %></td>
+            <td><%= request.kind_label %></td>
+            <td><%= request.summary %><div class="muted small"><%= request.reason %></div></td>
+            <td class="muted"><%= actor_name(request.requested_by) %></td>
+            <td>
+              <span class="badge"><%= request.status_label %></span>
+              <% if request.reject_reason %><div class="muted small"><%= request.reject_reason %></div><% end %>
+            </td>
+            <td class="muted"><%= actor_name(request.decided_by) %></td>
+            <td><%= jp_time(request.decided_at) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>

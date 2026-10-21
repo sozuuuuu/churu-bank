@@ -4,15 +4,12 @@
 
 <h1>行員ログイン</h1>
 
+<%# 学習用なのでパスワードは使わず、行員を選ぶだけで入る（二人承認を試すために行員を切り替えやすく） %>
 <%= form_with url: staff_session_path, class: "card form login" do |form| %>
   <label>
-    メールアドレス
-    <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username",
-                         value: params[:email_address] %>
+    行員
+    <%= form.select :staff_id, @staffs.map { [ it.name, it.id ] },
+                    { selected: params[:staff_id], include_blank: "選んでください" }, required: true, autofocus: true %>
   </label>
-  <label>
-    パスワード
-    <%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72 %>
-  </label>
-  <%= form.submit "ログイン", class: "button primary" %>
+  <%= form.submit "入る", class: "button primary" %>
 <% end %>

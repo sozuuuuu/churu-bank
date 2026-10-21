@@ -2,14 +2,15 @@
 #
 #   bank = Banking::Bank.new(actor: "web")
 #   bank.deposit("0000001", 100, memo: "おこづかい")
-#   bank.withdraw("0000001", 30, dry_run: true)  # 書き込まずに結果だけ返す
+#   bank.deposit("0000001", 30, dry_run: true)   # 書き込まずに結果だけ返す
+#   bank.request_withdrawal("0000001", 30)       # 出金は利用者の依頼から（窓口取引）。行員が process_withdrawal で出金
 #   bank.transfer("0000001", "0000002", 50)      # 引き落としまで。入金は非同期
 #   bank.transfer("0000001", "0000002", 50, execute_on: Date.tomorrow) # 予約振込（引き落としは実行日）
 #   bank.cancel_transfer(transfer_id, from: "0000001") # 実行前（予約中・保留中）の取消（利用者）
 #   bank.stop_transfer(transfer_id, reason: "詐欺の疑い") # 実行前の差し止め（行員）
 #   bank.release_transfer(transfer_id)          # 高額で保留中の振込を通す（行員）
-#   bank.reverse("0000001", event_id, reason: "金額まちがい")  # 入金・出金の取消
-#   bank.reverse_transfer(transfer_id, reason: "振込先まちがい") # 完了した振込の組戻し
+#   bank.reverse("0000001", event_id, reason: "金額まちがい", approval:)  # 入金・出金の取消（二人承認）
+#   bank.reverse_transfer(transfer_id, reason: "振込先まちがい", approval:) # 完了した振込の組戻し（二人承認）
 #   bank.pay_interest(date: Date.yesterday)      # 日次の利息（ふだんは Interest::PayJob が呼ぶ）
 #
 # 書き込みは「集約を読み込む → ルールを確かめて apply → まとめて publish」。
@@ -19,8 +20,8 @@ module Banking
   class Bank
     # ドライランでも本番でも同じ形で返す
     Outcome = Data.define(:account_number, :events, :balance_before, :balance_after, :dry_run,
-                          :transfer_id, :warnings) do
-      def initialize(transfer_id: nil, warnings: [], **) = super
+                          :transfer_id, :warnings, :request_id) do
+      def initialize(transfer_id: nil, warnings: [], request_id: nil, **) = super
 
       def dry_run? = dry_run
     end
@@ -40,23 +41,85 @@ module Banking
       change(number, dry_run:) { |account| account.deposit(amount, memo:, value_date:) }
     end
 
-    def withdraw(number, amount, memo: nil, value_date: nil, dry_run: false)
-      change(number, dry_run:) { |account| account.withdraw(amount, memo:, value_date:) }
+    # ---- 出金（窓口取引、TODO の Q1）----
+    # 出金は利用者の「出金依頼」があるときだけ。依頼なしに出金する入口はない（Bank#withdraw はなくした）。
+    #   利用者: request_withdrawal →（行員が処理する前なら）cancel_withdrawal
+    #   行員:   process_withdrawal（出金する）/ reject_withdrawal（理由つきで断る）
+    # 依頼のときはお金を押さえない（凍結・残高を確かめるだけ）。処理するときに足りなければ InsufficientFunds
+
+    # 出金依頼を受け付ける。お金はまだ動かない（Outcome の balance_after は「処理されたら」の残高）。request_id に依頼ID
+    def request_withdrawal(number, amount, memo: nil, dry_run: false)
+      account = load_account(number)
+      before = account.balance
+      account.withdraw(amount, memo:) # 凍結・残高の確認だけ（この集約は保存しない）
+      request_id = SecureRandom.uuid
+      request = WithdrawalRequest.new(request_id)
+      request.request(account_number: number, amount:, memo:)
+
+      events = request.unpublished_events.to_a
+      store_all(request => WithdrawalRequest.stream_name(request_id)) unless dry_run
+      Outcome.new(account_number: number, events:, balance_before: before,
+                  balance_after: account.balance, dry_run:, request_id:,
+                  warnings: [ "行員が処理するまでお金は動きません（それまでは取り消せます）" ])
     end
+
+    # 行員が出金依頼を処理する（依頼の額を口座から出金する）。受付中でなければ InvalidState なので二重に出金しない。
+    # 口座の MoneyWithdrawn（data に request_id）と依頼の WithdrawalRequestProcessed を1つのトランザクションで書き、
+    # MoneyWithdrawn を WithdrawalRequest$<id> にもリンクする。取消と同時なら expected_version で後の方が負ける
+    def process_withdrawal(request_id, dry_run: false)
+      request = load_existing_withdrawal_request(request_id)
+      raise InvalidState, "出金依頼は#{withdrawal_status_label(request)}なので処理できません" unless request.requested?
+
+      number = request.account_number
+      account = load_account(number)
+      before = account.balance
+      account.withdraw(request.amount, memo: request.memo.presence || "窓口での出金", request_id:)
+      withdrawn = account.unpublished_events.to_a.last
+      request.process!(withdrawal_event_id: withdrawn.event_id)
+
+      events = account.unpublished_events.to_a + request.unpublished_events.to_a
+      unless dry_run
+        store_all(account => Account.stream_name(number), request => WithdrawalRequest.stream_name(request_id)) do
+          @event_store.link(withdrawn.event_id, stream_name: WithdrawalRequest.stream_name(request_id))
+        end
+      end
+      Outcome.new(account_number: number, events:, balance_before: before, balance_after: account.balance,
+                  dry_run:, request_id:)
+    end
+
+    # 行員が出金依頼を断る。理由は必須。お金は動かない
+    def reject_withdrawal(request_id, reason:, dry_run: false)
+      close_withdrawal(request_id, dry_run:) { |request| request.reject!(reason: reason.to_s.strip) }
+    end
+
+    # 利用者が出金依頼を取り消す（行員が処理する前だけ）。from を渡すと、その口座の依頼でなければ NotFound
+    def cancel_withdrawal(request_id, from: nil, dry_run: false)
+      close_withdrawal(request_id, from:, dry_run:, &:cancel!)
+    end
+
+    # ---- 二人承認の操作（TODO の Q2）----
+    # 取消・組戻し・凍結の解除は、申請した行員とは別の行員が承認したときだけ実行できる。
+    # 申請・承認の流れ（だれが申請し、だれが承認・却下したか）は packs/approvals が持ち、銀行は
+    # 「承認があること」と「申請者と実行者（= このBankの actor）が別人であること」だけを確かめる。
+    # 承認なしでも dry_run（確認画面の試算）はできる。イベントの metadata に approval_id / requested_by が残る
+    Approval = Data.define(:id, :requested_by)
 
     # 入金・出金の取消（逆仕訳）。event_id は取り消す入金・出金のイベント（LedgerEntry#event_id）。
     # 元のイベントは残し、DepositReversed / WithdrawalReversed で相殺する。二重取消・取消の取消は不可。
     # 振込はここでは取り消せない（reverse_transfer で組戻しする）
-    def reverse(number, event_id, reason:, dry_run: false)
-      change(number, dry_run:) { |account| account.reverse(event_id, reason:) }
+    def reverse(number, event_id, reason:, approval: nil, dry_run: false)
+      metadata = approval_metadata(approval, dry_run:)
+      change(number, dry_run:, metadata:) { |account| account.reverse(event_id, reason:) }
     end
 
+    # 凍結（不正の疑いで止める）は急ぐので一人ですぐできる。解除は二人承認
     def freeze_account(number, reason:, dry_run: false)
       change(number, dry_run:) { |account| account.freeze!(reason:) }
     end
 
-    def unfreeze_account(number, dry_run: false)
-      change(number, dry_run:) { |account| account.unfreeze! }
+    def unfreeze_account(number, approval: nil, dry_run: false)
+      metadata = approval_metadata(approval, dry_run:)
+      change(number, dry_run:, metadata:) { |account| account.unfreeze! }
     end
 
     def close_account(number, dry_run: false)
@@ -196,8 +259,9 @@ module Banking
     #   Account$<振込先> TransferCreditReversed（引き戻し）→ Account$<振込元> TransferRefunded（払い戻し）
     #   → Transfer$<id> TransferReversed
     # を書く。振込先の残高が足りなければ InsufficientFunds。処理中・失敗（組戻し済み）の振込は不可。
-    # 返す Outcome は振込元の口座のもの
-    def reverse_transfer(transfer_id, reason:, dry_run: false)
+    # 返す Outcome は振込元の口座のもの。二人承認（approval）が要る
+    def reverse_transfer(transfer_id, reason:, approval: nil, dry_run: false)
+      metadata = approval_metadata(approval, dry_run:)
       transfer = load_existing_transfer(transfer_id)
       transfer.reverse!(reason:)
       from, to = transfer.from_account, transfer.to_account
@@ -212,9 +276,11 @@ module Banking
       money_events = destination.unpublished_events.to_a + source.unpublished_events.to_a
       events = money_events + transfer.unpublished_events.to_a
       unless dry_run
-        store_all(destination => Account.stream_name(to), source => Account.stream_name(from),
-                  transfer => Transfer.stream_name(transfer_id)) do
-          money_events.each { |event| link_to_transfer(transfer_id, event) }
+        @event_store.with_metadata(metadata) do
+          store_all(destination => Account.stream_name(to), source => Account.stream_name(from),
+                    transfer => Transfer.stream_name(transfer_id)) do
+            money_events.each { |event| link_to_transfer(transfer_id, event) }
+          end
         end
       end
 
@@ -266,6 +332,43 @@ module Banking
       load_transfer(transfer_id).tap do |transfer|
         raise NotFound, "振込 #{transfer_id} はありません" if transfer.status == :new
       end
+    end
+
+    def load_withdrawal_request(request_id)
+      @repository.load(WithdrawalRequest.new(request_id), WithdrawalRequest.stream_name(request_id))
+    end
+
+    def load_existing_withdrawal_request(request_id)
+      load_withdrawal_request(request_id).tap do |request|
+        raise NotFound, "出金依頼 #{request_id} はありません" if request.status == :new
+      end
+    end
+
+    def withdrawal_status_label(request) = ::WithdrawalRequest::STATUS_LABELS.fetch(request.status.to_s)
+
+    # 出金依頼を断る・取り消す（お金は動かない）。どちらにするかはブロックで集約のメソッドを呼ぶ
+    def close_withdrawal(request_id, from: nil, dry_run:)
+      request = load_existing_withdrawal_request(request_id)
+      raise NotFound, "出金依頼 #{request_id} はありません" if from && request.account_number != from
+
+      yield request
+      events = request.unpublished_events.to_a
+      store_all(request => WithdrawalRequest.stream_name(request_id)) unless dry_run
+      balance = load_account(request.account_number).balance
+      Outcome.new(account_number: request.account_number, events:, balance_before: balance, balance_after: balance,
+                  dry_run:, request_id:)
+    end
+
+    # 二人承認の確かめ（Bank::Approval）。承認がない・申請者が実行者（この Bank の actor）と同じなら InvalidState。
+    # ドライランは承認なしでよい（申請の確認画面で試算するため）
+    def approval_metadata(approval, dry_run:)
+      return {} if dry_run && approval.nil?
+      raise InvalidState, "この操作は二人承認が必要です（申請 → 別の行員が承認）" unless approval.is_a?(Approval)
+      if approval.requested_by.blank? || approval.requested_by == @actor
+        raise InvalidState, "申請した本人は承認・実行できません（別の行員が承認します）"
+      end
+
+      { approval_id: approval.id, requested_by: approval.requested_by, approved_by: @actor }
     end
 
     def held_amount?(amount) = amount.is_a?(Integer) && amount >= self.class.hold_threshold
@@ -332,11 +435,11 @@ module Banking
                   balance_after: source.balance, dry_run:, transfer_id:)
     end
 
-    def change(number, dry_run:, account: load_account(number))
+    def change(number, dry_run:, account: load_account(number), metadata: {})
       before = account.balance
       yield account
       events = account.unpublished_events.to_a
-      store_all(account => Account.stream_name(number)) unless dry_run
+      @event_store.with_metadata(metadata) { store_all(account => Account.stream_name(number)) } unless dry_run
 
       Outcome.new(account_number: number, events:, balance_before: before,
                   balance_after: account.balance, dry_run:)

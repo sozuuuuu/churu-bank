@@ -16,7 +16,7 @@ module Projections
       projections = Projections.all
       count = 0
       ActiveRecord::Base.transaction do
-        [ LedgerEntry, ::Transfer, ::Account ].each(&:delete_all)
+        [ LedgerEntry, ::Transfer, ::WithdrawalRequest, ::Account ].each(&:delete_all)
         @event_store.read.each do |event|
           projections.each { |projection, types| projection.call(event) if types.include?(event.class) }
           count += 1

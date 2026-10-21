@@ -1,5 +1,5 @@
 # 利用者画面（/）。利用者としてログインした人（packs/customer_identity）が、自分の口座だけを見て、自分の口座から振り込める。
-# 入出金と凍結は行員だけ（packs/admin）。銀行からのお知らせは packs/notices の部品（notices_inbox）をレイアウトに1か所差し込む
+# 出金は依頼を出すだけ（行員が窓口で処理）。入金と凍結は行員だけ（packs/admin）。銀行からのお知らせは packs/notices の部品（notices_inbox）をレイアウトに1か所差し込む
 enforce_dependencies: true
 enforce_privacy: false
 

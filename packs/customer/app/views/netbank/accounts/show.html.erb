@@ -42,6 +42,8 @@
     </section>
   </div>
 
+  <%= render "netbank/accounts/withdrawal_requests", account: @account, requests: @withdrawal_requests %>
+
   <% if @pending_transfers.any? %>
     <section class="card pop" style="--i: 3" id="pending-transfers">
       <h2><span aria-hidden="true">⏳</span> 予約・保留中の振込</h2>

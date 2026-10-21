@@ -1,6 +1,7 @@
 <%= turbo_frame_tag "reversal" do %>
   <div class="confirm reversal-panel">
-    <h3>取消（逆仕訳）</h3>
+    <h3>取消（逆仕訳）の申請</h3>
+    <p class="muted small">取消は二人承認です。申請 → 別の行員が承認 → 実行。</p>
     <% if @error %>
       <p class="flash flash-alert"><%= @error %></p>
     <% end %>

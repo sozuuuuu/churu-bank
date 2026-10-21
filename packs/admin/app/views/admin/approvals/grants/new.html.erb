@@ -1,0 +1,34 @@
+<%= turbo_frame_tag "approval" do %>
+  <div class="confirm reversal-panel">
+    <h3>承認の確認</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl>
+      <%= render "admin/approvals/request", request: @request %>
+      <% if @outcome %>
+        <dt>残高（口座 <%= @outcome.account_number %>）</dt>
+        <dd><%= churu(@outcome.balance_before) %> → <strong><%= churu(@outcome.balance_after) %></strong></dd>
+        <dt>発生するイベント</dt>
+        <dd><code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code>（と ApprovalGranted, ApprovalExecuted）</dd>
+      <% end %>
+    </dl>
+
+    <% if @outcome && @request.pending? %>
+      <p class="muted">まだ承認していません。承認すると、その場で実行します。</p>
+      <%= form_with url: admin_approval_grant_path(@request), data: { turbo_frame: "_top" } do |f| %>
+        <div class="actions">
+          <%= f.submit "承認して実行する", class: "button primary" %>
+          <%= link_to "やめる", admin_approvals_path, class: "button", data: { turbo_frame: "_top" } %>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="actions">
+        <% if @request.decidable_by?(current_staff.actor) %>
+          <%= link_to "却下する", new_admin_approval_rejection_path(@request), class: "button" %>
+        <% end %>
+        <%= link_to "閉じる", admin_approvals_path, class: "button", data: { turbo_frame: "_top" } %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

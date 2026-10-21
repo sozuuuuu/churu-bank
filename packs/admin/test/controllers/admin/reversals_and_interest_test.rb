@@ -11,6 +11,16 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
     @zingiber = @bank.open_account(holder_name: "ジンジベル").account_number
   end
 
+  # 別の行員でログインし直して、承認待ちから承認する（二人承認）。終わったら元の行員に戻る
+  def approve_as_another_staff(request)
+    sign_in_as_staff create_staff(name: "係長")
+    get new_admin_approval_grant_path(request)
+    assert_select "input[type=submit][value=?]", "承認して実行する"
+    post admin_approval_grant_path(request)
+    assert_redirected_to admin_approvals_path
+    sign_in_as_staff @admin
+  end
+
   test "入金の取消: 確認では何も起きず、確定で逆仕訳が入り、通帳で対応が分かる" do
     @bank.deposit(@orca, 100, memo: "おこづかい")
     entry = LedgerEntry.find_by!(account_number: @orca, kind: "deposit")
@@ -23,12 +33,20 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
 
     post admin_account_reversals_path(@orca), params: { event_id: entry.event_id, reason: "金額まちがい", preview: "1" }
     assert_response :success
-    assert_match "まだ取り消していません", response.body
+    assert_match "まだ申請していません", response.body
     assert_match "DepositReversed", response.body
     assert_equal 100, Account.find_by!(number: @orca).balance
 
+    # 確定は申請。二人承認なので、まだ取り消さない。通帳の行は「承認待ち」
     post admin_account_reversals_path(@orca), params: { event_id: entry.event_id, reason: "金額まちがい" }
     assert_redirected_to admin_account_path(@orca)
+    assert_match "申請しました", flash[:notice]
+    assert_equal 100, Account.find_by!(number: @orca).balance
+    get admin_account_path(@orca)
+    assert_select "tr##{dom_id(entry)} .badge", "承認待ち"
+
+    # 別の行員が承認すると実行される
+    approve_as_another_staff(ApprovalRequest.pending.sole)
     assert_equal 0, Account.find_by!(number: @orca).balance
     assert entry.reload.reversed?
 
@@ -46,9 +64,9 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
 
     post admin_account_reversals_path(@orca), params: { event_id: entry.event_id, reason: " ", preview: "1" }
     assert_response :unprocessable_entity
-    assert_match "取消の理由を入れてください", response.body
+    assert_match "申請の理由を入れてください", response.body
 
-    @bank.reverse(@orca, entry.event_id, reason: "テスト")
+    @bank.reverse(@orca, entry.event_id, reason: "テスト", approval: approval_for_test)
     get new_admin_account_reversal_path(@orca, event_id: entry.event_id)
     assert_match "この取引は取り消せません", response.body
     assert_select "input[name=reason]", count: 0
@@ -68,12 +86,18 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
 
     post admin_transfer_reversals_path(transfer), params: { reason: "振込先まちがい", back_to: @zingiber, preview: "1" }
     assert_response :success
-    assert_match "まだ組戻ししていません", response.body
+    assert_match "まだ申請していません", response.body
     assert_match "TransferReversed", response.body
     assert_equal 40, Account.find_by!(number: @zingiber).balance
 
     post admin_transfer_reversals_path(transfer), params: { reason: "振込先まちがい", back_to: @zingiber }
     assert_redirected_to admin_account_path(@zingiber)
+    assert_equal "completed", transfer.reload.status
+    get admin_transfers_path
+    assert_select "a", text: "組戻しの承認待ち"
+    assert_select "a", text: "組戻し", count: 0
+
+    approve_as_another_staff(ApprovalRequest.pending.sole)
     assert_equal "reversed", transfer.reload.status
     assert_equal 100, Account.find_by!(number: @orca).balance
     assert_equal 0, Account.find_by!(number: @zingiber).balance

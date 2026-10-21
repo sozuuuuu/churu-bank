@@ -12,7 +12,7 @@ module Banking
     # data: account_number, amount, memo
     class MoneyDeposited < RubyEventStore::Event; end
 
-    # data: account_number, amount, memo
+    # 窓口での出金（出金依頼を行員が処理したとき）。data: account_number, amount, memo, request_id
     class MoneyWithdrawn < RubyEventStore::Event; end
 
     # data: account_number, reason
@@ -89,6 +89,21 @@ module Banking
     class TransferCancelled < RubyEventStore::Event; end
     class TransferStopped < RubyEventStore::Event; end
 
+    # ---- 出金依頼（窓口取引、ストリーム WithdrawalRequest$<依頼ID>） ----
+
+    # 利用者が出金を依頼した（まだお金は動かない）。data: request_id, account_number, amount, memo
+    class WithdrawalRequested < RubyEventStore::Event; end
+
+    # 行員が依頼どおりに出金した（口座側は MoneyWithdrawn。data の request_id でつながる）。
+    # data: request_id, account_number, amount, withdrawal_event_id
+    class WithdrawalRequestProcessed < RubyEventStore::Event; end
+
+    # 行員が依頼を断った。data: request_id, account_number, reason
+    class WithdrawalRequestRejected < RubyEventStore::Event; end
+
+    # 利用者が依頼を取り消した（行員が処理する前だけ）。data: request_id, account_number
+    class WithdrawalRequestCancelled < RubyEventStore::Event; end
+
     ACCOUNT = [
       AccountOpened, MoneyDeposited, MoneyWithdrawn, AccountFrozen, AccountUnfrozen, AccountClosed,
       TransferDebited, TransferCredited, TransferRefunded, TransferCreditReversed,
@@ -98,6 +113,9 @@ module Banking
       TransferRequested, TransferCompleted, TransferFailed, TransferReversed,
       TransferScheduled, TransferStarted, ScheduledTransferFailed, TransferHeld, TransferReleased,
       TransferCancelled, TransferStopped
+    ].freeze
+    WITHDRAWAL_REQUEST = [
+      WithdrawalRequested, WithdrawalRequestProcessed, WithdrawalRequestRejected, WithdrawalRequestCancelled
     ].freeze
 
     # 口座側のイベントのうち、Transfer$<振込ID> にもリンクされるもの

@@ -12,6 +12,11 @@ module Admin
       @holders = Account.pluck(:number, :holder_name).to_h
       @date = parse_date(params[:date]) || Date.current
       @owners = Customer.owning(@account.number).order(:id)
+      # 承認待ちの申請（取消・組戻し・凍結の解除）と、窓口の出金依頼
+      @approvals = ApprovalRequest.pending.where(account_number: @account.number).order(:requested_at)
+      @pending_entry_ids = @approvals.filter_map(&:ledger_event_id).to_set
+      @pending_transfer_ids = ApprovalRequest.pending.where(transfer_id: @transfers.keys).pluck(:transfer_id).to_set
+      @withdrawal_requests = WithdrawalRequest.open.where(account_number: @account.number).order(:requested_at)
     end
 
     def new

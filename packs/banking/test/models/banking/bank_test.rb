@@ -13,7 +13,7 @@ class Banking::BankTest < ActiveSupport::TestCase
 
   test "書き込むとイベントと読み取りモデルの両方が更新される" do
     @bank.deposit(@number, 100, memo: "おこづかい")
-    @bank.withdraw(@number, 30)
+    withdraw_at_counter(@number, 30)
 
     account = Account.find_by!(number: @number)
     assert_equal 70, account.balance
@@ -33,16 +33,16 @@ class Banking::BankTest < ActiveSupport::TestCase
   test "ドライランは何も書き込まずに結果だけ返す" do
     @bank.deposit(@number, 100)
 
-    outcome = @bank.withdraw(@number, 40, dry_run: true)
+    outcome = @bank.deposit(@number, 40, dry_run: true)
 
     assert outcome.dry_run?
-    assert_equal [ 100, 60 ], [ outcome.balance_before, outcome.balance_after ]
+    assert_equal [ 100, 140 ], [ outcome.balance_before, outcome.balance_after ]
     assert_equal 100, Account.find_by!(number: @number).balance
     assert_equal 2, event_store.read.stream("Account$#{@number}").count
   end
 
   test "失敗したときは何も残らない" do
-    assert_raises(Banking::InsufficientFunds) { @bank.withdraw(@number, 1) }
+    assert_raises(Banking::InsufficientFunds) { withdraw_at_counter(@number, 1) }
 
     assert_equal 1, event_store.read.stream("Account$#{@number}").count
     assert_empty LedgerEntry.where(account_number: @number)
@@ -51,7 +51,7 @@ class Banking::BankTest < ActiveSupport::TestCase
   test "同時に更新されたら後から来た方が失敗する" do
     @bank.deposit(@number, 100)
     stale = @bank.load_account(@number) # この時点の version で止めておく
-    @bank.withdraw(@number, 100) # 先に別の誰かが全額出金
+    withdraw_at_counter(@number, 100) # 先に別の誰かが全額出金
 
     stale.withdraw(100) # 古い残高（100）では通ってしまうが…
     assert_raises(RubyEventStore::WrongExpectedEventVersion) do

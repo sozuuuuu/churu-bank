@@ -1,6 +1,7 @@
 <%= turbo_frame_tag "reversal" do %>
   <div class="confirm reversal-panel">
-    <h3>振込の組戻し</h3>
+    <h3>振込の組戻しの申請</h3>
+    <p class="muted small">組戻しは二人承認です。申請 → 別の行員が承認 → 実行。</p>
     <% if @error %>
       <p class="flash flash-alert"><%= @error %></p>
     <% end %>

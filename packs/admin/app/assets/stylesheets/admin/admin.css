@@ -17,3 +17,8 @@ turbo-frame#reversal:empty { display: none; }
 .table tr.reversed td.num + td.num { text-decoration: none; color: inherit; } /* 残高は当時のまま */
 .reversal-panel form.form { display: grid; }
 .interest-status { margin: 0 0 12px; }
+
+/* 窓口（出金依頼）・承認待ち（二人承認） */
+turbo-frame#counter:empty, turbo-frame#approval:empty { display: none; }
+.inline-form { display: flex; gap: 6px; align-items: center; }
+.inline-form input[type=text] { min-width: 14em; }

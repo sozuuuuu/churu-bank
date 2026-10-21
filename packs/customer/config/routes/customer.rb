@@ -6,8 +6,10 @@ scope module: :netbank do
     member do
       get :balance # 時点指定の残高（Turbo Frame で差し替え）
     end
-    # 振込（確認 → 確定の2段階）。入出金と凍結は行員だけ
+    # 振込（確認 → 確定の2段階）。入金と凍結は行員だけ。出金は下の出金依頼から
     resources :transfers, only: %i[new create], module: :accounts
+    # 出金の依頼（確認 → 確定の2段階）。行員が窓口で処理する前なら取り消せる（DELETE）
+    resources :withdrawal_requests, only: %i[new create destroy], module: :accounts
     # 実行前（予約中・保留中）の自分の振込の取消（確認 → 確定の2段階）
     resources :transfers, only: [], module: :accounts do
       resource :cancellation, only: %i[new create]

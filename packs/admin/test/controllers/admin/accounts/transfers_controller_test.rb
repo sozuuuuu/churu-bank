@@ -33,8 +33,10 @@ class Admin::Accounts::TransfersControllerTest < ActionDispatch::IntegrationTest
     post admin_account_transfers_path(@orca), params: { to: @zingiber, amount: "40", preview: "1" }
     assert_match "組戻し", response.body
 
-    delete admin_account_freeze_path(@zingiber)
-    assert_equal "active", Account.find_by!(number: @zingiber).status
+    # 解除は二人承認なので、申請しただけでは凍結のまま
+    delete admin_account_freeze_path(@zingiber), params: { reason: "確認できた" }
+    assert_equal "frozen", Account.find_by!(number: @zingiber).status
+    assert ApprovalRequest.pending.exists?(kind: "unfreeze", account_number: @zingiber)
   end
 
   test "振込先を選ばないとエラー" do

@@ -31,7 +31,7 @@ class Netbank::AccountsControllerTest < ActionDispatch::IntegrationTest
 
   test "取り消された行は通帳で分かる（取消のボタンは出さない）" do
     entry = LedgerEntry.find_by!(account_number: @orca_number, kind: "deposit")
-    Banking::Bank.new(actor: "test").reverse(@orca_number, entry.event_id, reason: "金額まちがい")
+    Banking::Bank.new(actor: "test").reverse(@orca_number, entry.event_id, reason: "金額まちがい", approval: approval_for_test)
 
     get account_path(@orca_number)
 

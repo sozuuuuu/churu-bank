@@ -15,6 +15,8 @@ module Netbank
       # 実行前（予約中・保留中）の自分の振込。ここから取り消せる
       @pending_transfers = Transfer.pending.where(from_account: @account.number).includes(:destination)
                                    .order(:execute_on, :requested_at)
+      # 出金依頼（窓口取引）。受付中のものと最近のもの
+      @withdrawal_requests = WithdrawalRequest.where(account_number: @account.number).order(requested_at: :desc).limit(5)
     end
 
     # 時点指定の残高。起算日基準と記帳日基準を並べて出す

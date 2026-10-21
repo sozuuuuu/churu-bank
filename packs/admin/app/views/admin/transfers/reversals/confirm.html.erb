@@ -1,13 +1,13 @@
 <%= turbo_frame_tag "reversal" do %>
   <div class="confirm reversal-panel">
-    <h3>振込の組戻しの確認</h3>
-    <p class="muted">まだ組戻ししていません。内容を確認してください。振込先から引き戻して、振込元へ返します。</p>
+    <h3>振込の組戻しの申請の確認</h3>
+    <p class="muted">まだ申請していません。組戻しは二人承認です: 申請したあと、別の行員が承認すると、振込先から引き戻して振込元へ返します。</p>
     <dl>
       <%= render "admin/transfers/reversals/transfer", transfer: @transfer %>
       <dt>理由</dt><dd><%= @reason %></dd>
-      <dt>振込元の残高</dt>
+      <dt>承認されたら振込元の残高</dt>
       <dd><%= churu(@outcome.balance_before) %> → <strong><%= churu(@outcome.balance_after) %></strong></dd>
-      <dt>振込先の残高</dt>
+      <dt>承認されたら振込先の残高</dt>
       <dd><%= churu(@destination_before) %> → <strong><%= churu(@destination_before - @transfer.amount) %></strong></dd>
       <dt>発生するイベント</dt>
       <dd><code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code></dd>
@@ -16,7 +16,7 @@
     <%= form_with url: admin_transfer_reversals_path(@transfer), data: { turbo_frame: "_top" } do |f| %>
       <%= f.hidden_field :back_to, value: @back_to if @back_to %>
       <%= f.hidden_field :reason, value: @reason %>
-      <%= f.submit "組戻しを確定する", class: "button primary" %>
+      <%= f.submit "組戻しを申請する", class: "button primary" %>
       <%= link_to "戻る", new_admin_transfer_reversal_path(@transfer, back_to: @back_to, reason: @reason), class: "button" %>
     <% end %>
   </div>

@@ -1,0 +1,69 @@
+<% content_for :title, "窓口 | ちゅーる銀行" %>
+
+<%# 利用者が依頼を出した・取り消した、ほかの行員が処理したら、この一覧が morph で更新される %>
+<%= staff_stream_from "withdrawal_requests" %>
+
+<h1>窓口（出金依頼）</h1>
+<p class="muted">出金は、利用者の出金依頼があるときだけできます。内容を確かめて「出金する」か「断る」を選んでください。入金（現金の持ち込み）は口座ページから。</p>
+
+<%# 「出金する」「断る」を押すと、確認 → 確定 がこの Frame の中で動く %>
+<%= turbo_frame_tag "counter", autoscroll: true, data: { autoscroll_block: "center" } %>
+
+<section class="card">
+  <h2>受付中 <span class="badge"><%= @open_requests.size %></span></h2>
+  <% if @open_requests.empty? %>
+    <p class="empty">いまは出金依頼はありません。</p>
+  <% else %>
+    <table class="table">
+      <thead>
+        <tr><th>受付日時</th><th>口座</th><th class="num">金額</th><th class="num">いまの残高</th><th>メモ</th><th>依頼した人</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% @open_requests.each do |request| %>
+          <tr id="<%= dom_id(request) %>">
+            <td><%= jp_time(request.requested_at) %></td>
+            <td><%= link_to "#{request.account.holder_name}（#{request.account_number}）", admin_account_path(request.account_number) %></td>
+            <td class="num"><%= churu(request.amount) %></td>
+            <td class="num <%= "minus" if request.amount > request.account.balance %>"><%= churu(request.account.balance) %></td>
+            <td><%= request.memo %></td>
+            <td class="muted"><%= actor_name(request.requested_by) %></td>
+            <td>
+              <%= link_to "出金する", new_admin_withdrawal_request_processing_path(request), class: "button small primary",
+                          data: { turbo_frame: "counter" } %>
+              <%= link_to "断る", new_admin_withdrawal_request_rejection_path(request), class: "button small",
+                          data: { turbo_frame: "counter" } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>
+
+<section class="card">
+  <h2>最近の処理</h2>
+  <% if @closed_requests.empty? %>
+    <p class="empty">まだありません。</p>
+  <% else %>
+    <table class="table">
+      <thead>
+        <tr><th>受付日時</th><th>口座</th><th class="num">金額</th><th>状態</th><th>だれが</th><th>処理日時</th></tr>
+      </thead>
+      <tbody>
+        <% @closed_requests.each do |request| %>
+          <tr id="<%= dom_id(request) %>">
+            <td><%= jp_time(request.requested_at) %></td>
+            <td><%= link_to "#{request.account.holder_name}（#{request.account_number}）", admin_account_path(request.account_number) %></td>
+            <td class="num"><%= churu(request.amount) %></td>
+            <td>
+              <span class="badge"><%= request.status_label %></span>
+              <% if request.reject_reason %><div class="muted small"><%= request.reject_reason %></div><% end %>
+            </td>
+            <td class="muted"><%= actor_name(request.closed_by) %></td>
+            <td><%= jp_time(request.closed_at) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>

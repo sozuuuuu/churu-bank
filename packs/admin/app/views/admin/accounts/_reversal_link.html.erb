@@ -1,0 +1,12 @@
+<%# 通帳の行の対応: 取り消された行 → 取消の行、取消の行 → 元の行（同じページにあれば行へ飛ぶ） %>
+<% if entry.reversed? && (other = entry.reversal_entry) %>
+  <div class="small">
+    <span class="badge badge-reversed">取消済み</span>
+    <%= link_to "→ #{jp_time(other.booked_at)} の取消", "##{dom_id(other)}", class: "muted" %>
+  </div>
+<% elsif entry.reversal? && (other = entry.original_entry) %>
+  <div class="small">
+    <%= link_to "← #{jp_time(other.booked_at)} の#{other.kind_label} #{churu(other.amount, signed: true)}",
+                "##{dom_id(other)}", class: "muted" %>
+  </div>
+<% end %>

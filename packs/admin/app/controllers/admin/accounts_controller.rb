@@ -7,7 +7,7 @@ module Admin
     end
 
     def show
-      @entries = @account.ledger_entries.reverse_order.limit(100)
+      @entries = @account.ledger_entries.reverse_order.limit(100).includes(:original_entry, :reversal_entry)
       @transfers = Transfer.where(transfer_id: @entries.filter_map(&:transfer_id)).index_by(&:transfer_id)
       @holders = Account.pluck(:number, :holder_name).to_h
       @date = parse_date(params[:date]) || Date.current

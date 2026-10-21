@@ -56,26 +56,46 @@
     <% end %>
     <%= turbo_frame_tag "balance", src: balance_admin_account_path(@account, date: @date) %>
   </section>
+
+  <section class="card">
+    <h2>利息</h2>
+    <% if @account.status == "closed" %>
+      <p class="muted">解約済みの口座には利息を払いません。</p>
+    <% else %>
+      <%= turbo_frame_tag "interest", src: new_admin_account_interest_path(@account), loading: :lazy do %>
+        <p class="muted">読み込み中…</p>
+      <% end %>
+    <% end %>
+  </section>
 </div>
 
 <section class="card">
   <h2>通帳</h2>
+  <%# 行の「取消」「組戻し」を押すと、理由の入力 → 確認 → 確定 がこの Frame の中で動く %>
+  <%= turbo_frame_tag "reversal", autoscroll: true, data: { autoscroll_block: "center" } %>
   <% if @entries.empty? %>
     <p class="muted">まだ取引はありません。</p>
   <% else %>
     <table class="table">
       <thead>
-        <tr><th>記帳日時</th><th>起算日</th><th>取引</th><th>相手・メモ</th><th class="num">金額</th><th class="num">残高</th><th>経路</th></tr>
+        <tr><th>記帳日時</th><th>起算日</th><th>取引</th><th>相手・メモ</th><th class="num">金額</th><th class="num">残高</th><th>経路</th><th></th></tr>
       </thead>
       <tbody>
         <% @entries.each do |entry| %>
-          <tr id="<%= dom_id(entry) %>">
+          <% transfer = @transfers[entry.transfer_id] %>
+          <tr id="<%= dom_id(entry) %>" class="<%= "reversed" if entry.reversed? %> <%= "reversal" if entry.reversal? %>">
             <td><%= jp_time(entry.booked_at) %></td>
             <td class="<%= "backdated" if entry.backdated? %>"><%= jp_date(entry.value_date) %></td>
             <td>
               <%= entry.kind_label %>
-              <% if (transfer = @transfers[entry.transfer_id]) && entry.kind == "transfer_out" %>
+              <% if transfer && entry.kind == "transfer_out" %>
                 <%= render "transfers/status", transfer: %>
+              <% end %>
+              <%= render "admin/accounts/reversal_link", entry: %>
+              <% if transfer&.status == "reversed" && entry.kind.in?(%w[transfer_out transfer_in]) %>
+                <div class="small muted">
+                  <span class="badge badge-reversed">組戻し済み</span> <%= jp_time(transfer.reversed_at) %> <%= transfer.reversal_reason %>
+                </div>
               <% end %>
             </td>
             <td>
@@ -87,6 +107,15 @@
             <td class="num <%= entry.amount.negative? ? "minus" : "plus" %>"><%= churu(entry.amount, signed: true) %></td>
             <td class="num"><%= churu(entry.balance_after) %></td>
             <td class="muted"><%= entry.actor %></td>
+            <td>
+              <% if entry.reversible? %>
+                <%= link_to "取消", new_admin_account_reversal_path(@account, event_id: entry.event_id),
+                            class: "button small", data: { turbo_frame: "reversal" } %>
+              <% elsif transfer&.reversible? && entry.kind.in?(%w[transfer_out transfer_in]) %>
+                <%= link_to "組戻し", new_admin_transfer_reversal_path(transfer, back_to: @account.number),
+                            class: "button small", data: { turbo_frame: "reversal" } %>
+              <% end %>
+            </td>
           </tr>
         <% end %>
       </tbody>

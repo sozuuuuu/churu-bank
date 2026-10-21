@@ -62,6 +62,8 @@
                     <%= render "transfers/status", transfer: %>
                   </span>
                 <% end %>
+                <%# 銀行が取り消した行（取消の行は種類が「取消（入金）」などになっている） %>
+                <% if entry.reversed? %><span class="badge badge-reversed">取消済み</span><% end %>
               </span>
               <span class="passbook-sub">
                 <% if entry.counterparty %>

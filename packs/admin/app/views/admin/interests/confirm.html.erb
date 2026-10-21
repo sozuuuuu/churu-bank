@@ -1,0 +1,23 @@
+<%= turbo_frame_tag "interest" do %>
+  <div class="confirm">
+    <p class="muted"><%= jp_date(@date) %> の利息は、まだ払っていません。口座ごとの支払額を確認してください。</p>
+    <%= render "admin/interests/rows", rows: @rows %>
+
+    <% paying = @rows.select(&:pay?) %>
+    <% if paying.empty? %>
+      <p class="hint">この日に払う利息はありません（支払い済み・残高 0 など）。確定しても何も起きません。</p>
+      <%= link_to "日付を選び直す", admin_interest_path(date: @date), class: "button", data: { turbo_frame: "_top" } %>
+    <% else %>
+      <dl>
+        <dt>払う口座</dt><dd><%= paying.size %> 口座</dd>
+        <dt>合計</dt><dd><strong><%= churu(paying.sum(&:amount)) %></strong></dd>
+        <dt>発生するイベント</dt><dd><code>InterestPaid</code> × <%= paying.size %></dd>
+      </dl>
+      <%= form_with url: admin_interest_path, data: { turbo_frame: "_top" } do |f| %>
+        <%= f.hidden_field :date, value: @date %>
+        <%= f.submit "この日の利息を払う", class: "button primary" %>
+        <%= link_to "戻る", admin_interest_path(date: @date), class: "button", data: { turbo_frame: "_top" } %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

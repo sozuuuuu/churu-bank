@@ -1,0 +1,9 @@
+<%# 組戻しする振込（入力・確認の両方で出す） %>
+<dt>振込</dt>
+<dd>
+  <%= transfer.source.holder_name %>（<%= transfer.from_account %>）→
+  <%= transfer.destination.holder_name %>（<%= transfer.to_account %>）
+  <strong><%= churu(transfer.amount) %></strong>
+  <%= render "transfers/status", transfer: %>
+  <div class="muted small"><%= jp_time(transfer.requested_at) %> <%= transfer.memo %></div>
+</dd>

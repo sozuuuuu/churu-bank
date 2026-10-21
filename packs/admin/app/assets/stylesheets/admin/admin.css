@@ -1,0 +1,16 @@
+/* 管理画面だけの追加（layouts/admin で読み込む）。色は application.css の変数を使う */
+
+/* 取消・組戻し */
+.badge-transfer-reversed, .badge-reversed { color: var(--minus); border-style: dashed; }
+.table tr.reversed td.num:not(:last-of-type) { text-decoration: line-through; color: var(--muted); }
+.table tr.reversal { background: var(--warn-bg); }
+.table tr:target { outline: 2px solid var(--accent); outline-offset: -2px; }
+.reversal-panel { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.reversal-panel h3 { margin: 0 0 8px; font-size: 1rem; }
+turbo-frame#reversal:empty { display: none; }
+.actions { display: flex; gap: 8px; }
+
+/* 利息 */
+.interest-rate { margin: 0 0 8px; }
+.interest-rows { margin-bottom: 12px; }
+.interest-rows tr.skip td { color: var(--muted); }

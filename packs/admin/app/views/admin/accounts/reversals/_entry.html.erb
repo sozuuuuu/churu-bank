@@ -1,0 +1,6 @@
+<%# 取り消す通帳の行（入力・確認の両方で出す） %>
+<dt>取り消す取引</dt>
+<dd>
+  <%= entry.kind_label %> <strong><%= churu(entry.amount, signed: true) %></strong>
+  <span class="muted"><%= jp_time(entry.booked_at) %> <%= entry.memo %></span>
+</dd>

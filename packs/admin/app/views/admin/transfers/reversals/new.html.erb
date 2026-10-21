@@ -1,0 +1,26 @@
+<%= turbo_frame_tag "reversal" do %>
+  <div class="confirm reversal-panel">
+    <h3>振込の組戻し</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl><%= render "admin/transfers/reversals/transfer", transfer: @transfer %></dl>
+
+    <% if @transfer.reversible? %>
+      <%= form_with url: admin_transfer_reversals_path(@transfer), class: "form" do |f| %>
+        <%= f.hidden_field :back_to, value: @back_to if @back_to %>
+        <label>
+          理由（両方の通帳のメモに残ります）
+          <%= f.text_field :reason, value: @reason, required: true, autofocus: true, placeholder: "例: 振込先まちがい" %>
+        </label>
+        <div class="actions">
+          <%= f.submit "確認する", name: "preview", class: "button primary" %>
+          <%= link_to "やめる", back_path, class: "button", data: { turbo_frame: "_top" } %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="muted">組戻しできるのは完了した振込だけです（この振込は「<%= @transfer.status_label %>」）。</p>
+      <%= link_to "閉じる", back_path, class: "button", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

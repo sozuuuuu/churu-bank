@@ -5,12 +5,15 @@
 
 <h1>振込一覧</h1>
 
+<%# 「組戻し」を押すと、理由の入力 → 確認 → 確定 がこの Frame の中で動く %>
+<%= turbo_frame_tag "reversal", autoscroll: true, data: { autoscroll_block: "center" } %>
+
 <% if @transfers.empty? %>
   <p class="empty">まだ振込はありません。</p>
 <% else %>
   <table class="table">
     <thead>
-      <tr><th>受付日時</th><th>振込元</th><th>振込先</th><th class="num">金額</th><th>メモ</th><th>状態</th><th>処理日時</th></tr>
+      <tr><th>受付日時</th><th>振込元</th><th>振込先</th><th class="num">金額</th><th>メモ</th><th>状態</th><th>処理日時</th><th></th></tr>
     </thead>
     <tbody>
       <% @transfers.each do |transfer| %>
@@ -23,8 +26,17 @@
           <td>
             <%= render "transfers/status", transfer: %>
             <% if transfer.failure_reason %><div class="muted small"><%= transfer.failure_reason %></div><% end %>
+            <% if transfer.reversal_reason %>
+              <div class="muted small"><%= jp_time(transfer.reversed_at) %> <%= transfer.reversal_reason %></div>
+            <% end %>
           </td>
           <td><%= jp_time(transfer.settled_at) %></td>
+          <td>
+            <% if transfer.reversible? %>
+              <%= link_to "組戻し", new_admin_transfer_reversal_path(transfer), class: "button small",
+                          data: { turbo_frame: "reversal" } %>
+            <% end %>
+          </td>
         </tr>
       <% end %>
     </tbody>

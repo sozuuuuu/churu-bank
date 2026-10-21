@@ -16,6 +16,18 @@ namespace :admin do
   resources :transfers, only: :index
 end
 
+# 取消・組戻し・利息の手動実行。どれも理由や日付の入力 → 確認（ドライラン）→ 確定の2段階
+namespace :admin do
+  scope "accounts/:account_number", module: :accounts, as: :account do
+    resources :reversals, only: %i[new create] # 入出金の取消（?event_id= で通帳の行を指す）
+    resource :interest, only: %i[new create]   # この口座だけ利息を払う
+  end
+  resources :transfers, only: [] do
+    resources :reversals, only: %i[new create], module: :transfers # 完了した振込の組戻し
+  end
+  resource :interest, only: %i[show create] # 利率の表示と、全口座の利息
+end
+
 # イベントストアの中身を見るブラウザ（RES Browser）。管理者以外には 404
 constraints(Authentication::AdminConstraint) do
   mount RubyEventStore::Browser::App.for(event_store_locator: -> { Rails.configuration.event_store }), at: "/res"

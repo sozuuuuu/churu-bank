@@ -1,0 +1,4 @@
+<%= turbo_frame_tag "interest" do %>
+  <%= render "admin/interests/rate" %>
+  <%= render "admin/interests/form", url: admin_account_interest_path(@account) %>
+<% end %>

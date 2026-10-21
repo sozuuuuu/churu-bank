@@ -1,0 +1,25 @@
+<%# 利息の確認画面: 口座ごとの支払額（Admin::InterestPayment::Row） %>
+<table class="table interest-rows">
+  <thead>
+    <tr><th>口座</th><th class="num">元になる残高</th><th class="num">払う利息</th><th>繰り越す端数</th></tr>
+  </thead>
+  <tbody>
+    <% rows.each do |row| %>
+      <tr class="<%= "skip" unless row.pay? %>">
+        <td><%= row.account.number %> <%= row.account.holder_name %></td>
+        <% case row.state %>
+        <% when :pay %>
+          <td class="num"><%= churu(row.base_balance) %></td>
+          <td class="num plus"><%= churu(row.amount, signed: true) %></td>
+          <td class="muted"><%= row.carry %></td>
+        <% when :paid %>
+          <td colspan="3"><span class="badge">支払い済み</span> <span class="muted">この日の分はもう払ったので、何もしません</span></td>
+        <% when :zero %>
+          <td colspan="3" class="muted">残高が 0 なので払いません</td>
+        <% when :closed %>
+          <td colspan="3" class="muted">解約済みなので払いません</td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

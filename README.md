@@ -155,6 +155,23 @@ bin/rails churu:rebuild_projections
 通帳の種類（`LedgerEntry::KIND_LABELS`）に `interest`（利息）・`deposit_reversal` / `withdrawal_reversal`（取消）・
 `transfer_reversal`（組戻しの引き戻し）が増えた。振込の状態（`Transfer::STATUS_LABELS`）に `reversed` が増えた。
 
+### 管理画面での取消・組戻し・利息（packs/admin）
+
+どれも入出金・振込と同じく Turbo Frame の中で「入力 → 確認（ドライラン）→ 確定（`_top` へ）」。
+
+| 画面 | 場所 | 確認画面で見せるもの |
+|---|---|---|
+| 入出金の取消 | 口座ページの通帳の「取消」→ Frame `reversal`（`/admin/accounts/:number/reversals/new?event_id=`） | 理由・残高の変化・発生するイベント |
+| 振込の組戻し | 振込一覧と口座ページの通帳の「組戻し」→ Frame `reversal`（`/admin/transfers/:id/reversals/new`） | 振込元・振込先それぞれの残高の変化・イベント。口座ページから来たら確定後はその口座へ戻る（`back_to`） |
+| 利息（全口座） | メニューの「利息」（`/admin/interest`）。利率の表示と日付 → Frame `interest` | 口座ごとの元の残高・支払額・繰り越す端数。支払い済み・残高 0・解約済みの口座はその旨 |
+| 利息（1口座） | 口座ページの「利息」カード → Frame `interest` | 同上（1行） |
+
+- 利息の日付は昨日まで（その日の終わりの残高にかかるので）。払う口座が無ければ確定ボタンを出さず、
+  それでも確定が来たら「何もしませんでした」と出す（2回目は払われない）
+- 通帳: 取り消された行は金額に取り消し線と「取消済み → 取消の行」、取消の行は「← 元の行」へのリンク（`#dom_id`）。
+  組戻しした振込は「組戻し済み」と理由。利用者画面は「取消済み」のバッジだけ（ボタンは出さない）
+- 管理画面だけの CSS は `packs/admin/app/assets/stylesheets/admin/admin.css`（`layouts/admin` が `data-turbo-track="dynamic"` で読む）
+
 ## ちゅ〜る商店（packs/shop）
 
 `/shop`。銀行とは別のドメインで、集約とイベントを自前で持つ。支払いと返金は `Banking::Bank#transfer`
@@ -235,8 +252,8 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~C~~ | ~~管理画面（行員）と利用者画面（口座の持ち主）を分ける~~（済） | B | `packs/admin`・`packs/customer` |
 | ~~D~~ | ~~2つめのドメイン「ちゅ〜る商店」: 商品・在庫・注文。支払いは `Banking::Bank` 経由、在庫切れなら返金~~（済） | | `packs/shop` |
 | ~~E~~ | ~~MCP（`/mcp`、HTTP）: 残高照会・明細・振込（ドライラン → 確定）~~（済） | | `packs/mcp` |
-| ~~F~~ | ~~利息（Solid Queue の recurring で日次計算）~~（済。画面は未） | | `packs/banking` |
-| ~~G~~ | ~~取消（逆仕訳）~~（済。画面は未: 通帳の「取消」・振込の「組戻し」ボタン） | | `packs/banking` |
+| ~~F~~ | ~~利息（Solid Queue の recurring で日次計算）~~（済。画面は O） | | `packs/banking` |
+| ~~G~~ | ~~取消（逆仕訳）~~（済。画面は O） | | `packs/banking` |
 | ~~H~~ | ~~読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`）~~（済） | | `packs/banking` |
 | I | GitHub（private）と CI | | `.github/` |
 | J | Zingiber から銀行の MCP を使う | E | Zingiber 側 |
@@ -244,7 +261,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |
 | ~~M~~ | ~~利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮~~（済） | C | `packs/customer` |
 | N | 商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ | B, D | `packs/shop`・`packs/platform` |
-| O | 管理画面に取消・組戻し・利息の手動実行のボタン（API は「画面から使う Banking::Bank の API」） | F, G | `packs/admin` |
+| ~~O~~ | ~~管理画面に取消・組戻し・利息の手動実行のボタン~~（済。「管理画面での取消・組戻し・利息」） | F, G | `packs/admin` |
 
 並行の進め方（フェーズ1）: B+C / D / E→J / F+G+H を別々に進められる。
 各自 `jj workspace add ../churu-bank-<名前>` で作業ディレクトリを分け、`bin/dev -p 300X` でポートも分ける

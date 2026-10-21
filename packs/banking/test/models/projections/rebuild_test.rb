@@ -24,12 +24,23 @@ class Projections::RebuildTest < ActiveSupport::TestCase
     bank.withdraw(orca, 100)
     bank.deposit(orca, 5)
     bank.reverse(orca, LedgerEntry.last.event_id, reason: "まちがい")
-    completed = bank.transfer(orca, zingiber, 300).transfer_id
+    completed = bank.transfer(orca, zingiber, 200).transfer_id
     bank.freeze_account(frozen, reason: "調査中")
     bank.transfer(orca, frozen, 50) # 振込先が凍結中 → 組戻し
     perform_enqueued_jobs(only: Transfers::SettleJob)
     bank.reverse_transfer(completed, reason: "振込先まちがい")
+    # 差し止め（Q3）: 保留 → 通す、保留 → 差し止め、予約 → 取消、予約 → 実行、予約のまま
+    threshold = Banking::Bank.hold_threshold
+    bank.release_transfer(bank.transfer(orca, zingiber, threshold).transfer_id)
+    bank.stop_transfer(bank.transfer(orca, zingiber, threshold).transfer_id, reason: "確認できず")
+    bank.cancel_transfer(bank.transfer(orca, zingiber, 20, execute_on: Date.current + 1).transfer_id)
+    bank.transfer(orca, zingiber, 30, execute_on: Date.current + 1)
+    bank.execute_due_transfers(date: Date.current + 1)
+    perform_enqueued_jobs(only: Transfers::SettleJob)
+    bank.transfer(orca, zingiber, 40, execute_on: Date.current + 2)
     bank.transfer(orca, zingiber, 10) # 処理中のまま
+    assert_equal %w[cancelled completed failed requested reversed scheduled stopped],
+                 Transfer.distinct.order(:status).pluck(:status)
     bank.pay_interest(date: Date.current - 1, annual_rate: "0.365")
     clear_enqueued_jobs
 

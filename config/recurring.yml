@@ -17,6 +17,10 @@ production:
     class: Interest::PayJob
     queue: default
     schedule: "5 0 * * * Asia/Tokyo"
+  execute_scheduled_transfers:
+    class: Transfers::ExecuteDueJob
+    queue: default
+    schedule: every hour at minute 1
 
 # 日次の利息（packs/banking の Interest::PayJob）。毎日 0:05（東京）に前日の終わりの残高へ利息を払う。
 # 開発でも Solid Queue を使うので development にも入れる。同じ日に何度動いても1回分だけ
@@ -25,3 +29,8 @@ development:
     class: Interest::PayJob
     queue: default
     schedule: "5 0 * * * Asia/Tokyo"
+  # 予約振込（packs/banking の Transfers::ExecuteDueJob）。1時間ごとに、実行日が今日までの予約を実行する
+  execute_scheduled_transfers:
+    class: Transfers::ExecuteDueJob
+    queue: default
+    schedule: every hour at minute 1

@@ -60,6 +60,19 @@ class Shop::StoreTest < ActiveSupport::TestCase
                  order(outcome.order_id).lines.map { [ it.sku, it.unit_price, it.quantity ] }
   end
 
+  test "高額振込の保留のしきい値を超えても、商店の支払い・返金は保留にならない" do
+    @store.restock("tsumetogi", 1)
+    first = place(@orca, { "tsumetogi" => 2 }) # 600（しきい値以上）
+    second = place(@zingiber, { "tsumetogi" => 1 }) # 在庫切れ → 返金も 300
+    assert_operator first.total, :>=, Banking::Bank.hold_threshold
+    assert_empty first.warnings
+    drain
+
+    assert_equal [ "fulfilled", "refunded" ], [ order(first.order_id).status, order(second.order_id).status ]
+    assert_empty Transfer.where(status: "held")
+    assert_equal [ 400, 1000 ], [ balance(@orca), balance(@zingiber) ]
+  end
+
   test "注文の値段は注文したときのもので残る" do
     outcome = place(@orca, { "churu" => 1 })
     @store.change_price("churu", 50)

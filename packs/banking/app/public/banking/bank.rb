@@ -4,6 +4,10 @@
 #   bank.deposit("0000001", 100, memo: "おこづかい")
 #   bank.withdraw("0000001", 30, dry_run: true)  # 書き込まずに結果だけ返す
 #   bank.transfer("0000001", "0000002", 50)      # 引き落としまで。入金は非同期
+#   bank.transfer("0000001", "0000002", 50, execute_on: Date.tomorrow) # 予約振込（引き落としは実行日）
+#   bank.cancel_transfer(transfer_id, from: "0000001") # 実行前（予約中・保留中）の取消（利用者）
+#   bank.stop_transfer(transfer_id, reason: "詐欺の疑い") # 実行前の差し止め（行員）
+#   bank.release_transfer(transfer_id)          # 高額で保留中の振込を通す（行員）
 #   bank.reverse("0000001", event_id, reason: "金額まちがい")  # 入金・出金の取消
 #   bank.reverse_transfer(transfer_id, reason: "振込先まちがい") # 完了した振込の組戻し
 #   bank.pay_interest(date: Date.yesterday)      # 日次の利息（ふだんは Interest::PayJob が呼ぶ）
@@ -61,20 +65,29 @@ module Banking
 
     # 振込の受付と引き落とし（同期）。振込先への入金は、TransferDebited のコミット後に
     # Transfers::SettleJob（Solid Queue）が settle_transfer を呼んで行う。
-    def transfer(from, to, amount, memo: nil, dry_run: false)
+    #
+    # - execute_on（明日以降の日付）を渡すと予約振込。受付だけして、引き落としは実行日（execute_transfer）
+    # - 金額が保留のしきい値（Bank.hold_threshold）以上なら、引き落としたあと「保留中」にして、
+    #   行員が release_transfer するまで入金しない。holdable: false（商店の支払い・返金）は保留しない
+    def transfer(from, to, amount, memo: nil, execute_on: nil, holdable: true, dry_run: false)
       transfer_id = SecureRandom.uuid
       source = load_account(from)
       destination = load_account(to)
       raise NotFound, "振込先の口座 #{to} はありません" if destination.status == :unopened
 
+      warnings = []
+      unless destination.status == :active
+        warnings << "振込先の口座は#{status_label(destination.status)}なので、入金できずに組戻しになります"
+      end
+      return schedule_transfer(transfer_id, source, to, amount, memo:, execute_on:, holdable:, warnings:, dry_run:) if execute_on
+
       before = source.balance
       source.debit_for_transfer(transfer_id:, amount:, to:, memo:)
       transfer = Transfer.new(transfer_id)
       transfer.request(from:, to:, amount:, memo:)
-
-      warnings = []
-      unless destination.status == :active
-        warnings << "振込先の口座は#{status_label(destination.status)}なので、入金できずに組戻しになります"
+      if holdable && held_amount?(amount)
+        transfer.hold!(threshold: self.class.hold_threshold)
+        warnings << hold_warning
       end
 
       events = source.unpublished_events.to_a + transfer.unpublished_events.to_a
@@ -88,9 +101,75 @@ module Banking
                   dry_run:, transfer_id:, warnings:)
     end
 
+    # 予約振込の実行（Transfers::ExecuteDueJob が execute_due_transfers から呼ぶ）。実行日が来ていれば
+    # 振込元から引き落として「処理中」（高額なら「保留中」）にする。このあとはふつうの振込と同じ。
+    # 残高不足・凍結などで引き落とせなければ「実行できず」（お金は動かない）。
+    # 予約中でない・実行日前なら何もしない（nil）ので、何度呼ばれても1回分しか動かない。
+    # 同じ振込を利用者が同時に取り消していたら、Transfer$ の expected_version で負けて ConcurrentModification
+    def execute_transfer(transfer_id, date: Date.current)
+      transfer = load_transfer(transfer_id)
+      return unless transfer.scheduled? && transfer.execute_on <= date
+
+      source = load_account(transfer.from_account)
+      begin
+        source.debit_for_transfer(transfer_id:, amount: transfer.amount, to: transfer.to_account, memo: transfer.memo)
+      rescue Banking::Error, ArgumentError => e
+        transfer.fail_scheduled!(reason: e.message)
+        store_all(transfer => Transfer.stream_name(transfer_id))
+        return transfer
+      end
+
+      transfer.start!
+      transfer.hold!(threshold: self.class.hold_threshold) if transfer.holdable? && held_amount?(transfer.amount)
+      debited = source.unpublished_events.first
+      store_all(source => Account.stream_name(transfer.from_account), transfer => Transfer.stream_name(transfer_id)) do
+        link_to_transfer(transfer_id, debited)
+      end
+      transfer
+    end
+
+    # 実行日が date 以前の予約振込をすべて実行する。実行した（または実行できなかった）振込の集約を返す。
+    # 1件が同時更新で負けても（ちょうど取り消された等）ほかは続ける。負けた振込は次の回にまた見る
+    def execute_due_transfers(date: Date.current)
+      ::Transfer.where(status: "scheduled", execute_on: ..date).order(:execute_on, :id).pluck(:transfer_id)
+                .filter_map do |transfer_id|
+        execute_transfer(transfer_id, date:)
+      rescue ConcurrentModification
+        nil
+      end
+    end
+
+    # 保留中の振込を行員が通す。このあと Transfers::SettleJob が入金する。Outcome は振込先の口座
+    # （残高はまだ変わらない。入金されると balance_after の額になる）
+    def release_transfer(transfer_id, dry_run: false)
+      transfer = load_existing_transfer(transfer_id)
+      transfer.release!
+      destination = load_account(transfer.to_account)
+      warnings = []
+      unless destination.status == :active
+        warnings << "振込先の口座は#{status_label(destination.status)}なので、入金できずに組戻しになります"
+      end
+
+      events = transfer.unpublished_events.to_a
+      store_all(transfer => Transfer.stream_name(transfer_id)) unless dry_run
+      Outcome.new(account_number: transfer.to_account, events:, balance_before: destination.balance,
+                  balance_after: destination.balance + transfer.amount, dry_run:, transfer_id:, warnings:)
+    end
+
+    # 実行前（予約中・保留中）の振込を、利用者が取り消す。from を渡すと、その口座からの振込でなければ NotFound
+    # （画面は自分の口座番号を渡す）。引き落とし済み（保留中）なら振込元へ払い戻す。Outcome は振込元の口座
+    def cancel_transfer(transfer_id, from: nil, reason: "利用者が取り消しました", dry_run: false)
+      halt_transfer(transfer_id, from:, dry_run:) { |transfer| transfer.cancel!(reason:) }
+    end
+
+    # 実行前（予約中・保留中）の振込を、行員が差し止める。理由は必須。引き落とし済みなら振込元へ払い戻す
+    def stop_transfer(transfer_id, reason:, dry_run: false)
+      halt_transfer(transfer_id, dry_run:) { |transfer| transfer.stop!(reason:) }
+    end
+
     # 振込の後半（入金 → 完了、入金できなければ組戻し → 失敗）。何度呼ばれても1回分しか動かない
     def settle_transfer(transfer_id)
-      transfer = @repository.load(Transfer.new(transfer_id), Transfer.stream_name(transfer_id))
+      transfer = load_transfer(transfer_id)
       return unless transfer.requested?
 
       destination = load_account(transfer.to_account)
@@ -119,9 +198,7 @@ module Banking
     # を書く。振込先の残高が足りなければ InsufficientFunds。処理中・失敗（組戻し済み）の振込は不可。
     # 返す Outcome は振込元の口座のもの
     def reverse_transfer(transfer_id, reason:, dry_run: false)
-      transfer = @repository.load(Transfer.new(transfer_id), Transfer.stream_name(transfer_id))
-      raise NotFound, "振込 #{transfer_id} はありません" if transfer.status == :new
-
+      transfer = load_existing_transfer(transfer_id)
       transfer.reverse!(reason:)
       from, to = transfer.from_account, transfer.to_account
       destination = load_account(to)
@@ -169,12 +246,91 @@ module Banking
     # 年利（文字列の小数。例: "0.365"）。packs/banking/config/initializers/banking_interest.rb で設定
     def self.annual_interest_rate = Rails.configuration.x.banking.annual_interest_rate
 
+    # 振込の保留のしきい値（ちゅ〜る）。この額以上の振込は行員が通すまで入金しない。
+    # packs/banking/config/initializers/banking_transfers.rb で設定
+    def self.hold_threshold = Integer(Rails.configuration.x.banking.transfer_hold_threshold)
+
+    # 予約振込の実行日は、明日から何日先まで選べるか
+    MAX_SCHEDULE_DAYS = 365
+
     # 集約から組み立てた「いまの」口座（読み取りモデルを使わない）
     def load_account(number)
       @repository.load(Account.new(number), Account.stream_name(number))
     end
 
     private
+
+    def load_transfer(transfer_id) = @repository.load(Transfer.new(transfer_id), Transfer.stream_name(transfer_id))
+
+    def load_existing_transfer(transfer_id)
+      load_transfer(transfer_id).tap do |transfer|
+        raise NotFound, "振込 #{transfer_id} はありません" if transfer.status == :new
+      end
+    end
+
+    def held_amount?(amount) = amount.is_a?(Integer) && amount >= self.class.hold_threshold
+
+    def hold_warning
+      "#{self.class.hold_threshold} ちゅ〜る以上の振込なので、引き落としたあと行員が確認するまで「保留中」になります" \
+        "（入金は確認のあと。保留のあいだは取り消せます）"
+    end
+
+    # 予約振込の受付。引き落とさないので残高は変わらない（足りなければ警告だけ）
+    def schedule_transfer(transfer_id, source, to, amount, memo:, execute_on:, holdable:, warnings:, dry_run:)
+      execute_on = validate_execute_on(execute_on)
+      source.ensure_can_transfer!(amount:, to:)
+      transfer = Transfer.new(transfer_id)
+      transfer.schedule(from: source.number, to:, amount:, memo:, execute_on:, holdable:)
+
+      warnings.unshift("#{execute_on.strftime('%-m/%-d')} に引き落として振り込みます。いまはまだ引き落としません")
+      if amount > source.balance
+        warnings << "いまの残高（#{source.balance} ちゅ〜る）では足りません。実行日までに入金がないと振り込まれません"
+      end
+      warnings << hold_warning.sub("引き落としたあと", "実行日に引き落としたあと") if holdable && held_amount?(amount)
+
+      events = transfer.unpublished_events.to_a
+      store_all(transfer => Transfer.stream_name(transfer_id)) unless dry_run
+      Outcome.new(account_number: source.number, events:, balance_before: source.balance,
+                  balance_after: source.balance, dry_run:, transfer_id:, warnings:)
+    end
+
+    def validate_execute_on(value)
+      date = value.is_a?(Date) ? value : Date.iso8601(value.to_s)
+      raise ArgumentError, "実行日は明日以降の日付を入れてください（今日なら空のままにします）" unless date > Date.current
+      if date > Date.current + MAX_SCHEDULE_DAYS
+        raise ArgumentError, "実行日は #{MAX_SCHEDULE_DAYS} 日先までです"
+      end
+
+      date
+    rescue Date::Error
+      raise ArgumentError, "実行日は YYYY-MM-DD で入れてください（#{value}）"
+    end
+
+    # 実行前の振込の取消・差し止め（どちらにするかはブロックで集約のメソッドを呼ぶ）。
+    # 状態の確認（実行が始まっていたら InvalidState）を先にして、引き落とし済みなら払い戻す
+    def halt_transfer(transfer_id, from: nil, dry_run:)
+      transfer = load_existing_transfer(transfer_id)
+      raise NotFound, "振込 #{transfer_id} はありません" if from && transfer.from_account != from
+
+      yield transfer
+      reason = transfer.unpublished_events.to_a.last.data.fetch(:reason)
+      source = load_account(transfer.from_account)
+      before = source.balance
+      if transfer.debited?
+        source.refund_transfer(transfer_id:, amount: transfer.amount, to: transfer.to_account, reason:)
+      end
+
+      money_events = source.unpublished_events.to_a
+      events = money_events + transfer.unpublished_events.to_a
+      unless dry_run
+        aggregates = money_events.any? ? { source => Account.stream_name(transfer.from_account) } : {}
+        aggregates[transfer] = Transfer.stream_name(transfer_id)
+        store_all(aggregates) { money_events.each { |event| link_to_transfer(transfer_id, event) } }
+      end
+
+      Outcome.new(account_number: transfer.from_account, events:, balance_before: before,
+                  balance_after: source.balance, dry_run:, transfer_id:)
+    end
 
     def change(number, dry_run:, account: load_account(number))
       before = account.balance

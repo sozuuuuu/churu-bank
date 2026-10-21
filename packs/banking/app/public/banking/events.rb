@@ -63,12 +63,42 @@ module Banking
     # 完了した振込を組戻しした（振込先から引き戻し → 振込元へ払い戻し）。data: transfer_id, reason
     class TransferReversed < RubyEventStore::Event; end
 
+    # ---- 振込の差し止め（予約・保留・取消・差し止め） ----
+
+    # 予約振込を受け付けた（まだ引き落とさない）。
+    # data: transfer_id, from_account, to_account, amount, memo, execute_on
+    class TransferScheduled < RubyEventStore::Event; end
+
+    # 予約振込の実行日になり、振込元から引き落とした（このあとは TransferRequested のあとと同じ「処理中」）。
+    # data: transfer_id
+    class TransferStarted < RubyEventStore::Event; end
+
+    # 予約振込を実行しようとしたが、引き落とせなかった（残高不足・凍結など）。お金は動いていない。
+    # data: transfer_id, reason
+    class ScheduledTransferFailed < RubyEventStore::Event; end
+
+    # 高額なので、行員が通すか差し止めるまで入金しない（引き落としは済んでいる）。data: transfer_id, threshold
+    class TransferHeld < RubyEventStore::Event; end
+
+    # 行員が保留を解いた（このあと入金する）。data: transfer_id
+    class TransferReleased < RubyEventStore::Event; end
+
+    # 実行前に、利用者が取り消した（Cancelled）/ 行員が差し止めた（Stopped）。
+    # 引き落とし済みだったら振込元へ払い戻している（refunded: true、口座側は TransferRefunded）。
+    # data: transfer_id, reason, refunded
+    class TransferCancelled < RubyEventStore::Event; end
+    class TransferStopped < RubyEventStore::Event; end
+
     ACCOUNT = [
       AccountOpened, MoneyDeposited, MoneyWithdrawn, AccountFrozen, AccountUnfrozen, AccountClosed,
       TransferDebited, TransferCredited, TransferRefunded, TransferCreditReversed,
       DepositReversed, WithdrawalReversed, InterestPaid
     ].freeze
-    TRANSFER = [ TransferRequested, TransferCompleted, TransferFailed, TransferReversed ].freeze
+    TRANSFER = [
+      TransferRequested, TransferCompleted, TransferFailed, TransferReversed,
+      TransferScheduled, TransferStarted, ScheduledTransferFailed, TransferHeld, TransferReleased,
+      TransferCancelled, TransferStopped
+    ].freeze
 
     # 口座側のイベントのうち、Transfer$<振込ID> にもリンクされるもの
     TRANSFER_MONEY = [ TransferDebited, TransferCredited, TransferRefunded, TransferCreditReversed ].freeze

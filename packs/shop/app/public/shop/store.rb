@@ -7,6 +7,7 @@
 #   store.place_order(order_id:, buyer_account: "0000001", items: { "churu" => 2 }, dry_run: true)
 #
 # 支払いと返金は銀行の振込（Banking::Bank#transfer）。商店は銀行の公開 API しか使わない。
+# 決まった加盟店への支払いなので、高額振込の保留の対象外（holdable: false）。
 #
 #   place_order（同期・1トランザクション）
 #     Order$<id>  … OrderPlaced → OrderPaymentRequested（銀行で 購入者 → 商店 の振込を受付）
@@ -97,14 +98,14 @@ module Shop
       memo = "#{SHOP_NAME} 注文 #{order_id.first(8)}"
 
       if dry_run
-        payment = @bank.transfer(buyer_account, shop_account, order.total, memo:, dry_run: true)
+        payment = @bank.transfer(buyer_account, shop_account, order.total, memo:, holdable: false, dry_run: true)
         order.request_payment(payment.transfer_id)
         return outcome(order, payment:, warnings:, dry_run: true)
       end
 
       # 注文と支払いの引き落としを同じ correlation_id にして、RES Browser で1本の流れとして辿れるようにする
       transaction(correlation_id: order_id) do
-        payment = pay(order) { @bank.transfer(buyer_account, shop_account, order.total, memo:) }
+        payment = pay(order) { @bank.transfer(buyer_account, shop_account, order.total, memo:, holdable: false) }
         order.request_payment(payment.transfer_id) if payment
         events = order.unpublished_events.to_a
         @repository.store(order, Order.stream_name(order_id))
@@ -174,7 +175,7 @@ module Shop
     # 商店の口座から購入者へ返金の振込を頼む。頼めなければ返金失敗（人の手で対応）
     def refund(order)
       memo = "#{SHOP_NAME} 返金 #{order.id.first(8)}"
-      pay(order, refund: true) { @bank.transfer(account_number, order.buyer_account, order.total, memo:) }
+      pay(order, refund: true) { @bank.transfer(account_number, order.buyer_account, order.total, memo:, holdable: false) }
         &.tap { order.request_refund(it.transfer_id) }
     end
 

@@ -7,6 +7,7 @@ Rails.configuration.to_prepare do
   # （bin/rails churu:rebuild_projections も同じ Projections.all を使う）
   Projections.all.each { |projection, types| event_store.subscribe(projection, to: types) }
 
-  # 非同期（コミット後に Solid Queue へ）: 振込の後半（入金 or 組戻し）
-  event_store.subscribe(Transfers::SettleJob, to: [ events::TransferDebited ])
+  # 非同期（コミット後に Solid Queue へ）: 振込の後半（入金 or 組戻し）。
+  # 引き落とし（すぐの振込・予約の実行）と、保留を通したとき。保留中なら SettleJob は何もしない
+  event_store.subscribe(Transfers::SettleJob, to: [ events::TransferDebited, events::TransferReleased ])
 end

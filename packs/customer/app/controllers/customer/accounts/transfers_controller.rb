@@ -48,7 +48,7 @@ module Customer
       def done_message
         status = Transfer.find_by(transfer_id: @outcome.transfer_id)&.status
         case status
-        when "scheduled" then "振込を予約しました（#{@form[:execute_on]} に振り込みます）"
+        when "scheduled" then "振込を予約しました（#{Date.iso8601(@form[:execute_on]).strftime('%-m/%-d')} に振り込みます）"
         when "held" then "振込を受け付けました。金額が大きいので、銀行の確認が終わるまで保留中です"
         else "振込を受け付けました"
         end

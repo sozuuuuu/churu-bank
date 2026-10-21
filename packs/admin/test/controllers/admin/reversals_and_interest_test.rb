@@ -48,7 +48,7 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_match "取消の理由を入れてください", response.body
 
-    @bank.reverse(@orca, entry.event_id, reason: "テスト")
+    @bank.reverse(@orca, entry.event_id, reason: "テスト", approval: approval_for_test)
     get new_admin_account_reversal_path(@orca, event_id: entry.event_id)
     assert_match "この取引は取り消せません", response.body
     assert_select "input[name=reason]", count: 0

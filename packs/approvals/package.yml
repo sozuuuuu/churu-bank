@@ -1,0 +1,18 @@
+# 二人承認（TODO の Q2）: 取消・組戻し・凍結の解除を「申請 → 別の行員が承認 → 実行」にする。却下・取り下げもある。
+# 申請・承認・却下・取り下げ・実行はイベント（ストリーム Approval$<申請ID>）で、だれがしたかは metadata の actor に残る。
+#
+# 銀行（packs/banking）の外に置いた: 二人承認は「行員の業務の決まり（内部統制）」で、お金の不変条件ではないから。
+# 銀行は「承認（Banking::Bank::Approval）があること」「申請者と実行者が別人であること」だけを確かめ、
+# 申請の一覧・却下・取り下げなどの流れはここが持つ。行員（Staff）は知らない（actor の文字列 staff:<id> だけで比べる）
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - Approvals::Desk   … 申請・承認・却下・取り下げの唯一の入口（dry_run あり。行員の画面が使う）
+#   - Approvals::Events … イベントの定義（購読してよい）
+#   - ApprovalRequest   … 読み取りモデル（承認待ちの一覧。書き込みはプロジェクションだけ）
+# 集約（Approvals::Request）・プロジェクション・ジョブは非公開
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/banking

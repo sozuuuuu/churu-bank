@@ -1,4 +1,4 @@
-# RES の非同期ハンドラ。口座・振込のイベントがコミットされたら Solid Queue に積まれ、
+# RES の非同期ハンドラ。口座・振込・出金依頼のイベントがコミットされたら Solid Queue に積まれ、
 # 関係する画面に Turbo の refresh（morph）を配信する。
 #
 # broadcasts_refreshes はプロセス内で少し待ってから（debounce）ジョブを積むので、
@@ -15,6 +15,8 @@ class BroadcastRefreshJob < ApplicationJob
     end
     Turbo::StreamsChannel.broadcast_refresh_to("accounts")
     Turbo::StreamsChannel.broadcast_refresh_to("transfers") if event.data.key?(:transfer_id)
+    # 出金依頼（窓口取引）: 行員の「窓口」の一覧
+    Turbo::StreamsChannel.broadcast_refresh_to("withdrawal_requests") if event.data.key?(:request_id)
   end
 
   private

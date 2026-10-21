@@ -21,14 +21,14 @@ class Projections::RebuildTest < ActiveSupport::TestCase
     frozen = bank.open_account(holder_name: "こおり").account_number
 
     bank.deposit(orca, 1000, memo: "おこづかい", value_date: Date.current - 3)
-    bank.withdraw(orca, 100)
+    withdraw_at_counter(orca, 100)
     bank.deposit(orca, 5)
-    bank.reverse(orca, LedgerEntry.last.event_id, reason: "まちがい")
+    bank.reverse(orca, LedgerEntry.last.event_id, reason: "まちがい", approval: approval_for_test)
     completed = bank.transfer(orca, zingiber, 200).transfer_id
     bank.freeze_account(frozen, reason: "調査中")
     bank.transfer(orca, frozen, 50) # 振込先が凍結中 → 組戻し
     perform_enqueued_jobs(only: Transfers::SettleJob)
-    bank.reverse_transfer(completed, reason: "振込先まちがい")
+    bank.reverse_transfer(completed, reason: "振込先まちがい", approval: approval_for_test)
     # 差し止め（Q3）: 保留 → 通す、保留 → 差し止め、予約 → 取消、予約 → 実行、予約のまま
     threshold = Banking::Bank.hold_threshold
     bank.release_transfer(bank.transfer(orca, zingiber, threshold).transfer_id)

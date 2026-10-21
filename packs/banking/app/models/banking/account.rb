@@ -45,7 +45,8 @@ module Banking
       )
     end
 
-    def withdraw(amount, memo: nil, value_date: nil)
+    # 窓口での出金。Bank からは出金依頼の処理（process_withdrawal）でだけ呼ばれる
+    def withdraw(amount, memo: nil, value_date: nil, request_id: nil)
       ensure_active!
       ensure_positive!(amount)
       if amount > balance
@@ -53,7 +54,7 @@ module Banking
       end
 
       apply Events::MoneyWithdrawn.new(
-        data: { account_number: number, amount: amount, memo: memo },
+        data: { account_number: number, amount: amount, memo: memo, request_id: },
         metadata: value_date_metadata(value_date)
       )
     end

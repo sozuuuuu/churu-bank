@@ -83,7 +83,7 @@ class Shop::StoreTest < ActiveSupport::TestCase
   end
 
   test "残高が足りなければ支払い失敗で残り、お金も在庫も動かない" do
-    @bank.withdraw(@orca, 990)
+    withdraw_at_counter(@orca, 990)
 
     outcome = place(@orca, { "churu" => 1 })
     drain

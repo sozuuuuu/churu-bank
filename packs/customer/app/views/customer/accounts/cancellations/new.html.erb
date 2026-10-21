@@ -1,0 +1,19 @@
+<%= turbo_frame_tag "cancellation" do %>
+  <div class="confirm">
+    <h3>振込の取消</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl><%= render "customer/accounts/cancellations/transfer", transfer: @transfer %></dl>
+
+    <% if @transfer.pending? %>
+      <%= form_with url: account_transfer_cancellation_path(@account, @transfer) do |f| %>
+        <%= f.submit "確認する", name: "preview", class: "button primary" %>
+        <%= link_to "やめる", account_path(@account), class: "button", data: { turbo_frame: "_top" } %>
+      <% end %>
+    <% else %>
+      <p class="muted">取り消せるのは、まだ実行していない（予約中・保留中の）振込だけです。</p>
+      <%= link_to "閉じる", account_path(@account), class: "button", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

@@ -269,3 +269,10 @@ body.cat-theme .toast:empty { display: none; }
   }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* 予約・保留中の振込（口座ページ）。「取り消す」は右に */
+body.cat-theme .pending-transfers { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+body.cat-theme .pending-transfers li {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; background: var(--bg); border-radius: 14px;
+}

@@ -7,6 +7,12 @@
 
 <%# 「組戻し」を押すと、理由の入力 → 確認 → 確定 がこの Frame の中で動く %>
 <%= turbo_frame_tag "reversal", autoscroll: true, data: { autoscroll_block: "center" } %>
+<%# 「通す」「差し止める」（保留中・予約中の振込）も、確認 → 確定 がこの Frame の中で動く %>
+<%= turbo_frame_tag "hold", autoscroll: true, data: { autoscroll_block: "center" } %>
+
+<% if (held = @transfers.count(&:held?)).positive? %>
+  <p class="hint">保留中の振込が <%= held %> 件あります（<%= churu(Banking::Bank.hold_threshold) %> 以上）。内容を確かめて「通す」か「差し止める」を選んでください。</p>
+<% end %>
 
 <% if @transfers.empty? %>
   <p class="empty">まだ振込はありません。</p>
@@ -25,13 +31,25 @@
           <td><%= transfer.memo %></td>
           <td>
             <%= render "transfers/status", transfer: %>
+            <% if transfer.execute_on %><div class="muted small">実行日 <%= jp_date(transfer.execute_on) %></div><% end %>
             <% if transfer.failure_reason %><div class="muted small"><%= transfer.failure_reason %></div><% end %>
+            <% if transfer.cancel_reason %>
+              <div class="muted small"><%= jp_time(transfer.cancelled_at) %> <%= transfer.cancel_reason %>（<%= transfer.cancelled_by %>）</div>
+            <% end %>
             <% if transfer.reversal_reason %>
               <div class="muted small"><%= jp_time(transfer.reversed_at) %> <%= transfer.reversal_reason %></div>
             <% end %>
           </td>
           <td><%= jp_time(transfer.settled_at) %></td>
           <td>
+            <% if transfer.releasable? %>
+              <%= link_to "通す", new_admin_transfer_release_path(transfer), class: "button small",
+                          data: { turbo_frame: "hold" } %>
+            <% end %>
+            <% if transfer.pending? %>
+              <%= link_to "差し止める", new_admin_transfer_stop_path(transfer), class: "button small",
+                          data: { turbo_frame: "hold" } %>
+            <% end %>
             <% if transfer.reversible? %>
               <%= link_to "組戻し", new_admin_transfer_reversal_path(transfer), class: "button small",
                           data: { turbo_frame: "reversal" } %>

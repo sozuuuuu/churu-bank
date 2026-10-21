@@ -12,19 +12,25 @@
       <% if @form[:memo] %>
         <dt>メモ</dt><dd><%= @form[:memo] %></dd>
       <% end %>
+      <dt>実行日</dt>
+      <dd><%= @form[:execute_on] ? jp_date(Date.iso8601(@form[:execute_on])) : "すぐ" %></dd>
       <dt>残高</dt>
       <dd><%= churu(@outcome.balance_before) %> → <strong><%= churu(@outcome.balance_after) %></strong></dd>
       <dt>発生するイベント</dt>
       <dd><code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code></dd>
       <dt>このあと</dt>
-      <dd class="muted">受付の時点で引き落とし、振込先への入金はバックグラウンドのジョブが行います</dd>
+      <% if @form[:execute_on] %>
+        <dd class="muted">実行日まで「予約中」で、そのあいだは取り消せます。実行日に引き落として振り込みます</dd>
+      <% else %>
+        <dd class="muted">受付の時点で引き落とし、振込先への入金はバックグラウンドのジョブが行います</dd>
+      <% end %>
     </dl>
 
     <%= form_with url: account_transfers_path(@account), data: { turbo_frame: "_top" } do |f| %>
       <% @form.compact.each do |key, value| %>
         <%= f.hidden_field key, value: value %>
       <% end %>
-      <%= f.submit "振り込む", class: "button primary" %>
+      <%= f.submit @form[:execute_on] ? "予約する" : "振り込む", class: "button primary" %>
       <%= link_to "戻る", new_account_transfer_path(@account, @form.compact), class: "button" %>
     <% end %>
   </div>

@@ -1,0 +1,24 @@
+<%= turbo_frame_tag "cancellation" do %>
+  <div class="confirm">
+    <h3>振込の取消の確認</h3>
+    <p class="muted">まだ取り消していません。内容を確認してください。</p>
+    <dl>
+      <%= render "customer/accounts/cancellations/transfer", transfer: @transfer %>
+      <dt>残高</dt>
+      <dd>
+        <% if @outcome.balance_before == @outcome.balance_after %>
+          <%= churu(@outcome.balance_after) %>（まだ引き落としていないので、変わりません）
+        <% else %>
+          <%= churu(@outcome.balance_before) %> → <strong><%= churu(@outcome.balance_after) %></strong>（引き落とした分が戻ります）
+        <% end %>
+      </dd>
+      <dt>発生するイベント</dt>
+      <dd><code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code></dd>
+    </dl>
+
+    <%= form_with url: account_transfer_cancellation_path(@account, @transfer), data: { turbo_frame: "_top" } do |f| %>
+      <%= f.submit "取り消す", class: "button primary" %>
+      <%= link_to "戻る", new_account_transfer_cancellation_path(@account, @transfer), class: "button" %>
+    <% end %>
+  </div>
+<% end %>

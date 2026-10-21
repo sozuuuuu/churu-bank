@@ -5,7 +5,7 @@ module ChuruMcp
       title "振込の一覧"
       description <<~TEXT
         振込を新しい順に limit 件返します。account_number を渡すと、その口座が振込元か振込先のものだけにします。
-        status は requested（処理中: 引き落とし済みで入金待ち）/ completed（完了）/ failed（組戻し: 振込元に返金済み）。
+        status は scheduled（予約中: まだ引き落としていない。実行日は execute_on）/ held（保留中: 高額なので引き落とし済みで行員の確認待ち）/ requested（処理中: 引き落とし済みで入金待ち）/ completed（完了）/ failed（組戻し: 振込元に返金済み）/ unexecuted（実行できず: 実行日に残高不足など。お金は動いていない）/ cancelled（利用者が取消）/ stopped（行員が差し止め）/ reversed（完了後に組戻し）。
       TEXT
       input_schema(
         properties: {

@@ -1,0 +1,26 @@
+<%= turbo_frame_tag "hold" do %>
+  <div class="confirm reversal-panel">
+    <h3>振込の差し止めの確認</h3>
+    <p class="muted">まだ差し止めていません。差し止めると、この振込は実行しません。</p>
+    <dl>
+      <%= render "admin/transfers/reversals/transfer", transfer: @transfer %>
+      <dt>理由</dt><dd><%= @reason %></dd>
+      <dt>振込元の残高</dt>
+      <dd>
+        <% if @outcome.balance_before == @outcome.balance_after %>
+          <%= churu(@outcome.balance_after) %>（まだ引き落としていないので、変わりません）
+        <% else %>
+          <%= churu(@outcome.balance_before) %> → <strong><%= churu(@outcome.balance_after) %></strong>（引き落とした分を戻します）
+        <% end %>
+      </dd>
+      <dt>発生するイベント</dt>
+      <dd><code><%= @outcome.events.map { it.class.name.demodulize }.join(", ") %></code></dd>
+    </dl>
+
+    <%= form_with url: admin_transfer_stop_path(@transfer), data: { turbo_frame: "_top" } do |f| %>
+      <%= f.hidden_field :reason, value: @reason %>
+      <%= f.submit "差し止める", class: "button primary" %>
+      <%= link_to "戻る", new_admin_transfer_stop_path(@transfer, reason: @reason), class: "button" %>
+    <% end %>
+  </div>
+<% end %>

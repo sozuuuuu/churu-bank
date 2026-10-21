@@ -1,0 +1,28 @@
+<%= turbo_frame_tag "hold" do %>
+  <div class="confirm reversal-panel">
+    <h3>振込の差し止め</h3>
+    <% if @error %>
+      <p class="flash flash-alert"><%= @error %></p>
+    <% end %>
+    <dl>
+      <%= render "admin/transfers/reversals/transfer", transfer: @transfer %>
+      <% if @transfer.execute_on %><dt>実行日</dt><dd><%= jp_date(@transfer.execute_on) %></dd><% end %>
+    </dl>
+
+    <% if @transfer.pending? %>
+      <%= form_with url: admin_transfer_stop_path(@transfer), class: "form" do |f| %>
+        <label>
+          理由（振込元の通帳のメモにも残ります）
+          <%= f.text_field :reason, value: @reason, required: true, autofocus: true, placeholder: "例: 詐欺の疑い" %>
+        </label>
+        <div class="actions">
+          <%= f.submit "確認する", name: "preview", class: "button primary" %>
+          <%= link_to "やめる", admin_transfers_path, class: "button", data: { turbo_frame: "_top" } %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="muted">差し止められるのは、まだ実行していない（予約中・保留中の）振込だけです（この振込は「<%= @transfer.status_label %>」）。</p>
+      <%= link_to "閉じる", admin_transfers_path, class: "button", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

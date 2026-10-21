@@ -8,5 +8,9 @@ scope module: :customer do
     end
     # 振込（確認 → 確定の2段階）。入出金と凍結は行員だけ
     resources :transfers, only: %i[new create], module: :accounts
+    # 実行前（予約中・保留中）の自分の振込の取消（確認 → 確定の2段階）
+    resources :transfers, only: [], module: :accounts do
+      resource :cancellation, only: %i[new create]
+    end
   end
 end

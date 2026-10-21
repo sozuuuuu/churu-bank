@@ -92,6 +92,25 @@ class ChuruMcp::ServerTest < ActionDispatch::IntegrationTest
                  call_tool("list_transfers", { account_number: @bob })["structuredContent"]["transfers"].pluck("transfer_id")
   end
 
+  test "execute_on を渡すと予約振込になり、引き落としは実行日" do
+    tomorrow = (Date.current + 1).iso8601
+    preview = call_tool("transfer", { from_account: @alice, to_account: @bob, amount: 30, execute_on: tomorrow })
+    assert preview.dig("structuredContent", "dry_run")
+    assert_match "引き落として振り込みます", preview.dig("structuredContent", "warnings", 0)
+
+    content = call_tool("transfer", { from_account: @alice, to_account: @bob, amount: 30, execute_on: tomorrow,
+                                      confirm: true })["structuredContent"]
+    assert_equal [ "scheduled", tomorrow ], content.values_at("status", "execute_on")
+    assert_equal 100, Account.find_by!(number: @alice).balance
+
+    status = call_tool("get_transfer", { transfer_id: content["transfer_id"] })["structuredContent"]
+    assert_equal [ "scheduled", "予約中", tomorrow ], status.values_at("status", "status_label", "execute_on")
+
+    error = call_tool("transfer", { from_account: @alice, to_account: @bob, amount: 30, execute_on: Date.current.iso8601 })
+    assert error["isError"]
+    assert_match "明日以降", error.dig("content", 0, "text")
+  end
+
   test "入金・出金もドライランが既定" do
     assert call_tool("deposit", { account_number: @bob, amount: 5 }).dig("structuredContent", "dry_run")
     assert call_tool("withdraw", { account_number: @alice, amount: 5 }).dig("structuredContent", "dry_run")

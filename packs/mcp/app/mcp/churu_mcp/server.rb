@@ -11,6 +11,7 @@ module ChuruMcp
       書き込みのツール（deposit / withdraw / transfer）は、confirm を付けないとドライラン（何も書き込まない試算）になります。
       必ず、まずドライランの結果（残高の変化・警告）を利用者に見せて OK をもらい、そのあと同じ引数に confirm: true を付けて実行してください。
       振込は受け付けた時点で振込元から引き落とされ、振込先への入金は少しあとに非同期で行われます。状態は get_transfer で確かめられます。
+      transfer に execute_on を渡すと予約振込（実行日に引き落とし）。高額の振込は行員が確認するまで保留になります。
     TEXT
 
     def self.build

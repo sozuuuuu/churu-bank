@@ -1,7 +1,7 @@
 <% content_for :title, "#{@account.holder_name} の口座 | ちゅーる銀行" %>
 
 <%# ほかのタブや MCP、振込のジョブから更新があっても、この画面が morph で更新される %>
-<%= turbo_stream_from @account %>
+<%= staff_stream_from @account %>
 
 <div class="account-head card">
   <div>

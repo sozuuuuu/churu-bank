@@ -1,0 +1,57 @@
+<% content_for :title, "注文 #{@order.short_id} | ちゅ〜る商店" %>
+<%= render "shop_admin/header", title: "注文 #{@order.short_id}" %>
+
+<div class="grid">
+  <div class="card">
+    <h2>状態 <%= render "shop/orders/status", order: @order %></h2>
+    <% if @order.in_progress? %>
+      <p class="muted small">処理中です。進むとこの画面がその場で更新されます。</p>
+    <% end %>
+    <% if @order.failure_reason %>
+      <p class="hint"><%= @order.failure_reason %></p>
+    <% end %>
+    <dl class="confirm-like">
+      <dt>注文日時</dt><dd><%= jp_time(@order.placed_at) %></dd>
+      <dt>購入者</dt><dd><%= link_to @order.buyer_account, admin_account_path(@order.buyer_account) %></dd>
+      <dt>支払いの振込</dt><dd><code><%= @order.payment_transfer_id&.first(8) || "—" %></code></dd>
+      <% if @order.refund_transfer_id %>
+        <dt>返金の振込</dt><dd><code><%= @order.refund_transfer_id.first(8) %></code></dd>
+      <% end %>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>明細</h2>
+    <table class="table">
+      <tbody>
+        <% @order.lines.each do |line| %>
+          <tr>
+            <td><%= line.name %></td>
+            <td class="num"><%= churu(line.unit_price) %> × <%= line.quantity %></td>
+            <td class="num"><%= churu(line.subtotal) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr><th colspan="2">合計</th><th class="num"><%= churu(@order.total) %></th></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>イベント（ストリーム <code>Order$<%= @order.order_id %></code>）</h2>
+  <table class="table">
+    <tbody>
+      <% @events.each do |event| %>
+        <tr>
+          <td><%= jp_time(event.timestamp) %></td>
+          <td><code><%= event.class.name.demodulize %></code></td>
+          <td class="muted small"><%= event.metadata[:actor] %></td>
+          <td class="muted small"><%= event.data[:reason] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <p class="small"><%= link_to "RES Browser で見る", "/res/streams/Order$#{@order.order_id}", data: { turbo: false } %></p>
+</div>

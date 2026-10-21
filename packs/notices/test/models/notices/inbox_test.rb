@@ -5,8 +5,8 @@ class Notices::InboxTest < ActiveSupport::TestCase
 
   setup do
     @board = Notices::Board.new(actor: "test")
-    @orca = create_user(name: "オルカ")
-    @mike = create_user(name: "ミケ")
+    @orca = create_customer(name: "オルカ")
+    @mike = create_customer(name: "ミケ")
   end
 
   test "掲載期間の外（始まる前・終わった後）は出ない" do
@@ -18,7 +18,7 @@ class Notices::InboxTest < ActiveSupport::TestCase
   end
 
   test "選んだ利用者向けは、その人にだけ出る" do
-    only_orca = @board.post(kind: "request", title: "オルカさんへ", users: [ @orca ])
+    only_orca = @board.post(kind: "request", title: "オルカさんへ", customers: [ @orca ])
 
     assert_equal "selected", only_orca.audience
     assert_includes Notices::Inbox.new(@orca).notices, only_orca
@@ -61,7 +61,7 @@ class Notices::InboxTest < ActiveSupport::TestCase
 
   test "入力がまちがっていたら保存しない（対象を選ばない・終わりが始まりより前・タイトルなし）" do
     assert_no_difference "Notice.count" do
-      assert_not @board.post(kind: "info", title: "だれにも", audience: "selected", target_user_ids: [ "" ]).persisted?
+      assert_not @board.post(kind: "info", title: "だれにも", audience: "selected", target_customer_ids: [ "" ]).persisted?
       assert_not @board.post(kind: "info", title: "逆", starts_at: 1.day.from_now, ends_at: Time.current).persisted?
       assert_not @board.post(kind: "info", title: "").persisted?
       assert_not @board.post(kind: "campaign", title: "まだない種類").persisted?

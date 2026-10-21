@@ -10,7 +10,7 @@
   </label>
   <label>
     持ち主（利用者）
-    <%= f.select :owner_id, @users.map { [ "#{it.name}（#{it.email_address}）", it.id ] },
+    <%= f.select :owner_id, @customers.map { [ "#{it.name}（#{it.email_address}）", it.id ] },
                  { selected: params[:owner_id], include_blank: "なし" } %>
   </label>
   <%= f.submit "開設する", class: "button primary" %>

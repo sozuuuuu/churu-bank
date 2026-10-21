@@ -1,4 +1,5 @@
-<%# 管理画面のメニューを入れて、ルートの application レイアウトで描く %>
+<%# 管理画面のメニューと行員の名前・ログアウト（staff_header）を入れて、packs/ui の application レイアウトで描く %>
+<%= staff_header %>
 <% content_for :head do %>
   <%# 管理画面だけの見た目（packs/admin/app/assets/stylesheets/admin/admin.css）。利用者画面へ移ったら外れる %>
   <%= stylesheet_link_tag "admin/admin", "data-turbo-track": "dynamic" %>

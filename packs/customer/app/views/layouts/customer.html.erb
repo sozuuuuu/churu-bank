@@ -1,11 +1,10 @@
-<%# 利用者画面: メニューを入れて、ねこテーマのレイアウト（packs/ui の layouts/cat）で描く %>
+<%# 利用者画面: メニューと利用者の名前・ログアウト（customer_header）を入れて、ねこテーマのレイアウト（packs/ui の layouts/cat）で描く。
+    行員の画面へのリンクは出さない（行員と利用者はアカウントもログインも別） %>
+<%= customer_header %>
 <% content_for :nav do %>
   <%= link_to "わたしの口座", accounts_path %>
   <%= link_to "ちゅ〜る商店", shop_root_path %>
 <% end %>
 <%# 銀行からのお知らせ（packs/notices）: メニューの「お知らせ」とバッジ、ページの頭のねこの吹き出し、ライブ更新 %>
 <%= notices_inbox %>
-<% content_for :nav do %>
-  <%= link_to "管理画面", admin_root_path if Current.user&.admin? %>
-<% end %>
 <%= render template: "layouts/cat" %>

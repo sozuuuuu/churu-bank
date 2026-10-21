@@ -5,9 +5,9 @@ module Notices
   class RefreshJob < ApplicationJob
     queue_as :default
 
-    def perform(user = nil)
-      if user
-        Turbo::StreamsChannel.broadcast_refresh_to(user, :notices)
+    def perform(customer = nil)
+      if customer
+        Turbo::StreamsChannel.broadcast_refresh_to(customer, :notices)
       else
         Turbo::StreamsChannel.broadcast_refresh_to("notices")
       end

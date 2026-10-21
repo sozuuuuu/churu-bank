@@ -9,12 +9,4 @@ scope "shop", module: "shop", as: "shop" do
   resources :cart_items, only: %i[create destroy], param: :sku, path: "cart"
   # 注文。create は確認（preview=1 でドライラン）→ 確定の2段階
   resources :orders, only: %i[index show create], param: :order_id
-
-  # 商品と在庫の管理。行員だけ（Shop::Admin::ApplicationController）
-  namespace :admin do
-    resource :opening, only: :create # 商店の口座を開く
-    resources :products, only: %i[index create update], param: :sku do
-      resource :restock, only: :create
-    end
-  end
 end

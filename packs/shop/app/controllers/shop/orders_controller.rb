@@ -1,7 +1,7 @@
 # 注文。商品一覧ページの Turbo Frame "checkout" の中で動く:
 #   create + preview=1（ドライランの確認。ここで注文IDを決める）→ create（受付して注文ページへ）
 # 支払いの入金と在庫の引き当て（足りなければ返金）は、受付後にジョブが非同期で行う。
-# 見られる注文は自分の口座の分だけ（行員は商品と在庫の管理から全員分を見るので、どの注文も見られる）
+# 見られる注文は自分の口座の分だけ（行員が全員分を見るのは packs/shop_admin の /shop/admin/orders）
 module Shop
   class OrdersController < ApplicationController
     UUID = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
@@ -39,7 +39,7 @@ module Shop
     private
 
     # 他人の注文は「ない」ものとして 404 にする
-    def visible_orders = staff? ? ShopOrder.all : ShopOrder.where(buyer_account: my_account_numbers)
+    def visible_orders = ShopOrder.where(buyer_account: my_account_numbers)
 
     # 確認画面からはそのときの中身（hidden）、カートからはセッションの中身
     def items

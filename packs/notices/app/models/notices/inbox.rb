@@ -1,14 +1,14 @@
 # ある利用者から見たお知らせ: いま掲載中で自分が対象のもの、未読の数、ねこの吹き出しに出すもの
 module Notices
   class Inbox
-    attr_reader :user
+    attr_reader :customer
 
-    def initialize(user, at: Time.current)
-      @user = user
+    def initialize(customer, at: Time.current)
+      @customer = customer
       @at = at
     end
 
-    def notices = @notices ||= Notice.live(@at).for_user(user).newest_first.to_a
+    def notices = @notices ||= Notice.live(@at).for_customer(customer).newest_first.to_a
 
     def read?(notice) = receipts[notice.id]&.read_at.present?
 
@@ -26,7 +26,7 @@ module Notices
     private
 
     def receipts
-      @receipts ||= NoticeReceipt.where(user:, notice_id: notices.map(&:id)).index_by(&:notice_id)
+      @receipts ||= NoticeReceipt.where(customer:, notice_id: notices.map(&:id)).index_by(&:notice_id)
     end
   end
 end

@@ -23,14 +23,13 @@
 
   <body class="<%= content_for(:body_class) %>">
     <header class="site-header">
-      <%= link_to root_path, class: "brand" do %>🐟 ちゅーる銀行<% end %>
+      <%# ロゴのリンク先は、行員の画面なら管理画面、利用者の画面なら利用者画面（staff_header / customer_header が入れる） %>
+      <%= link_to content_for(:home_path) || "/", class: "brand" do %>🐟 ちゅーる銀行<% end %>
       <%# メニューは画面のパックごと（packs/admin・packs/customer・packs/shop の layouts）で content_for :nav に入れる %>
       <nav>
         <%= yield :nav %>
-        <% if Current.user %>
-          <span class="muted"><%= Current.user.name %></span>
-          <%= button_to "ログアウト", session_path, method: :delete, class: "link" %>
-        <% end %>
+        <%# ログイン中の人の名前とログアウト。行員と利用者でログインが別なので、それぞれのパックのヘルパーが入れる %>
+        <%= yield :account %>
       </nav>
     </header>
 

@@ -1,23 +1,19 @@
-# 商店の画面の土台。ログインが必要（identity の Authentication）。
-# 購入者になれるのは、ログイン中の利用者にひも付いた口座（account_ownerships）だけ。行員も同じで、
-# 行員だからといって他人の口座では買えない。見た目は、利用者にはねこテーマ、行員には管理画面と同じもの
+# 商店の画面（買い物）の土台。利用者としてログインしていなければ、利用者のログイン画面へ（packs/customer_identity）。
+# 購入者になれるのは、ログイン中の利用者にひも付いた口座（account_ownerships）だけ。
+# 商品と在庫の管理（行員）は別のパック packs/shop_admin（/shop/admin）。行員が買い物をするなら利用者のアカウントで
 module Shop
   class ApplicationController < ::ApplicationController
-    include Authentication
+    include CustomerAuthentication
     helper Ui::FormatHelper
 
-    layout :shop_layout
+    layout "shop/customer"
 
-    helper_method :current_buyer, :buyers, :cart, :store, :staff?
+    helper_method :current_buyer, :buyers, :cart, :store
 
     private
 
-    def store = @store ||= Shop::Store.new(actor: "shop:#{Current.user.email_address}")
-
-    def staff? = Current.user.admin?
-
-    # レイアウトは packs/shop/app/views/layouts/shop/*（メニューを入れて packs/ui のレイアウトで描く）
-    def shop_layout = staff? ? "shop/staff" : "shop/customer"
+    # 誰の操作かをイベントの metadata（actor）に残す（customer:<id>）
+    def store = @store ||= Shop::Store.new(actor: current_customer.actor)
 
     # 購入者（口座）。選んだ口座をセッションに持つが、使うたびに自分の口座の中から探し直す。
     # 選んでいなければ自分の最初の口座
@@ -32,7 +28,7 @@ module Shop
       Account.where(number: my_account_numbers, status: "active").where.not(number: store.account_number).order(:number)
     end
 
-    def my_account_numbers = @my_account_numbers ||= Current.user.account_numbers
+    def my_account_numbers = @my_account_numbers ||= current_customer.account_numbers
 
     # カート: { sku => 数 }。セッションに持つ
     def cart = session[:shop_cart] ||= {}

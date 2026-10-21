@@ -5,7 +5,7 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
   setup do
-    sign_in_as(@admin = create_user(name: "行員", admin: true))
+    sign_in_as_staff(@admin = create_staff)
     @bank = Banking::Bank.new(actor: "test")
     @orca = @bank.open_account(holder_name: "オルカ").account_number
     @zingiber = @bank.open_account(holder_name: "ジンジベル").account_number
@@ -140,33 +140,34 @@ class Admin::ReversalsAndInterestTest < ActionDispatch::IntegrationTest
     assert_match "何もしませんでした", flash[:alert]
   end
 
-  test "利用者はどの URL も 404 で、何も書き込まれない" do
+  test "利用者のログインでは、どの URL も行員のログイン画面へ飛ばされ、何も書き込まれない" do
     @bank.deposit(@orca, 1000, value_date: Date.current - 2)
     @bank.transfer(@orca, @zingiber, 40)
     perform_enqueued_jobs
     entry = LedgerEntry.find_by!(account_number: @orca, kind: "deposit")
     transfer = Transfer.last
 
-    orca = create_user(name: "オルカ")
+    orca = create_customer(name: "オルカ")
     orca.grant_account(@orca)
-    sign_in_as orca
+    delete staff_session_path # setup の行員のログインを終えてから
+    sign_in_as_customer orca
 
     get new_admin_account_reversal_path(@orca, event_id: entry.event_id)
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
     post admin_account_reversals_path(@orca), params: { event_id: entry.event_id, reason: "いたずら" }
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
     get new_admin_transfer_reversal_path(transfer)
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
     post admin_transfer_reversals_path(transfer), params: { reason: "いたずら" }
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
     get admin_interest_path
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
     post admin_interest_path, params: { date: Date.yesterday.iso8601 }
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
     get new_admin_account_interest_path(@orca)
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
     post admin_account_interest_path(@orca), params: { date: Date.yesterday.iso8601 }
-    assert_response :not_found
+    assert_redirected_to new_staff_session_path
 
     assert_not entry.reload.reversed?
     assert_equal "completed", transfer.reload.status

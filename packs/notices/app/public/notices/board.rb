@@ -1,9 +1,9 @@
 # お知らせを出す・直す・掲載を終える唯一の入口。行員の画面と seeds が使い、あとでキャンペーンのパックも
 # 「特典が届いたにゃ」のような、その人向けのお知らせをここから出す。
 #
-#   board = Notices::Board.new(actor: "admin:#{Current.user.email_address}")
+#   board = Notices::Board.new(actor: current_staff.actor)
 #   board.post(kind: "info", title: "…", body: "…")                       # 全員に、いまから
-#   board.post(kind: "request", title: "…", users: [ user ], important: true) # 選んだ利用者に、閉じるまで
+#   board.post(kind: "request", title: "…", customers: [ customer ], important: true) # 選んだ利用者に、閉じるまで
 #   board.revise(notice, title: "…")
 #   board.close(notice)                                                    # 掲載を終える（ends_at を今に）
 #
@@ -15,9 +15,9 @@ module Notices
       @actor = actor
     end
 
-    # users: 対象の利用者（User の配列）。target_user_ids: フォームからの ID。どちらもなければ全員
+    # customers: 対象の利用者（Customer の配列）。target_customer_ids: フォームからの ID。どちらもなければ全員
     def post(**attrs)
-      attrs[:audience] ||= attrs.key?(:users) || attrs.key?(:target_user_ids) ? "selected" : "everyone"
+      attrs[:audience] ||= attrs.key?(:customers) || attrs.key?(:target_customer_ids) ? "selected" : "everyone"
       save(Notice.new(posted_by: @actor, starts_at: Time.current), attrs)
     end
 
@@ -39,15 +39,15 @@ module Notices
 
     def save(notice, attrs)
       attrs = attrs.to_h.symbolize_keys
-      users = attrs.delete(:users)
-      ids = attrs.delete(:target_user_ids)
+      customers = attrs.delete(:customers)
+      ids = attrs.delete(:target_customer_ids)
       saved = Notice.transaction do
         notice.assign_attributes(attrs)
         # 対象は保存済みのお知らせだとすぐ書き込まれるので、保存できなければ巻き戻す
         if notice.audience == "selected"
-          notice.target_users = users || User.where(id: Array(ids).compact_blank) unless users.nil? && ids.nil?
+          notice.target_customers = customers || Customer.where(id: Array(ids).compact_blank) unless customers.nil? && ids.nil?
         else
-          notice.target_users = []
+          notice.target_customers = []
         end
         notice.save || raise(ActiveRecord::Rollback)
       end

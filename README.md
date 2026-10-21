@@ -6,30 +6,36 @@ Hotwire・Solid Queue・Solid Cable など Rails 標準の機能を一通り使�
 ## 起動
 
 ```bash
-bin/rails db:prepare   # 開発用の管理者・利用者・口座も入る（db/seeds.rb）
+bin/rails db:prepare   # 開発用の行員・利用者・口座も入る（db/seeds.rb）
 bin/dev            # http://localhost:3000 （Solid Queue のワーカーも Puma の中で動く）
 bin/test           # ルートとすべてのパックのテスト
 bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 ```
 
 - 環境: WSL の Ubuntu 24.04、Ruby は mise（`mise.toml`）、バージョン管理は jj
-- ログイン: 開発用のアカウントとパスワードは `db/seeds.rb`（管理者 1 人と、オルカ・ジンジベル・ミケ）
-- `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員。管理者だけ）
-- `/res` … RES Browser（イベントストアの中身を見る。管理者だけ）
+- ログイン: 開発用のアカウントとパスワードは `db/seeds.rb`（行員 2 人と、利用者のオルカ・ジンジベル・ミケ）。
+  **行員と利用者はアカウントもログイン画面も別**: 行員は `/admin/session/new`、利用者は `/session/new`
+- `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員だけ）
+- `/res` … RES Browser（イベントストアの中身を見る。行員だけ）
 - `/notices` … 銀行からのお知らせ（利用者）、`/admin/notices` … お知らせを出す・直す・掲載終了（行員）
+- `/shop` … ちゅ〜る商店（利用者の買い物）、`/shop/admin` … 商品と在庫の管理（行員）
 
 ## パッケージ（packwerk）
 
 | パッケージ | 中身 | 依存してよい先 |
 |---|---|---|
-| `.`（ルート） | JS（Stimulus）・CSS、画面へのライブ更新（`BroadcastRefreshJob`）、イベントストア本体 | platform, banking, identity |
-| `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入出金・振込・凍結、振込一覧。管理者だけ | platform, banking, identity, ui |
-| `packs/customer` | 利用者画面 `/`（`Customer::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込。お知らせはレイアウトで `notices_inbox` を1回呼ぶだけ | platform, banking, identity, ui, notices |
-| `packs/identity` | ログイン（Rails 8 の `generate authentication`）、`User#admin`、利用者と口座のひも付け（`account_ownerships`）。外から使えるのは `app/public`（`User` / `Current` / `Authentication`） | platform |
+| `.`（ルート） | JS（Stimulus）・CSS、画面へのライブ更新（`BroadcastRefreshJob`）、Action Cable の接続（`ApplicationCable::Connection`。行員か利用者か）、イベントストア本体 | platform, banking, staff_identity, customer_identity, customer_registry |
+| `packs/staff_identity` | **行員のログイン**（`/admin/session`）。`Staff` とセッション、`StaffAuthentication`・`StaffHelper`・`StaffStreamsChannel` を公開 | platform |
+| `packs/customer_identity` | **利用者のログイン**（`/session`、ねこテーマ）。セッション、`CustomerAuthentication`・`CustomerHelper`・`CustomerStreamsChannel` を公開 | platform, customer_registry, ui |
+| `packs/customer_registry` | **顧客台帳**: 利用者 `Customer` と口座のひも付け（`account_ownerships`）。ログインのしくみは持たない。公開は `Customer` だけ | platform |
+| `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入出金・振込・凍結、振込一覧、取消・組戻し・利息。行員だけ | platform, banking, staff_identity, customer_registry, ui |
+| `packs/customer` | 利用者画面 `/`（`Netbank::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込。お知らせはレイアウトで `notices_inbox` を1回呼ぶだけ | platform, banking, customer_identity, ui, notices |
 | `packs/banking` | 銀行ドメイン。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
-| `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と `/shop` の画面（商品と在庫の管理 `/shop/admin` も）。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking, identity, ui |
-| `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`。`content_for :nav` と `:page_top` で差し込む）、ねこテーマ（`layouts/cat` と `ui/cat.css`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`） | platform, identity |
-| `packs/notices` | 銀行からのお知らせ・お願い・メンテナンス（ふつうの ActiveRecord）。行員の画面 `/admin/notices`、利用者の `/notices`。外から使えるのは `app/public`（`Notices::InboxHelper` / `Notices::Board`） | platform, identity, ui |
+| `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と、利用者の買い物の画面 `/shop`。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking, customer_identity, ui |
+| `packs/shop_admin` | 商品と在庫の管理 `/shop/admin`（`ShopAdmin::`）。商品の登録・値段・入荷・商店の口座を開く、注文を全員分見る。行員だけ | platform, banking, shop, staff_identity, ui |
+| `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`。`content_for :nav` / `:account` / `:home_path` / `:page_top` で差し込む）、ねこテーマ（`layouts/cat` と `ui/cat.css`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`）。だれがログインしているかは知らない | platform |
+| `packs/notices` | 銀行からのお知らせ・お願い・メンテナンス（ふつうの ActiveRecord）と、利用者の `/notices`・ねこの吹き出し。外から使えるのは `app/public`（`Notices::InboxHelper` / `Notices::Board` / `Notice`） | platform, customer_identity, customer_registry, ui |
+| `packs/notices_admin` | お知らせの管理 `/admin/notices`（`NoticesAdmin::`）。出す・直す・掲載終了。行員だけ | platform, notices, staff_identity, customer_registry, ui |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
@@ -37,23 +43,64 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - 各パックは自分の `config/initializers` で自分のイベント購読だけを書く。イベントストア本体はルート
 - パックのテストは `packs/<名前>/test`。`bin/test` でまとめて流れる
 - ルーティングも各パックの `config/routes/<名前>.rb` に書き、`config/routes.rb` から `draw :<名前>` で読む
-- admin と customer は互いに依存しない。銀行は `User` を知らない（口座番号だけでつながる）
-- 画面のパック（admin / customer / shop）は、ベースコントローラで `helper Ui::FormatHelper` して packs/ui に依存する。
+- admin と customer は互いに依存しない。銀行は `Customer` も `Staff` も知らない（口座番号だけでつながる）
+- **画面のパックは staff_identity か customer_identity の片方にだけ依存する**（行員の画面: admin / shop_admin / notices_admin、
+  利用者の画面: customer / shop / notices）。宣言していない側の `StaffAuthentication` / `CustomerAuthentication` を使えば
+  `bin/packwerk check` が依存違反にする。両方を宣言しないといけなくなったら、画面を分けてパックも分けるしるし（shop_admin / notices_admin がそう）
+- 画面のパック（admin / customer / shop など）は、ベースコントローラで `helper Ui::FormatHelper` して packs/ui に依存する。
   レイアウトはテンプレート名（`render template: "layouts/application"` / `"layouts/cat"`）で使うので packwerk には見えないが、
   `Ui::FormatHelper` の参照が「ui を使っている」しるしになり、`bin/packwerk check` で依存の宣言漏れが見つかる
 
 ## 認証と権限
 
-- ログインは `packs/identity`（Rails 8 の `generate authentication` がもと。パスワード再設定は入れていない）。
-  画面のパックのベースコントローラ（`Admin::ApplicationController` / `Customer::ApplicationController` /
-  `Shop::ApplicationController`）で `Authentication` を include する
-- 管理画面は `User#admin` だけ。そうでなければ 404（管理画面があることも見せない）。`/res` もルーティングの制約で管理者だけ
+本物の銀行で、行員の業務システムとネットバンキングが別物なのと同じく、**行員と利用者は完全に分けている**（TODO の Q0）。
+
+| | 行員 | 利用者 |
+|---|---|---|
+| モデル・テーブル | `Staff`（`staffs`）・`staff_sessions` | `Customer`（`customers`、顧客台帳）・`customer_sessions` |
+| パック | `packs/staff_identity` | `packs/customer_identity`（ログイン）＋ `packs/customer_registry`（台帳） |
+| ログイン画面 | `/admin/session/new`（管理画面と同じ見た目） | `/session/new`（ねこテーマ） |
+| セッションの Cookie | `staff_session_id` | `customer_session_id` |
+| ベースコントローラで include | `StaffAuthentication`（`current_staff`） | `CustomerAuthentication`（`current_customer`） |
+| ライブ更新の購読 | `staff_stream_from` → `StaffStreamsChannel` | `customer_stream_from` → `CustomerStreamsChannel` |
+| イベントの actor | `staff:<id>` | `customer:<id>` |
+
+- **片方でログインしても、もう片方の画面には入れない**。行員の画面に行員のログインなしで来たら行員のログイン画面へ、
+  利用者の画面に利用者のログインなしで来たら利用者のログイン画面へ飛ばす。利用者の画面には行員の画面へのリンクを出さない。
+  `/res` はルーティングの制約（`StaffAuthentication::Constraint`）で、行員でなければ 404
+- 同じブラウザで両方にログインしていてもよい（Cookie が別）。ログアウトもそれぞれ。行員が客でもあるなら、利用者のアカウントを別に持つ
+- **Cookie の署名も別**: Rails の署名つき Cookie は Cookie の名前ごとに署名が違う（メタデータの purpose）ので、
+  行員の Cookie の値を `customer_session_id` に入れても通らない（id がたまたま同じでも）
+- **Action Cable**: `ApplicationCable::Connection` が接続ごとに `current_staff` / `current_customer` を持つ（どちらもなければ拒否）。
+  `StaffStreamsChannel` は行員の接続だけ、`CustomerStreamsChannel` は利用者の接続だけが購読でき、ストリーム名の署名の鍵もチャンネルごとに別
+  （`Rails.application.message_verifier("staff_streams")` / `("customer_streams")`）。なので行員の画面に埋め込まれた名前（`"accounts"` 全口座など）を
+  利用者が手に入れても購読できない。素の `Turbo::StreamsChannel`（`turbo_stream_from`）は購読を拒否する（`config/initializers/turbo_streams.rb`）。
+  配信はどちらも `Turbo::StreamsChannel.broadcast_refresh_to` のまま（ストリームの中身は同じで、購読の入口だけが分かれている）
 - 利用者画面は `account_ownerships` でひも付いた口座だけ。他人の口座は口座ページ・時点残高・振込とも 404。
   入出金と凍結は行員だけ。振込先には全口座（解約済みを除く）を選べる
+- 行員は口座の開設のときに持ち主（利用者）を選んでひも付ける。台帳（`Customer`）は packs/customer_registry にあり、
+  行員の画面（admin・notices_admin）はここに依存するが、利用者のログイン（customer_identity）には依存しない
 - 利用者画面は見た目も別（ねこ・ちゅ〜るのテーマ、`packs/ui/app/assets/stylesheets/ui/cat.css`。`layouts/cat` が読み込む）。`body.cat-theme` の下だけに効き、管理画面は今の見た目のまま
-- 商店（`/shop`）もログイン必須。権限は「ちゅ〜る商店」の節を参照
-- だれの操作かは、イベントの metadata の actor に `admin:<メール>` / `customer:<メール>` で残る
-- Action Cable もログインが必要（`ApplicationCable::Connection`）。購読できるのは画面に埋め込まれた署名つきのストリームだけ
+- 商店の買い物（`/shop`）は利用者のログイン、商品と在庫の管理（`/shop/admin`）は行員のログイン。「ちゅ〜る商店」の節を参照
+- だれの操作かは、イベントの metadata の actor に `staff:<id>` / `customer:<id>` で残る（メールアドレスは変わりうるので id）。
+  Q0 より前のイベントは `admin:<メール>` / `customer:<メール>` / `shop:<メール>` のまま（過去のイベントは書き換えない）
+
+### パックの分け方（Q0）
+
+- **ログインは2つのパック**（staff_identity / customer_identity）。共通の「ログインのパック」を作らず、それぞれが Rails 8 の
+  `generate authentication` の形を持つ。少し重複するが、片方に足した仕組み（たとえば行員だけの二人承認やアクセス制限）がもう片方に漏れない
+- **顧客台帳（customer_registry）をログインから分けた**: 行員の画面も「利用者の一覧」「口座のひも付け」を使う（口座の開設・お知らせの対象）。
+  台帳を customer_identity に置くと、行員の画面が利用者のログインのパックに依存できてしまい、packwerk で混ざりを止められない。
+  本物の銀行でも、顧客の台帳（窓口で行員が引く）とネットバンキングのログインは別物
+- **shop と notices は行員の画面を別のパックに出した**（shop_admin / notices_admin）。どちらも同じパックの中に行員の画面と利用者の画面があり、
+  そのままだと1つのパックが両方のログインに依存する。packwerk の依存はパック単位なので「中を分ける」だけでは混ざりを検査できない。
+  ドメイン（`Shop::Store`・`Notices::Board`）と利用者の画面は元のパックに残し、行員の画面はその公開 API だけを使う。
+  そのためにお知らせの `Notice` を公開した（読み取りだけ。書き込みは `Board`）
+- 利用者画面（packs/customer）のコントローラの名前空間は `Customer::` から `Netbank::`（ネットバンキング）に変えた。モデル `Customer` とぶつかるため。
+  URL とルート名（`account_path` など）は変わらない
+- packs/ui はだれがログインしているかを知らない（以前は `Current.user` を見ていた）。名前とログアウトは
+  `staff_header` / `customer_header` が `content_for :account` に入れる
+- テストのヘルパー: `create_staff` / `create_customer(name:)`、`sign_in_as_staff` / `sign_in_as_customer`（本物のログイン画面に POST する）
 
 ### packwerk の気づき（商店を作って）
 
@@ -65,7 +112,8 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
   パックからは依存できない。商店は `ActionController::Base` から直接作り、レイアウトとヘルパーは名前で借りていた。
   定数ではないので packwerk には見えない依存
   → TODO の N で、レイアウトとヘルパーを UI 用の土台パック `packs/ui` に移した。packs/platform に置かなかったのは、
-  レイアウトがログイン中の利用者（identity の `Current`）を使うから（platform は「どこにも依存しない」）。
+  当時はレイアウトがログイン中の利用者（identity の `Current`）を使っていたから（platform は「どこにも依存しない」）。
+  Q0 でログインが行員と利用者に分かれてからは、レイアウトはだれがログインしているかを知らない（`content_for :account` で入れてもらう）
   ヘルパーは `Ui::FormatHelper` と名前空間つきの定数にして、各ベースコントローラで `helper Ui::FormatHelper` と書く。
   Rails は既定で全ヘルパーをどの画面にも入れる（`include_all_helpers`）ので書かなくても動くが、書くことで依存が packwerk に見える
 
@@ -207,25 +255,27 @@ Shop::PaymentJob（銀行のイベントを購読）→ Store#settle_transfer（
 - 注文 → 振込 → 引き当て（返金）は同じ correlation_id を持つ（RES Browser で辿れる）
 - 開発用の商品は `bin/rails db:seed`（商店の口座も開く）
 
-### 認証と権限（TODO の N）
+### 認証と権限（TODO の N、Q0 で行員と利用者を分けた）
 
-- `/shop` はログイン必須（`Shop::ApplicationController` で `Authentication` を include）
+- `/shop`（買い物）は利用者のログインが必須（`Shop::ApplicationController` で `CustomerAuthentication` を include）
 - **購入者はログイン中の利用者にひも付いた口座（`account_ownerships`）だけ**。口座が複数あれば「支払う口座」で選べる
   （選んだ口座はセッションに持つが、使うたびに自分の口座の中から探し直す。他人の口座番号を送っても無視）。
   ひも付いた口座がなければ注文できない
 - 注文履歴は自分の口座の分だけ。他人の注文ページは 404（あるかどうかも見せない）
-- **行員が商店で買う場合**: 行員も「自分にひも付いた口座」でだけ買える。行員だからといって利用者の口座で
-  代わりに買うことはできない（代理購入は銀行の業務ではないし、他人の口座から引き落とす入口を増やさない）。
-  シードの行員には口座がないので、買うには口座を開いてひも付ける。行員は注文ページを全員分見られる（商品と在庫の管理の「最近の注文」から辿るため）
-- **商品の登録・値段・入荷・商店の口座を開く**のは行員（`User#admin`）だけ。`Shop::Admin::ApplicationController` で、行員でなければ 404
-- だれの操作かは、商店のイベントの metadata の actor に `shop:<メール>` で残る
-- 見た目: 利用者にはねこテーマ（`layouts/shop/customer` → `layouts/cat`）、行員には管理画面と同じ見た目
-  （`layouts/shop/staff` → `layouts/application`）。どちらも packs/ui のレイアウト
+- **行員が商店で買う場合**: 行員のアカウントでは買えない（行員のログインでは `/shop` に入れない）。買うなら利用者のアカウントを別に持ち、
+  そこにひも付いた口座で買う。行員だからといって利用者の口座で代わりに買うことはできない（代理購入は銀行の業務ではないし、
+  他人の口座から引き落とす入口を増やさない）
+- **商品の登録・値段・入荷・商店の口座を開く・注文を全員分見る**のは行員だけ。`/shop/admin`（packs/shop_admin、`ShopAdmin::`）で、
+  行員のログインがなければ行員のログイン画面へ。注文は `/shop/admin/orders/:id`（商品と在庫の管理の「最近の注文」から辿る。RES Browser へのリンクも）
+- だれの操作かは、商店のイベントの metadata の actor に `customer:<id>`（買い物）/ `staff:<id>`（管理）で残る（Q0 より前は `shop:<メール>`）
+- 見た目: 買い物はねこテーマ（`layouts/shop/customer` → `layouts/cat`）、管理は管理画面と同じ見た目
+  （`layouts/shop_admin` → `layouts/application`）。どちらも packs/ui のレイアウト
 
-**商品の管理を `/admin`（packs/admin）に寄せず、`/shop/admin`（packs/shop）に残した理由**:
+**商品の管理を `/admin`（packs/admin）に寄せず、`/shop/admin`（packs/shop_admin）にした理由**:
 管理画面に寄せると admin → shop の依存ができ、admin はドメインが増えるたびに全部に依存する「何でも屋」になる。
-商店の画面はもともと全部 shop の中（非公開）にあり、管理の画面だけ外に出すと `Shop::Store` の使い方が2か所に割れる。
-shop に残せば、shop が増やす依存は identity（ログインと `User#admin`）と ui（見た目）だけで、admin は shop を知らないまま。
+はじめは shop の中（`Shop::Admin::`）に置いていたが、Q0 で行員と利用者のログインを別のパックにしたとき、shop が両方のログインに
+依存することになったので、管理の画面だけを packs/shop_admin に出した。shop_admin は shop の公開 API（`Shop::Store`・読み取りモデル）だけを使う。
+注文の状態のバッジ（`shop/orders/_status`）だけは shop の部品を名前で借りている。
 管理画面のメニューの「商店の管理」はリンク（ルート名）だけで、定数の依存はない
 
 ## 銀行からのお知らせ（packs/notices）
@@ -243,7 +293,7 @@ shop に残せば、shop が増やす依存は identity（ログインと `User#
   **重要なものは開いて既読になっても、× で閉じるまで吹き出しに出し続ける**（本文のページにも「読んだにゃ（吹き出しを閉じる）」）
 - **掲載終了**は消さずに `ends_at` を今にする（だれが読んだかは残る）。始まる前のものを終えたら、始まりも今にする
 - **ライブ更新**: `Notices::Board` が保存したら `Notices::RefreshJob` が Turbo の refresh（morph）を `"notices"`（全員）に送る。
-  掲載の始まり・終わりが先なら、その時刻にも送る（`set(wait_until:)`。Solid Queue）。既読・閉じたは `[user, :notices]` に送ってほかのタブにも映す。
+  掲載の始まり・終わりが先なら、その時刻にも送る（`set(wait_until:)`。Solid Queue）。既読・閉じたは `[customer, :notices]` に送ってほかのタブにも映す。
   refresh は「取り直して」という合図だけで中身を運ばないので、対象外の人に届いても何も漏れない
 - **動き**: morph で新しく入った吹き出しだけが「ぽよん」と出る（CSS。すでにある要素は morph で残るので動き直さない）。
   ねこが跳ねてトースト（「銀行からお知らせが届いたにゃ！」）は Stimulus の `notices--inbox`。未読のバッジはぴょこぴょこ。
@@ -256,8 +306,10 @@ shop に残せば、shop が増やす依存は identity（ログインと `User#
 - customer からは `helper Notices::InboxHelper` して、レイアウトで `<%= notices_inbox %>` を1回呼ぶだけ。中で `content_for` の
   `:head`（CSS）・`:nav`（バッジ）・`:page_top`（吹き出し。packs/ui の `layouts/application` が main の頭に出す）を入れる。
   ヘルパーの定数が「notices を使っている」しるしになって、packwerk で customer → notices の依存が見える
-- 行員の画面も packs/notices の中（`Notices::Admin::`、`/admin/notices`）。商店の管理を `/shop/admin` に置いたのと同じ理由で、
-  admin が notices に依存しないよう、管理画面のメニューはリンク（ルート名）1つだけ
+- 行員の画面は packs/notices_admin（`NoticesAdmin::`、`/admin/notices`）。はじめは packs/notices の中（`Notices::Admin::`）だったが、
+  Q0 で notices が行員と利用者の両方のログインに依存することになったので出した（商店の管理と同じ）。notices_admin は
+  `Notices::Board`（書き込み）と `Notice`（読み取り）だけを使う。admin が notices に依存しないよう、管理画面のメニューはリンク（ルート名）1つだけ
+- ライブ更新の購読は利用者用のチャンネル（`customer_stream_from "notices"` と `customer_stream_from current_customer, :notices`）
 - CSS と Stimulus もパックの中（`app/assets/stylesheets/notices`・`app/javascript/controllers/notices`）。読み込み先は
   `packs/notices/config/initializers/assets.rb`、JS の pin はルートの `config/importmap.rb`（`pin_all_from … under: "controllers/notices"`）
 
@@ -328,7 +380,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | # | やること | 先に必要 | 主な場所 |
 |---|---|---|---|
 | ~~A~~ | ~~packwerk 導入、銀行を `packs/banking` へ~~（済） | | |
-| ~~B~~ | ~~認証（Rails 8 の `generate authentication`）、ユーザーと口座のひも付け~~（済） | | `packs/identity` |
+| ~~B~~ | ~~認証（Rails 8 の `generate authentication`）、ユーザーと口座のひも付け~~（済。Q0 で行員と利用者に分けた） | | `packs/staff_identity`・`packs/customer_identity`・`packs/customer_registry` |
 | ~~C~~ | ~~管理画面（行員）と利用者画面（口座の持ち主）を分ける~~（済） | B | `packs/admin`・`packs/customer` |
 | ~~D~~ | ~~2つめのドメイン「ちゅ〜る商店」: 商品・在庫・注文。支払いは `Banking::Bank` 経由、在庫切れなら返金~~（済） | | `packs/shop` |
 | ~~E~~ | ~~MCP（`/mcp`、HTTP）: 残高照会・明細・振込（ドライラン → 確定）~~（済） | | `packs/mcp` |
@@ -343,7 +395,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~N~~ | ~~商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ~~（済） | B, D | `packs/shop`・`packs/ui` |
 | ~~O~~ | ~~管理画面に取消・組戻し・利息の手動実行のボタン~~（済。「管理画面での取消・組戻し・利息」） | F, G | `packs/admin` |
 | P | 利用者画面に銀行からのお知らせ・お願い・キャンペーン（**お知らせ・お願いは済**。キャンペーン = 条件を満たすと特典が自動入金、は未） | C, N（キャンペーンは L） | `packs/notices`（キャンペーンは新しいパック） |
-| Q | 行員の権限を本物の銀行に寄せる。**Q0（先に）行員と利用者の完全な分離**: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける。Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）。Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」。Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
+| Q | 行員の権限を本物の銀行に寄せる。~~**Q0** 行員と利用者の完全な分離: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける~~（済。「認証と権限」）。Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）。Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」。Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
 | R | 日本語のイベントビューア（RES Browser の代わり）: イベント名・ストリーム名を日本語に、中身を表で、correlation / causation の連鎖を図で。管理画面の中、行員だけ | Q0 | 新しいパック（例 `packs/event_viewer`） |
 | S | WebSocket（Action Cable）を自分で書く: 窓口の整理券（番号札を取ると順番がライブで進み、呼ばれたらねこが知らせる）と、利用者と行員の窓口チャット（入力中の表示・在席表示）。自作チャンネル・presence・双方向。Q1 の窓口取引とつなげる | Q0, Q1 | 新しいパック（例 `packs/counter`） |
 | T | デビットカード決済（二段階）: 商店での購入はまずオーソリ（お金を押さえる）→ 発送で売上確定 → キャンセルなら押さえを解除。残高と「使えるお金」を分ける。押さえの期限切れはジョブで解除 | D, Q0 | `packs/banking`（カード）・`packs/shop`（支払い） |

@@ -1,0 +1,45 @@
+<% content_for :title, "お知らせ | ちゅーる銀行" %>
+
+<div class="account-head">
+  <h1>お知らせ</h1>
+  <%= link_to "お知らせを出す", new_notices_admin_notice_path, class: "button primary" %>
+</div>
+<p class="muted small">出すと、開いている利用者画面にすぐ出ます（掲載開始が先なら、その時刻に）。重要なものは、利用者が閉じるまでねこが出し続けます。</p>
+
+<% if @notices.empty? %>
+  <p class="empty">まだお知らせはありません。</p>
+<% else %>
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>状態</th><th>種類</th><th>タイトル</th><th>掲載期間</th><th>対象</th><th class="num">既読</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% @notices.each do |notice| %>
+            <tr id="<%= dom_id(notice) %>">
+              <td><span class="badge notice-status-<%= notice.status %>"><%= notice.status_label %></span></td>
+              <td><%= notice.kind_icon %> <%= notice.kind_label %></td>
+              <td class="notice-wrap">
+                <%= notice.title %>
+                <% if notice.important? %><span class="badge notice-status-important">重要</span><% end %>
+              </td>
+              <td class="small"><%= jp_time(notice.starts_at) %> 〜 <%= jp_time(notice.ends_at) || "終わりなし" %></td>
+              <td class="notice-wrap small">
+                <%= notice.everyone? ? "全員" : notice.target_customers.map(&:name).join("・") %>
+              </td>
+              <td class="num"><%= @read_counts.fetch(notice.id, 0) %></td>
+              <td class="notice-row-actions">
+                <%= link_to "編集", edit_notices_admin_notice_path(notice), class: "button small" %>
+                <% unless notice.ended? %>
+                  <%= button_to "掲載終了", notices_admin_notice_closing_path(notice), class: "button small",
+                                form: { data: { turbo_confirm: "「#{notice.title}」の掲載を終えますか？" } } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% end %>

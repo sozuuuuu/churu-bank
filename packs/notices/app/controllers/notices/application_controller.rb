@@ -1,7 +1,7 @@
-# 利用者のお知らせの画面（/notices）の土台。ログインが必要。見られるのは、いま掲載中で自分が対象のものだけ
+# 利用者のお知らせの画面（/notices）の土台。利用者としてのログインが必要（packs/customer_identity）。見られるのは、いま掲載中で自分が対象のものだけ
 module Notices
   class ApplicationController < ::ApplicationController
-    include Authentication
+    include CustomerAuthentication
     helper Ui::FormatHelper
     helper Notices::InboxHelper
 
@@ -12,9 +12,9 @@ module Notices
     private
 
     # ヘルパー（notices_inbox）と同じものを使う
-    def inbox = @notices_inbox ||= Inbox.new(Current.user)
+    def inbox = @notices_inbox ||= Inbox.new(current_customer)
 
     # 期間外・対象外のお知らせは「ない」ものとして 404 にする
-    def find_notice(id) = Notice.live.for_user(Current.user).find(id)
+    def find_notice(id) = Notice.live.for_customer(current_customer).find(id)
   end
 end

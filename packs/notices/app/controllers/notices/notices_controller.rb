@@ -11,7 +11,7 @@ module Notices
       if request.headers["X-Sec-Purpose"] == "prefetch"
         response.headers["Cache-Control"] = "no-store"
       else
-        NoticeReceipt.read!(@notice, Current.user)
+        NoticeReceipt.read!(@notice, current_customer)
       end
     end
   end

@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   draw :admin    # 管理画面 /admin（と /res）
   draw :customer # 利用者画面 /
   draw :shop     # ちゅ〜る商店 /shop
+  draw :notices  # お知らせ /notices と /admin/notices
 
   # MCP（packs/mcp）。Streamable HTTP（stateless）。localhost からだけ受け付ける
   match "mcp" => "churu_mcp/server#handle", via: %i[get post delete], as: :mcp

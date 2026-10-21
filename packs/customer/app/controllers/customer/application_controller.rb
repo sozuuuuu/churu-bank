@@ -3,6 +3,7 @@ module Customer
   class ApplicationController < ::ApplicationController
     include Authentication
     helper Ui::FormatHelper
+    helper Notices::InboxHelper # 銀行からのお知らせ（レイアウトの notices_inbox）
 
     layout "customer"
 

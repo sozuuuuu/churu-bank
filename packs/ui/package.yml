@@ -1,6 +1,7 @@
 # 画面の共通部品: どの画面のパック（admin / customer / shop）も使う見た目の土台。ドメインのコードは置かない
 #   - Ui::FormatHelper            … churu（金額）・jp_date・jp_time。画面のパックのベースで helper Ui::FormatHelper する
-#   - layouts/application         … 全画面の外枠（ヘッダー・フラッシュ）。メニューは各パックが content_for :nav で入れる
+#   - layouts/application         … 全画面の外枠（ヘッダー・フラッシュ）。メニューは各パックが content_for :nav で入れる。
+#                                   content_for :page_top は main の頭に出る（利用者画面のお知らせのねこなど）
 #   - layouts/cat                 … ねこテーマ（ui/cat.css とフォント）を足してから application で描く。利用者向けの画面用
 # レイアウトはテンプレート名で使うので packwerk には見えない。ベースコントローラの helper Ui::FormatHelper を
 # 「ui を使っている」しるしにして、package.yml の dependencies にも packs/ui を書く

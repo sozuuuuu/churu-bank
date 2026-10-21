@@ -1,0 +1,181 @@
+/*
+ * 銀行からのお知らせ（packs/notices）。利用者向けは body.cat-theme の下（ねこテーマの変数を使う）、
+ * 行員の画面向けは .notice-form などの小さな部品だけ。
+ * 動きは、ねこテーマの「視差効果を減らす」（packs/ui の cat.css）でまとめて止まる。下にも念のため書いてある
+ */
+
+/* ---- 種類ごとの色 ---- */
+body.cat-theme .notice-kind-info { --kind: var(--accent); }
+body.cat-theme .notice-kind-request { --kind: var(--churu); }
+body.cat-theme .notice-kind-maintenance { --kind: #6f9cf0; }
+@media (prefers-color-scheme: dark) {
+  body.cat-theme .notice-kind-maintenance { --kind: #9dbcff; }
+}
+
+/* ---- メニューの「お知らせ」と未読のバッジ ---- */
+body.cat-theme .notice-nav { display: inline-flex; align-items: center; gap: 4px; }
+body.cat-theme .notice-badge {
+  display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; padding: 0 5px;
+  border-radius: 999px; background: var(--minus); color: #fff; font-size: .75rem; font-weight: 800; line-height: 1;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--minus) 60%, transparent);
+  animation: notice-badge 2.2s ease-in-out infinite;
+}
+@keyframes notice-badge {
+  0%, 70%, 100% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--minus) 50%, transparent); }
+  80% { transform: scale(1.25) rotate(-8deg); }
+  90% { transform: scale(1) rotate(6deg); box-shadow: 0 0 0 8px transparent; }
+}
+
+/* ---- ねこの吹き出し ---- */
+body.cat-theme .notice-board { display: flex; align-items: flex-end; gap: 6px; margin: 4px 0 20px; }
+body.cat-theme .notice-board[hidden] { display: none; }
+body.cat-theme .notice-cat-wrap { flex: none; }
+body.cat-theme .notice-cat { width: 92px; }
+body.cat-theme .notice-letter-paper { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; }
+body.cat-theme .notice-letter-flap { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
+body.cat-theme .notice-letter-heart { fill: var(--minus); }
+body.cat-theme .notice-letter { transform-box: fill-box; transform-origin: 50% 0%; animation: notice-letter 3s ease-in-out infinite; }
+@keyframes notice-letter { 0%, 100% { transform: rotate(0); } 40% { transform: rotate(-5deg); } 60% { transform: rotate(4deg); } }
+/* お知らせがあると、耳がぴくっ */
+body.cat-theme .notice-board .notice-cat-ear { transform-box: fill-box; transform-origin: 50% 100%; animation: notice-ear 4s ease-in-out infinite; }
+@keyframes notice-ear { 0%, 88%, 100% { transform: rotate(0); } 92% { transform: rotate(-12deg); } 96% { transform: rotate(8deg); } }
+
+body.cat-theme .notice-bubbles { flex: 1; min-width: 0; display: grid; gap: 8px; }
+body.cat-theme .notice-bubbles ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+body.cat-theme .notice-hello { margin: 0 0 0 10px; color: var(--accent); font-weight: 800; font-size: .9rem; }
+
+body.cat-theme .notice-bubble {
+  position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px;
+  padding: 10px 12px 10px 16px; border-radius: 22px;
+  background: var(--surface); border: 2px solid var(--border); box-shadow: var(--shadow);
+  border-left: 6px solid color-mix(in srgb, var(--kind) 70%, transparent);
+  transform-origin: 0% 100%;
+  /* morph で新しく入った吹き出しだけ動く（すでにある要素はそのまま残るので、動き直さない） */
+  animation: notice-pop .7s cubic-bezier(.3, 1.6, .5, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+/* いちばん下（ねこに近い）吹き出しにしっぽ */
+body.cat-theme .notice-bubble:last-child::before {
+  content: ""; position: absolute; left: -11px; bottom: 14px; width: 16px; height: 16px;
+  background: var(--surface); border-left: 2px solid var(--border); border-bottom: 2px solid var(--border);
+  transform: rotate(45deg);
+}
+body.cat-theme .notice-bubble.is-important {
+  border-color: color-mix(in srgb, var(--minus) 45%, var(--border));
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--minus) 14%, transparent), transparent 60%),
+    var(--surface);
+}
+body.cat-theme .notice-bubble.is-important:last-child::before { border-color: color-mix(in srgb, var(--minus) 45%, var(--border)); }
+body.cat-theme .notice-bubble-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; grid-column: 1; }
+body.cat-theme .notice-bubble-title {
+  grid-column: 1; color: var(--text); font-weight: 800; text-decoration: none; overflow-wrap: anywhere;
+}
+body.cat-theme .notice-bubble-title:hover { color: var(--accent); text-decoration: underline wavy color-mix(in srgb, var(--accent) 50%, transparent); }
+body.cat-theme .notice-close-form { grid-column: 2; grid-row: 1 / span 2; }
+body.cat-theme .notice-close {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--border); background: var(--bg); color: var(--muted); font: inherit; font-weight: 800;
+  transition: transform .2s ease, color .2s ease, border-color .2s ease;
+}
+body.cat-theme .notice-close:hover { transform: rotate(90deg) scale(1.1); color: var(--minus); border-color: var(--minus); }
+body.cat-theme .notice-more { margin-left: 10px; font-size: .85rem; font-weight: 700; }
+
+@keyframes notice-pop {
+  0% { opacity: 0; transform: translate(-10px, 12px) scale(.5); }
+  60% { opacity: 1; transform: translate(0, -3px) scale(1.04); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* ---- 小さな札 ---- */
+body.cat-theme .notice-chip {
+  display: inline-block; padding: 0 10px; border-radius: 999px; font-size: .75rem; font-weight: 800;
+  color: var(--kind); background: color-mix(in srgb, var(--kind) 16%, var(--surface));
+}
+body.cat-theme .notice-important {
+  display: inline-block; padding: 0 8px; border-radius: 999px; font-size: .75rem; font-weight: 800;
+  color: #fff; background: var(--minus);
+}
+body.cat-theme .notice-important::before { content: "❗"; margin-right: 2px; }
+body.cat-theme .notice-new {
+  display: inline-block; font-size: .7rem; font-weight: 800; letter-spacing: .06em; color: var(--accent);
+  animation: notice-new 1.6s ease-in-out infinite;
+}
+@keyframes notice-new { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+/* ---- お知らせの一覧 ---- */
+body.cat-theme .notice-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+body.cat-theme .notice-list li { animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+body.cat-theme .notice-row {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 20px; text-decoration: none; color: var(--text);
+  background: var(--surface); border: 2px solid var(--border); box-shadow: var(--shadow);
+  border-left: 6px solid color-mix(in srgb, var(--kind) 60%, transparent);
+  transition: transform .2s ease, border-color .2s ease;
+}
+body.cat-theme .notice-row:hover { transform: translateY(-3px) rotate(-.4deg); border-color: var(--kind); }
+body.cat-theme .notice-list li:not(.is-unread) .notice-row { background: color-mix(in srgb, var(--surface) 70%, var(--bg)); box-shadow: none; }
+body.cat-theme .notice-list li:not(.is-unread) .notice-row-title { font-weight: 700; color: var(--muted); }
+body.cat-theme .notice-row-icon {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; font-size: 1.4rem;
+  background: color-mix(in srgb, var(--kind) 16%, var(--surface));
+}
+body.cat-theme .notice-row-main { display: grid; gap: 2px; min-width: 0; }
+body.cat-theme .notice-row-title { font-weight: 800; overflow-wrap: anywhere; }
+body.cat-theme .notice-row-sub { color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
+body.cat-theme .notice-row-date { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+
+/* ---- お知らせの本文（お手紙） ---- */
+body.cat-theme .notice-letter-card { border-top: 8px solid color-mix(in srgb, var(--kind) 60%, transparent); animation: pop-in .5s cubic-bezier(.3, 1.4, .5, 1) both; }
+body.cat-theme .notice-letter-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+body.cat-theme .notice-letter-head h1 { margin: 4px 0 0; }
+body.cat-theme .notice-letter-head p { margin: 0; }
+body.cat-theme .notice-body {
+  padding: 14px 18px; border-radius: 16px; background: var(--bg); overflow-wrap: anywhere;
+  /* 便せんの罫線 */
+  background-image: repeating-linear-gradient(transparent 0 calc(1.6em - 1px), var(--border) calc(1.6em - 1px) 1.6em);
+  background-position: 0 14px;
+}
+body.cat-theme .notice-body p { margin: 0 0 1.6em; }
+body.cat-theme .notice-body p:last-child { margin-bottom: 0; }
+.notice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.notice-actions form { display: inline; }
+
+/* ---- 狭い画面 ---- */
+@media (max-width: 560px) {
+  body.cat-theme .notice-cat { width: 64px; }
+  body.cat-theme .notice-row { grid-template-columns: auto 1fr; }
+  body.cat-theme .notice-row-date { grid-column: 2; }
+}
+
+/* ---- 「視差効果を減らす」設定なら動きを止める（cat.css と同じ） ---- */
+@media (prefers-reduced-motion: reduce) {
+  body.cat-theme .notice-board *, body.cat-theme .notice-list *, body.cat-theme .notice-badge,
+  body.cat-theme .notice-new, body.cat-theme .notice-letter-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---- 行員の画面 ---- */
+.notice-form textarea {
+  font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); width: 100%; resize: vertical;
+}
+.notice-form input[type="datetime-local"] {
+  font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); width: 100%;
+}
+.notice-form .notice-check { display: flex; align-items: center; gap: 6px; }
+.notice-audience { border: 1px solid var(--border); border-radius: 8px; display: grid; gap: 8px; }
+.notice-audience legend { font-size: .9rem; padding: 0 4px; }
+.notice-users { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.notice-users label { display: flex; align-items: center; gap: 4px; }
+.notice-errors { margin: 0; padding-left: 28px; }
+.notice-wrap { white-space: normal !important; }
+.notice-row-actions { display: flex; gap: 6px; }
+.notice-row-actions form { display: inline; }
+.notice-status-live { color: var(--plus); }
+.notice-status-scheduled { color: var(--muted); border-style: dashed; }
+.notice-status-ended { color: var(--muted); }
+.notice-status-important { color: var(--minus); }

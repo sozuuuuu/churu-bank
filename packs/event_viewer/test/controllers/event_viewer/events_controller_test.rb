@@ -104,7 +104,7 @@ class EventViewer::EventsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "svg.ev-lanes .ev-lane", 3
-    assert_select "svg.ev-lanes .ev-lane-name", text: "#{@from} オルカ"
+    assert_select "svg.ev-lanes .ev-lane-name", text: "オルカ"
     assert_select "svg.ev-lanes .ev-dot", 4
 
     get event_viewer_lanes_path(stream: "Account$#{@from}") # 業務のストリームでなければ図は出さない

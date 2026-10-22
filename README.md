@@ -18,7 +18,8 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
   行員は `/admin/session/new`、利用者は `/session/new`
 - `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員だけ）。`/admin/counter` … 窓口（出金依頼の処理）、
   `/admin/approvals` … 承認待ち（二人承認）
-- `/res` … RES Browser（イベントストアの中身を見る。行員だけ）
+- `/admin/events` … イベントビューア（出来事を日本語で・図で見る。行員だけ。眺める出来事は `bin/rails churu:demo_events` で起こせる）。
+  `/res` … RES Browser（イベントストアの中身をそのまま見る英語の画面。行員だけ）
 - `/notices` … 銀行からのお知らせ（利用者）、`/admin/notices` … お知らせを出す・直す・掲載終了（行員）
 - `/shop` … ちゅ〜る商店（利用者の買い物）、`/shop/admin` … 商品と在庫の管理（行員）
 
@@ -40,6 +41,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/notices` | 銀行からのお知らせ・お願い・メンテナンス（ふつうの ActiveRecord）と、利用者の `/notices`・ねこの吹き出し。外から使えるのは `app/public`（`Notices::InboxHelper` / `Notices::Board` / `Notice`） | platform, customer_identity, customer_registry, ui |
 | `packs/notices_admin` | お知らせの管理 `/admin/notices`（`NoticesAdmin::`）。出す・直す・掲載終了。行員だけ | platform, notices, staff_identity, customer_registry, ui |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
+| `packs/event_viewer` | イベントビューア `/admin/events`（`EventViewer::`）。イベントを日本語で: 一覧と生中継・つながりの図・タイムマシン・レーン図。読むだけ。行員だけ | platform, banking, shop, approvals, staff_identity, customer_registry, ui |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
 - `bin/packwerk check` で、依存（`enforce_dependencies`）と非公開の参照（`enforce_privacy`、packwerk-extensions）を検査する
@@ -47,7 +49,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - パックのテストは `packs/<名前>/test`。`bin/test` でまとめて流れる
 - ルーティングも各パックの `config/routes/<名前>.rb` に書き、`config/routes.rb` から `draw :<名前>` で読む
 - admin と customer は互いに依存しない。銀行は `Customer` も `Staff` も知らない（口座番号だけでつながる）
-- **画面のパックは staff_identity か customer_identity の片方にだけ依存する**（行員の画面: admin / shop_admin / notices_admin、
+- **画面のパックは staff_identity か customer_identity の片方にだけ依存する**（行員の画面: admin / shop_admin / notices_admin / event_viewer、
   利用者の画面: customer / shop / notices）。宣言していない側の `StaffAuthentication` / `CustomerAuthentication` を使えば
   `bin/packwerk check` が依存違反にする。両方を宣言しないといけなくなったら、画面を分けてパックも分けるしるし（shop_admin / notices_admin がそう）
 - 画面のパック（admin / customer / shop など）は、ベースコントローラで `helper Ui::FormatHelper` して packs/ui に依存する。
@@ -524,6 +526,74 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_account","arguments":{"account_number":"0000001"}}}'
 ```
 
+## イベントビューア（packs/event_viewer、TODO の R）
+
+`/admin/events`（行員だけ。管理画面のメニューの「イベント」）。英語の RES Browser（`/res`）の代わりに、イベントストアの中身を
+**日本語で・目で見て**たどる画面。読むだけで、何も書き込まない。英語の RES Browser は右上の「詳しく見る（英語）」に残してある。
+
+```bash
+bin/rails churu:demo_events   # 眺めるための出来事を一通り起こす（db:seed のあとで。流すたびに1組増える）
+```
+
+デモの出来事（`db/demo_events.rb`）: 窓口での入金・起算日を3日さかのぼった入金・振込・凍結中の口座への振込（組戻し）・凍結の解除（二人承認）・
+高額振込の保留を通す・お買いもの（完了 / 在庫が足りず返金 / 残高が足りず支払いの失敗）・出金依頼（出金 / お断り）・入金の取消（二人承認）・利息。
+ジョブはその場で動かす（inline）ので、流し終わったときには振込の入金や商店の引き当てまでそろっている。
+
+### 使い方
+
+| 画面 | 場所 | できること |
+|---|---|---|
+| 一覧と生中継 | `/admin/events` | 新しい順の一覧。出来事の名前（「振込の引き落とし」など）・種類の色とアイコン・入れ物（「口座 0000001（オルカ）」「振込 #c49f」）・金額や相手・だれが（「窓口のたま（行員）」）。**新しい出来事が上から1件ずつふわっと流れてくる**（「止める」でためておき、「再開する」で順に流す）。種類・口座・日付で絞り込める（絞り込み中は生中継しない） |
+| 1件の中身 | `/admin/events/:id` | 中身（data）と付帯情報（metadata）を日本語の項目名で表に（金額は「120 ちゅ〜る」、口座は名義つき、だれは名前、ほかの出来事・振込・注文はリンク。元の英語の項目名は小さく右に）。入っているストリーム（もともとの入れ物 / リンク） |
+| つながりの図 | 1件の中身の下 | その出来事と**ひとつながりの出来事**を、上から下へ時間の順に。同じ処理で書いた出来事を枠で囲み、きっかけ（causation_id）でつながるたびに1列右へずらす。「再生」で起きた順に1つずつ光る。出来事をクリックするとその出来事へ |
+| タイムマシン | `/admin/events/time_machine` | 口座を選び、つまみ（何件目まで足すか）を動かすと、その出来事まで足し合わせた残高・状態・通帳。「コマ送り」で1件ずつ足していき、残高の数字がその場で変わる。上に足し算（0 ＋300 −50 … = 残高）。**起算日の順 / 記帳日の順**を切り替えられる |
+| レーン図 | `/admin/events/lanes` | 振込・注文・出金依頼・二人承認を1つ選ぶと、かかわった入れ物（振込元の口座・振込・振込先の口座・注文・商店の口座・商品 …）を横に並べ、出来事を時間の順に矢印でつなぐ。「再生」もある |
+
+### イベントソーシングの見どころ（何を見ると何が分かるか）
+
+- **残高は「出来事を順に足し合わせた結果」**（タイムマシン）: 読み取りモデル（`accounts.balance`）を見ずに、口座の出来事を1件目から足すと、
+  いまの残高とぴったり同じになる。つまみを戻せば、どの時点の残高にも戻れる。消したり書き換えたりしないから、過去がそのまま残っている
+- **取消も「逆向きの出来事」**（一覧・タイムマシン）: 入金の取消は、元の入金を消さずに「入金の取消」（−100）を足す。通帳には両方が残る
+- **起算日と記帳日**（タイムマシンの切り替え）: デモの「3日前の持ち込み分」は、記帳日の順だと記帳したところに、起算日の順だと3日前（口座の開設より前！）に来る。
+  どちらの順で足しても、いまの残高は同じ。「本当はいつのことか」と「銀行がいつ知ったか」は別の時間
+- **1回の操作がいくつもの入れ物に書かれる**（レーン図）: 振込1件で、振込元の口座（引き落とし）・振込（受付・完了）・振込先の口座（入金）の3つの入れ物に出来事が入る。
+  口座の出来事は振込の入れ物にもリンクしてあるので、どちらからでもたどれる
+- **ジョブが出来事を受けて続きをする（プロセスマネージャ）**（つながりの図）: 振込の受付の処理（利用者）→ きっかけの矢印 → 振込の処理（自動）が入金と完了。
+  お買いものなら さらに → 商店の支払いの処理（自動）が引き当て・完了、在庫が足りなければ返金の振込 → 振込の処理 → 返金の完了…と、**右へ右へ階段になる**。
+  これが correlation_id（ひとつながりの番号）と causation_id（きっかけの出来事）
+- **人があとで操作した続き**（点線の「そのあと」）: 高額振込の保留を行員が「通す」、出金依頼を窓口で処理する、二人承認で別の行員が承認する、は
+  きっかけ（causation_id）の記録がない（人がボタンを押したから）。同じ振込・依頼・申請の入れ物でつながっていることを点線で描く
+- **同じトランザクション**（枠）: 「振込の引き落とし」と「振込の受付」、「入金の取消」「承認」「承認した操作の実行」は同じ処理の中で書かれ、全部書けるか全部書けないか
+- **補償（あとから打ち消す）**: 凍結中の口座への振込は、いったん引き落としてから「払い戻し」と「失敗」。在庫切れの注文は、支払いのあとで「キャンセル」と「返金」。
+  先に止めるのではなく、起きたことを打ち消す出来事を足して整える
+
+### しくみ
+
+| 部品 | 中身 |
+|---|---|
+| `EventViewer::Catalog` | イベントの日本語の名前・種類（入金・出金・振込の手続き・止める・通す・依頼と承認・商店・口座。色とアイコン）・ひとこと説明、中身の項目名。**新しいイベントを足したらここにも1行**（`catalog_test` が全イベント分あるかを確かめる）。各パックの公開のイベント一覧（`Banking::Events` など）を定数で引く |
+| `EventViewer::Names` | ストリーム名・口座番号・actor を日本語に（`Account$0000001` → 口座 0000001（オルカ）、`staff:1` → 窓口のたま（行員）、`transfer-settlement` → 振込の処理（自動））。名義は公開の読み取りモデル（`Account`・`ShopProduct`）と台帳（`Staff`・`Customer`）から |
+| `EventViewer::EventIndex` | イベントストアの全部を `event_store.read` で1回読み、correlation_id・業務の ID（振込ID・注文ID・出金依頼ID・申請ID）で引ける索引にする |
+| `EventViewer::Flow` | 1つの出来事から「ひとつながり」を集める: 同じ correlation_id、causation_id の先、同じ業務の ID をもつ出来事（口座と商品の入れ物は出来事が多すぎるのでたどらない）。それを「処理」（同じ actor・同じきっかけ・0.5 秒以内に続けて書かれたもの。ふつうは1トランザクションの目安。RES はトランザクションの区切りを残さない）に分け、きっかけ（:cause）・そのあと（:then）・同じ処理の中（:same）でつなぐ |
+| `EventViewer::Diagram` | つながりの図（Tree）とレーン図（Lanes）の座標と線。SVG は ERB で自分で描く（外部の図のライブラリは使わない） |
+| `EventViewer::TimeMachine` | 口座の入れ物を `read.stream(...).as_of` / `.as_at` で読み、`Banking::Events.balance_delta` で1件ずつ足す（`Banking::Statement` と同じ考え方を、1件ごとに） |
+| `EventViewer::LiveJob` | 生中継。`subscribe_to_all_events` の非同期ハンドラ（コミット後に Solid Queue）で、一覧の1行を Turbo Stream（prepend）で配信。購読は `staff_stream_from`（行員の接続だけ） |
+| Stimulus（`controllers/event_viewer/*`） | `live`（届いた行を `turbo:before-stream-render` で横取りし、ためておいて1件ずつ入れる・止める・再開）、`playback`（data-step の順に光らせる）、`time_machine`（つまみ・コマ送り・残高の数字）。`prefers-reduced-motion` なら動きを止める |
+
+- 組み込みブラウザのペインが隠れていると requestAnimationFrame が止まり、Turbo Stream の描画が止まる（生中継が流れてこない）。アプリの不具合ではない（ペインを表に出すと動く）
+- 同じホスト名だと Cookie はポートを区別しないので、別の作業ディレクトリのサーバー（3000 番と 3001 番）を `localhost` で同時に開くとセッションがぶつかって CSRF で弾かれる。片方を `127.0.0.1` で開く
+
+### パッケージの境目と、公開されていなくて困ったこと
+
+- 依存は banking・shop・approvals（公開のイベント一覧と読み取りモデル）、staff_identity（行員だけ）、customer_registry（actor の名前）、ui。だれもこのパックに依存しない（管理画面のメニューはルート名のリンク1つ）
+- **ストリーム名の作り方が非公開**: `Banking::Account.stream_name` などは銀行のパックの非公開のクラスにあるので、`"Account$#{番号}"` を文字列で書いている（`Catalog.home_stream`・`TimeMachine`・`Search`）。
+  銀行が名前を変えたらずれる。直すなら、銀行の `app/public` に「ストリーム名の一覧」（例 `Banking::Streams.account(number)` / `.transfer(id)`）を公開する。商店（`Order$`・`Product$`）・二人承認（`Approval$`）も同じ
+- **correlation_id で引けない**: RES の読み取り API に correlation_id での検索がないので、全部を読んで手元で引いている（学習用の小さなストアなら足りる）。
+  大きくなったら、イベントストア本体（ルートの `config/initializers/event_store.rb`）で RES の `RubyEventStore::LinkByCorrelationId` / `LinkByCausationId` を購読して
+  `$by_correlation_id_<id>` の入れ物にリンクし、それを読む。リンクは書き込みなので、このパックではなくイベントストアの持ち主（ルート）でやる。過去の分は1回流し直しが要る
+- **actor の名前**: 管理画面の `Admin::ActorsHelper`（非公開）と同じことを `EventViewer::Names` でもしている（自動の処理の名前も足した）。
+  ほかでも要るようになったら、actor の文字列 → 名前を staff_identity / customer_registry の公開の部品にする
+
 ## TODO
 
 | # | やること | 先に必要 | 主な場所 |
@@ -545,7 +615,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | ~~O~~ | ~~管理画面に取消・組戻し・利息の手動実行のボタン~~（済。「管理画面での取消・組戻し・利息」） | F, G | `packs/admin` |
 | P | 利用者画面に銀行からのお知らせ・お願い・キャンペーン（**お知らせ・お願いは済**。キャンペーン = 条件を満たすと特典が自動入金、は未） | C, N（キャンペーンは L） | `packs/notices`（キャンペーンは新しいパック） |
 | Q | 行員の権限を本物の銀行に寄せる。~~**Q0** 行員と利用者の完全な分離: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける~~（済。「認証と権限」）。~~Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）~~（**済**）。~~Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」~~（**済**。どちらも「行員の権限: 窓口取引と二人承認」）。~~Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる~~（**済**。「予約振込・高額振込の保留・取消と差し止め」） | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
-| R | 日本語のイベントビューア（RES Browser の代わり）: イベント名・ストリーム名を日本語に、中身を表で、correlation / causation の連鎖を図で。管理画面の中、行員だけ | Q0 | 新しいパック（例 `packs/event_viewer`） |
+| ~~R~~ | ~~日本語のイベントビューア（RES Browser の代わり）: イベント名・ストリーム名を日本語に、中身を表で、correlation / causation の連鎖を図で。管理画面の中、行員だけ~~（済。「イベントビューア」。生中継・タイムマシン・レーン図も） | Q0 | `packs/event_viewer` |
 | S | WebSocket（Action Cable）を自分で書く: 窓口の整理券（番号札を取ると順番がライブで進み、呼ばれたらねこが知らせる）と、利用者と行員の窓口チャット（入力中の表示・在席表示）。自作チャンネル・presence・双方向。Q1 の窓口取引とつなげる | Q0, Q1 | 新しいパック（例 `packs/counter`） |
 | T | デビットカード決済（二段階）: 商店での購入はまずオーソリ（お金を押さえる）→ 発送で売上確定 → キャンセルなら押さえを解除。残高と「使えるお金」を分ける。押さえの期限切れはジョブで解除 | D, Q0 | `packs/banking`（カード）・`packs/shop`（支払い） |
 | U | 為替・外貨預金: 「ちゅ〜る ⇄ かつおぶし」など別の通貨の口座と両替。レートは数秒ごとに動き、WebSocket（Action Cable）で配信。両替の端数・手数料 | S | 新しいパック（例 `packs/fx`） |

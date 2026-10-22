@@ -10,13 +10,10 @@ export default class extends Controller {
   static targets = ["balance", "status", "count", "when", "slider", "row", "result", "play"]
   static values = { position: Number }
 
-  connect() {
-    this.shown = this.balanceAt(this.positionValue)
-  }
-
   disconnect() {
     this.pause()
     cancelAnimationFrame(this.frame)
+    clearTimeout(this.settle)
   }
 
   positionValueChanged(position) {
@@ -78,9 +75,15 @@ export default class extends Controller {
     this.shown = to
     this.resultTarget.textContent = to.toLocaleString("ja-JP")
     cancelAnimationFrame(this.frame)
+    clearTimeout(this.settle)
     if (from !== to) this.bump(to > from ? "up" : "down")
     if (prefersReducedMotion() || from === to) return this.render(to)
 
+    // 画面が描かれていない（タブが裏にある）と requestAnimationFrame が来ないので、少しあとに必ず最後の値にする
+    this.settle = setTimeout(() => {
+      cancelAnimationFrame(this.frame)
+      this.render(to)
+    }, 600)
     const start = performance.now()
     const tick = (now) => {
       const t = Math.min((now - start) / 450, 1)

@@ -95,7 +95,7 @@ module EventViewer
         end
         by_id = @nodes.index_by { it.event.event_id }
         @edges = flow.links.map { edge(by_id.fetch(it.from), by_id.fetch(it.to), it.kind) }
-        @width = PAD_LEFT + @lanes.size * LANE_W + 8
+        @width = PAD_LEFT + @lanes.size * LANE_W + 50 # 右端のレーンの字がはみ出す分
         @height = HEAD_H + 26 + @nodes.size * ROW
       end
 

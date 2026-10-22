@@ -40,11 +40,11 @@ module EventViewer
       end
     end
 
-    # レーン図の見出し: [種類, 名前]
+    # レーン図の見出しの2行: [上の段（種類と番号）, 下の段（名前）]
     def stream_parts(name)
       kind, id = name.to_s.split("$", 2)
       case kind
-      when "Account" then [ "口座", [ id, holder(id) ].compact.join(" ") ]
+      when "Account" then [ "口座 #{id}", holder(id) || id ]
       when "Product" then [ "商品", products[id] || id ]
       when "Shop" then [ "商店", "ちゅ〜る商店" ]
       when *STREAM_KINDS.keys then [ STREAM_KINDS.fetch(kind), short(id) ]

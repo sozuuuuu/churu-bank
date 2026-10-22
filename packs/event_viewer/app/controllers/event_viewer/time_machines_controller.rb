@@ -5,7 +5,7 @@ module EventViewer
       @accounts = ::Account.order(:number)
       number = params[:account].presence || @accounts.first&.number
       @account = @accounts.find { it.number == number }
-      @machine = TimeMachine.new(@account.number, basis: params[:basis]) if @account
+      @machine = EventLens::TimeMachine.new(@account.number, basis: params[:basis]) if @account
     end
   end
 end

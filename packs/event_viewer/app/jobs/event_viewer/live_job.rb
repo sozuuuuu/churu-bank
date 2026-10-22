@@ -11,8 +11,8 @@ module EventViewer
     queue_as :default
 
     def perform(event)
-      html = EventViewer::EventsController.render(partial: "event_viewer/events/event",
-                                                  locals: { event:, names: Names.new })
+      html = EventViewer::EventsController.render(partial: "event_lens/event",
+                                                  locals: { event:, names: ApplicationController.names })
       Turbo::StreamsChannel.broadcast_prepend_to(STREAM, target: TARGET, html:)
     end
   end

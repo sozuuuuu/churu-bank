@@ -7,4 +7,4 @@ pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
 # パックの Stimulus（読み込み先は各パックの config/initializers/assets.rb で足している）。識別子は notices--inbox など
 pin_all_from "packs/notices/app/javascript/controllers/notices", under: "controllers/notices"
-pin_all_from "packs/event_viewer/app/javascript/controllers/event_viewer", under: "controllers/event_viewer"
+pin_all_from "packs/event_lens/app/javascript/controllers/event_lens", under: "controllers/event_lens"

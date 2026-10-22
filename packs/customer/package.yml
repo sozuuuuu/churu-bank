@@ -1,5 +1,7 @@
 # 利用者画面（/）。利用者としてログインした人（packs/customer_identity）が、自分の口座だけを見て、自分の口座から振り込める。
 # 出金は依頼を出すだけ（行員が窓口で処理）。入金と凍結は行員だけ（packs/admin）。銀行からのお知らせは packs/notices の部品（notices_inbox）をレイアウトに1か所差し込む
+# わたしの出来事（/events、MyEvents::）は自分の口座にかかわる出来事だけを見る画面で、表示の部品は packs/event_lens（行員の画面と共通）。
+# 自分の注文の出来事を見分けるのに商店の読み取りモデル（ShopOrder）、生中継を送る相手（口座の持ち主）に顧客台帳（Customer.owning）を使う
 enforce_dependencies: true
 enforce_privacy: false
 
@@ -7,5 +9,8 @@ dependencies:
   - packs/platform
   - packs/banking
   - packs/customer_identity
+  - packs/customer_registry
   - packs/ui
   - packs/notices
+  - packs/event_lens
+  - packs/shop

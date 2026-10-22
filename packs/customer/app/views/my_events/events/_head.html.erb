@@ -1,0 +1,6 @@
+<%# わたしの出来事の共通: 部品の CSS（ねこテーマの上でも同じ部品が描ける）と、中のメニュー %>
+<% content_for :head, stylesheet_link_tag("event_lens/event_lens", "data-turbo-track": "dynamic") %>
+<nav class="my-events-tabs" aria-label="わたしの出来事の中のメニュー">
+  <%= link_to events_path, class: "button small#{" primary" if action_name != "time_machine"}" do %><%= icon(:bell, size: 16) %> 出来事のならび<% end %>
+  <%= link_to event_time_machine_path, class: "button small#{" primary" if action_name == "time_machine"}" do %><%= icon(:clock, size: 16) %> タイムマシン<% end %>
+</nav>

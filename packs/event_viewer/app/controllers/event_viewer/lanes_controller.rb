@@ -10,10 +10,10 @@ module EventViewer
       @approvals = ::ApprovalRequest.order(id: :desc).limit(RECENT)
       @stream = params[:stream].presence
       @stream ||= "Transfer$#{@transfers.first.transfer_id}" if @transfers.any?
-      return unless @stream&.match?(EventIndex::BUSINESS)
+      return unless @stream&.match?(EventLens::EventIndex::BUSINESS)
 
-      @flow = Flow.of_stream(@stream)
-    rescue Flow::NotFound
+      @flow = EventLens::Flow.of_stream(@stream)
+    rescue EventLens::Flow::NotFound
       @flow = nil
     end
   end

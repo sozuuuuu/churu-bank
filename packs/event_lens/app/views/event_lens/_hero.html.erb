@@ -1,0 +1,18 @@
+<%# 1件の出来事の見出し（日本語の名前・種類の色・いつ・だれが・何番目）。event と flow（EventLens::Flow） %>
+<% entry = event_entry(event) %>
+<section class="card ev-hero <%= kind_class(entry.kind) %>">
+  <span class="ev-hero-icon"><%= icon(entry.icon, size: 34) %></span>
+  <div>
+    <p class="ev-hero-kind"><%= entry.kind_label %></p>
+    <h1><%= entry.label %></h1>
+    <p class="muted"><%= entry.description %></p>
+  </div>
+  <dl class="ev-hero-facts">
+    <div><dt>いつ（記帳）</dt><dd><%= l_time(event.timestamp) %></dd></div>
+    <% if event.valid_at.to_i != event.timestamp.to_i %>
+      <div class="backdated"><dt>本当はいつ（起算）</dt><dd><%= l_time(event.valid_at) %></dd></div>
+    <% end %>
+    <div><dt>だれが</dt><dd><%= names.actor(event.metadata[:actor]) %></dd></div>
+    <div><dt>番号</dt><dd><%= flow.position(event) %> 番目の出来事</dd></div>
+  </dl>
+</section>

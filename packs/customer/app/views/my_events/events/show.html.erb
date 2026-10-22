@@ -1,0 +1,16 @@
+<% entry = event_entry(@event) %>
+<% content_for :title, "#{entry.label} | わたしの出来事 | ちゅーる銀行" %>
+<% cat_says "これは「#{entry.label}」の出来事にゃ。下の図は、この出来事のきっかけと、そのあとに続いた出来事を線でつないだものにゃ。「再生」を押すと、起きた順に光るにゃ。" %>
+
+<%= render "my_events/events/head" %>
+
+<%= render "event_lens/hero", event: @event, flow: @flow %>
+<%= render "event_lens/fields", event: @event, metadata_keys: MyEvents::EventsController::METADATA_KEYS,
+                                 data_title: "中身", metadata_title: "いつ・だれが・どこから" %>
+
+<section class="card" id="flow">
+  <h2><%= icon(:send, size: 22) %><span class="marker">つながりの図</span></h2>
+  <p class="muted small">きみの口座にかかわる、ひとつながりの出来事（<%= @flow.events.size %> 件）。上から下へ時間が進みます。
+    右へずれていくのは、前の出来事を受けて、銀行や商店の自動の処理が続きをしたしるしです。</p>
+  <%= render "event_lens/tree", flow: @flow %>
+</section>

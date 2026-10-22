@@ -8,7 +8,7 @@
 
 <%= form_with url: event_viewer_events_path, method: :get, class: "ev-filters card", data: { turbo_action: "advance" } do |f| %>
   <label>種類
-    <%= f.select :kind, EventViewer::Catalog::KINDS.values.map { [ it.label, it.key ] }, { include_blank: "すべて", selected: @search.kind } %>
+    <%= f.select :kind, EventLens::Catalog::KINDS.values.map { [ it.label, it.key ] }, { include_blank: "すべて", selected: @search.kind } %>
   </label>
   <label>口座
     <%= f.select :account, @accounts.map { [ "#{it.number}（#{it.holder_name}）", it.number ] }, { include_blank: "すべて", selected: @search.account } %>
@@ -25,20 +25,20 @@
 <% if @search.filtered? || @search.before %>
   <p class="muted small">絞り込み中・前のページを見ているあいだは、生中継を止めています。</p>
   <ul class="ev-list" id="event_viewer_list">
-    <%= render partial: "event_viewer/events/event", collection: @search.events, as: :event, locals: { names: } %>
+    <%= render partial: "event_lens/event", collection: @search.events, as: :event, locals: { names: } %>
   </ul>
 <% else %>
   <%= staff_stream_from EventViewer::LiveJob::STREAM %>
-  <section class="ev-live" data-controller="event-viewer--live">
+  <section class="ev-live" data-controller="event-lens--live">
     <div class="ev-live-bar">
-      <span class="ev-live-dot" data-event-viewer--live-target="dot" aria-hidden="true"></span>
-      <strong data-event-viewer--live-target="status">生中継中</strong>
+      <span class="ev-live-dot" data-event-lens--live-target="dot" aria-hidden="true"></span>
+      <strong data-event-lens--live-target="status">生中継中</strong>
       <span class="muted small">新しい出来事が上から1件ずつ流れてきます</span>
-      <span class="ev-live-pending" data-event-viewer--live-target="pending" hidden></span>
-      <button type="button" class="button small" data-event-viewer--live-target="toggle" data-action="event-viewer--live#toggle">止める</button>
+      <span class="ev-live-pending" data-event-lens--live-target="pending" hidden></span>
+      <button type="button" class="button small" data-event-lens--live-target="toggle" data-action="event-lens--live#toggle">止める</button>
     </div>
-    <ul class="ev-list" id="<%= EventViewer::LiveJob::TARGET %>" data-event-viewer--live-target="list" aria-live="polite">
-      <%= render partial: "event_viewer/events/event", collection: @search.events, as: :event, locals: { names: } %>
+    <ul class="ev-list" id="<%= EventViewer::LiveJob::TARGET %>" data-event-lens--live-target="list" aria-live="polite">
+      <%= render partial: "event_lens/event", collection: @search.events, as: :event, locals: { names: } %>
     </ul>
   </section>
 <% end %>

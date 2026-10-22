@@ -16,7 +16,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - ログイン: 開発用のアカウントは `db/seeds.rb`（行員の たま・くろ と、利用者のオルカ・ジンジベル・ミケ）。
   **行員と利用者はアカウントもログイン画面も別**。どちらも学習用なのでパスワードなしで、ドロップダウンで選んで入るだけ:
   行員は `/admin/session/new`、利用者は `/session/new`
-- `/` … 利用者画面（自分の口座だけ）、`/admin` … 管理画面（行員だけ）。`/admin/counter` … 窓口（出金依頼の処理）、
+- `/` … 利用者画面（自分の口座だけ。`/events` … わたしの出来事）、`/admin` … 管理画面（行員だけ）。`/admin/counter` … 窓口（出金依頼の処理）、
   `/admin/approvals` … 承認待ち（二人承認）
 - `/admin/events` … イベントビューア（出来事を日本語で・図で見る。行員だけ。眺める出来事は `bin/rails churu:demo_events` で起こせる）。
   `/res` … RES Browser（イベントストアの中身をそのまま見る英語の画面。行員だけ）
@@ -32,7 +32,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/customer_identity` | **利用者のログイン**（`/session`、ねこテーマ）。セッション、`CustomerAuthentication`・`CustomerHelper`・`CustomerStreamsChannel` を公開 | platform, customer_registry, ui |
 | `packs/customer_registry` | **顧客台帳**: 利用者 `Customer` と口座のひも付け（`account_ownerships`）。ログインのしくみは持たない。公開は `Customer` だけ | platform |
 | `packs/admin` | 管理画面 `/admin`（`Admin::`）。全口座の開設・入金（現金の持ち込み）・振込・凍結、窓口（出金依頼の処理）、振込一覧、取消・組戻し・凍結の解除の申請と承認待ち、利息。行員だけ | platform, banking, approvals, staff_identity, customer_registry, ui |
-| `packs/customer` | 利用者画面 `/`（`Netbank::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込と出金の依頼。お知らせはレイアウトで `notices_inbox` を1回呼ぶだけ | platform, banking, customer_identity, ui, notices |
+| `packs/customer` | 利用者画面 `/`（`Netbank::`）。自分の口座の一覧・通帳・時点残高、自分の口座からの振込と出金の依頼。お知らせはレイアウトで `notices_inbox` を1回呼ぶだけ。わたしの出来事 `/events`（`MyEvents::`。自分の口座にかかわるイベントだけ） | platform, banking, customer_identity, customer_registry, ui, notices, event_lens, shop |
 | `packs/banking` | 銀行ドメイン（口座・振込・出金依頼）。外から使えるのは `app/public` だけ（`Banking::Bank` ほか） | platform |
 | `packs/approvals` | **二人承認**: 取消・組戻し・凍結の解除の「申請 → 別の行員が承認 → 実行」（却下・取り下げ）。外から使えるのは `app/public`（`Approvals::Desk` / `Approvals::Events` / `ApprovalRequest`） | platform, banking |
 | `packs/shop` | ちゅ〜る商店（商品・在庫・注文）と、利用者の買い物の画面 `/shop`。外から使えるのは `app/public` だけ（`Shop::Store` ほか） | platform, banking, customer_identity, ui |
@@ -41,7 +41,8 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/notices` | 銀行からのお知らせ・お願い・メンテナンス（ふつうの ActiveRecord）と、利用者の `/notices`・ねこの吹き出し。外から使えるのは `app/public`（`Notices::InboxHelper` / `Notices::Board` / `Notice`） | platform, customer_identity, customer_registry, ui |
 | `packs/notices_admin` | お知らせの管理 `/admin/notices`（`NoticesAdmin::`）。出す・直す・掲載終了。行員だけ | platform, notices, staff_identity, customer_registry, ui |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
-| `packs/event_viewer` | イベントビューア `/admin/events`（`EventViewer::`）。イベントを日本語で: 一覧と生中継・つながりの図・タイムマシン・レーン図。読むだけ。行員だけ | platform, banking, shop, approvals, staff_identity, customer_registry, ui |
+| `packs/event_viewer` | イベントビューア `/admin/events`（`EventViewer::`）。イベントを日本語で: 一覧と生中継・つながりの図・タイムマシン・レーン図。読むだけ。行員だけ | platform, event_lens, banking, shop, approvals, staff_identity, customer_registry, ui |
+| `packs/event_lens` | イベントを読み解く部品（`EventLens::`）: 日本語の名前・つながりの図・タイムマシン・表示の部品・Stimulus・CSS。行員の画面と利用者の画面が共通で使う。どちらのログインにも依存しない | platform, banking, shop, approvals, ui |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
 - `bin/packwerk check` で、依存（`enforce_dependencies`）と非公開の参照（`enforce_privacy`、packwerk-extensions）を検査する
@@ -571,28 +572,54 @@ bin/rails churu:demo_events   # 眺めるための出来事を一通り起こす
 
 | 部品 | 中身 |
 |---|---|
-| `EventViewer::Catalog` | イベントの日本語の名前・種類（入金・出金・振込の手続き・止める・通す・依頼と承認・商店・口座。色とアイコン）・ひとこと説明、中身の項目名。**新しいイベントを足したらここにも1行**（`catalog_test` が全イベント分あるかを確かめる）。各パックの公開のイベント一覧（`Banking::Events` など）を定数で引く |
-| `EventViewer::Names` | ストリーム名・口座番号・actor を日本語に（`Account$0000001` → 口座 0000001（オルカ）、`staff:1` → 窓口のたま（行員）、`transfer-settlement` → 振込の処理（自動））。名義は公開の読み取りモデル（`Account`・`ShopProduct`）と台帳（`Staff`・`Customer`）から |
-| `EventViewer::EventIndex` | イベントストアの全部を `event_store.read` で1回読み、correlation_id・業務の ID（振込ID・注文ID・出金依頼ID・申請ID）で引ける索引にする |
-| `EventViewer::Flow` | 1つの出来事から「ひとつながり」を集める: 同じ correlation_id、causation_id の先、同じ業務の ID をもつ出来事（口座と商品の入れ物は出来事が多すぎるのでたどらない）。それを「処理」（同じ actor・同じきっかけ・0.5 秒以内に続けて書かれたもの。ふつうは1トランザクションの目安。RES はトランザクションの区切りを残さない）に分け、きっかけ（:cause）・そのあと（:then）・同じ処理の中（:same）でつなぐ |
-| `EventViewer::Diagram` | つながりの図（Tree）とレーン図（Lanes）の座標と線。SVG は ERB で自分で描く（外部の図のライブラリは使わない） |
-| `EventViewer::TimeMachine` | 口座の入れ物を `read.stream(...).as_of` / `.as_at` で読み、`Banking::Events.balance_delta` で1件ずつ足す（`Banking::Statement` と同じ考え方を、1件ごとに） |
+| `EventLens::Catalog` | イベントの日本語の名前・種類（入金・出金・振込の手続き・止める・通す・依頼と承認・商店・口座。色とアイコン）・ひとこと説明、中身の項目名。**新しいイベントを足したらここにも1行**（`catalog_test` が全イベント分あるかを確かめる）。各パックの公開のイベント一覧（`Banking::Events` など）を定数で引く |
+| `EventLens::Names` | ストリーム名・口座番号・actor を日本語に（`Account$0000001` → 口座 0000001（オルカ）、`staff:1` → 窓口のたま（行員）、`transfer-settlement` → 振込の処理（自動））。名義は公開の読み取りモデル（`Account`・`ShopProduct`）から。人の名前は見る画面が渡す（行員の画面は全員、利用者の画面は本人だけ。ほかは「銀行の行員」「ほかのお客さま」） |
+| `EventLens::EventIndex` | イベントストアの全部を `event_store.read` で1回読み、correlation_id・業務の ID（振込ID・注文ID・出金依頼ID・申請ID）で引ける索引にする |
+| `EventLens::Flow` | 1つの出来事から「ひとつながり」を集める: 同じ correlation_id、causation_id の先、同じ業務の ID をもつ出来事（口座と商品の入れ物は出来事が多すぎるのでたどらない）。それを「処理」（同じ actor・同じきっかけ・0.5 秒以内に続けて書かれたもの。ふつうは1トランザクションの目安。RES はトランザクションの区切りを残さない）に分け、きっかけ（:cause）・そのあと（:then）・同じ処理の中（:same）でつなぐ |
+| `EventLens::Diagram` | つながりの図（Tree）とレーン図（Lanes）の座標と線。SVG は ERB で自分で描く（外部の図のライブラリは使わない） |
+| `EventLens::TimeMachine` | 口座の入れ物を `read.stream(...).as_of` / `.as_at` で読み、`Banking::Events.balance_delta` で1件ずつ足す（`Banking::Statement` と同じ考え方を、1件ごとに） |
 | `EventViewer::LiveJob` | 生中継。`subscribe_to_all_events` の非同期ハンドラ（コミット後に Solid Queue）で、一覧の1行を Turbo Stream（prepend）で配信。購読は `staff_stream_from`（行員の接続だけ） |
-| Stimulus（`controllers/event_viewer/*`） | `live`（届いた行を `turbo:before-stream-render` で横取りし、ためておいて1件ずつ入れる・止める・再開）、`playback`（data-step の順に光らせる）、`time_machine`（つまみ・コマ送り・残高の数字）。`prefers-reduced-motion` なら動きを止める |
+| `EventLens::EventsHelper` と `app/views/event_lens/*` | 表示の部品（一覧の1行・見出し・中身の表・つながりの図・レーン図・タイムマシン）。リンク先は画面ごとにちがうので、使う画面が `lens_event_path` / `lens_lanes_path` / `lens_time_machine_path` と `names` をヘルパーで用意する（リンクしないなら nil） |
+| Stimulus（`controllers/event_lens/*`） | `live`（届いた行を `turbo:before-stream-render` で横取りし、ためておいて1件ずつ入れる・止める・再開）、`playback`（data-step の順に光らせる）、`time_machine`（つまみ・コマ送り・残高の数字）。`prefers-reduced-motion` なら動きを止める |
 
 - 組み込みブラウザのペインが隠れていると requestAnimationFrame が止まり、Turbo Stream の描画が止まる（生中継が流れてこない）。アプリの不具合ではない（ペインを表に出すと動く）
 - 同じホスト名だと Cookie はポートを区別しないので、別の作業ディレクトリのサーバー（3000 番と 3001 番）を `localhost` で同時に開くとセッションがぶつかって CSRF で弾かれる。片方を `127.0.0.1` で開く
 
 ### パッケージの境目と、公開されていなくて困ったこと
 
-- 依存は banking・shop・approvals（公開のイベント一覧と読み取りモデル）、staff_identity（行員だけ）、customer_registry（actor の名前）、ui。だれもこのパックに依存しない（管理画面のメニューはルート名のリンク1つ）
+- **部品（packs/event_lens）と画面（packs/event_viewer・packs/customer）を分けた**: 利用者にも出来事の画面を作るとき、行員の画面のパックに部品があると、利用者の画面がそれに依存して行員のログイン（staff_identity）までつながってしまう。「画面のパックは片方のログインにだけ依存する」を守るため、ログインに依存しない部品のパックを作り、両方の画面がそれを使う。部品は「だれが見ているか」を知らず、人の名前とリンク先は画面が渡す
+- event_lens の依存は banking・shop・approvals（公開のイベント一覧と読み取りモデル）と ui。event_viewer は加えて staff_identity（行員だけ）と customer_registry（利用者の名前）。だれも event_viewer に依存しない（管理画面のメニューはルート名のリンク1つ）
 - **ストリーム名の作り方が非公開**: `Banking::Account.stream_name` などは銀行のパックの非公開のクラスにあるので、`"Account$#{番号}"` を文字列で書いている（`Catalog.home_stream`・`TimeMachine`・`Search`）。
   銀行が名前を変えたらずれる。直すなら、銀行の `app/public` に「ストリーム名の一覧」（例 `Banking::Streams.account(number)` / `.transfer(id)`）を公開する。商店（`Order$`・`Product$`）・二人承認（`Approval$`）も同じ
 - **correlation_id で引けない**: RES の読み取り API に correlation_id での検索がないので、全部を読んで手元で引いている（学習用の小さなストアなら足りる）。
   大きくなったら、イベントストア本体（ルートの `config/initializers/event_store.rb`）で RES の `RubyEventStore::LinkByCorrelationId` / `LinkByCausationId` を購読して
   `$by_correlation_id_<id>` の入れ物にリンクし、それを読む。リンクは書き込みなので、このパックではなくイベントストアの持ち主（ルート）でやる。過去の分は1回流し直しが要る
-- **actor の名前**: 管理画面の `Admin::ActorsHelper`（非公開）と同じことを `EventViewer::Names` でもしている（自動の処理の名前も足した）。
+- **actor の名前**: 管理画面の `Admin::ActorsHelper`（非公開）と同じことを `EventViewer::ApplicationController.names`（`EventLens::Names` に名前を渡す）でもしている（自動の処理の名前も足した）。
   ほかでも要るようになったら、actor の文字列 → 名前を staff_identity / customer_registry の公開の部品にする
+
+### 利用者の「わたしの出来事」（/events）
+
+利用者画面のメニューの「わたしの出来事」。行員の画面と同じ部品（日本語のイベント名・つながりの図・タイムマシン）を、ねこテーマの見た目で使う（`MyEvents::`、packs/customer）。
+ねこのちゅーるがセリフ窓で、しくみをやさしく説明する（「通帳は、出来事を順番に足していったものなんだにゃ」など）。
+
+| 画面 | 場所 | できること |
+|---|---|---|
+| 出来事のならび | `/events` | 自分の口座にかかわる出来事を新しい順に（100 件まで）。種類・口座で絞り込める。**生中継は自分の分だけ**（届くとねこが「新しい出来事が届いたにゃ」） |
+| 1件の中身 | `/events/:id` | 中身と「いつ・だれが・どこから」の表、つながりの図（再生つき） |
+| タイムマシン | `/events/time_machine` | 自分の口座を選んで、出来事を1件ずつ足していく（起算日の順 / 記帳日の順） |
+
+**見せる範囲**（`MyEvents::EventScope`）:
+
+- 見せる: 自分の口座のストリームの出来事、自分の口座が振込元か振込先の振込・自分の注文・自分の出金依頼の出来事、自分の注文のための在庫の引き当て
+- 見せない: 他人の口座の出来事（振込先の口座への入金も、相手の口座の出来事なので出さない。つながりの図では、その先を「そのあと」の点線でつなぐ）、
+  二人承認の申請・承認（行員の内部の手続き）、商店の開店・商品の登録・入荷、ほかの人の注文
+- 付帯情報は「だれが・いつ・ひとつながりの番号・きっかけ」だけ。二人承認で実行された取消でも、申請者・承認者・申請 ID や、接続元・リクエストは出さない
+- 人の名前は本人だけ。行員は「銀行の行員」、ほかの利用者は「ほかのお客さま」。口座の名義は出す（通帳の振込の相手と同じ）
+- 他人の口座（`?account=`）・他人の出来事・行員だけの出来事の URL は 404（あるかどうかも見せない）。他人の出来事・口座へのリンクも作らない
+- 生中継: `MyEvents::EventsLiveJob`（`subscribe_to_all_events`）が、かかわる口座の持ち主のうち EventScope が通す人にだけ、`[利用者, :events]` へ Turbo Stream を送る。
+  購読は `customer_stream_from current_customer, :events`（利用者用の鍵で署名。ほかの人のストリームは購読できない）
+- パック: 画面は packs/customer の中（利用者画面のレイアウト・ログインをそのまま使う）。名前空間を `Netbank::` にしないのは、メニューの「わたしの口座」の印（`netbank` の画面にいるか）と分けるため。
+  依存に event_lens（部品）・shop（自分の注文を見分ける `ShopOrder`）・customer_registry（生中継の相手を引く `Customer.owning`）を足した。二人承認（approvals）には依存しない
 
 ## TODO
 

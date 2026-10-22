@@ -77,7 +77,7 @@ class EventViewer::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_select "svg.ev-tree .ev-node", 4
     assert_select "svg.ev-tree .ev-node.is-seed .ev-node-label", "振込の引き落とし"
     assert_select "svg.ev-tree path.ev-edge-cause", 1
-    assert_select "[data-controller='event-viewer--playback']"
+    assert_select "[data-controller='event-lens--playback']"
   end
 
   test "ない出来事は 404" do
@@ -91,7 +91,7 @@ class EventViewer::EventsControllerTest < ActionDispatch::IntegrationTest
     get event_viewer_time_machine_path(account: @from, basis: "as_at")
 
     assert_response :success
-    assert_select "[data-controller='event-viewer--time-machine'] .balance", "70 ちゅ〜る"
+    assert_select "[data-controller='event-lens--time-machine'] .balance", "70 ちゅ〜る"
     assert_select "tr[data-position]", 3
     assert_select "tr[data-position='2'][data-balance='120']"
     assert_select "input[type=range][max='3']"

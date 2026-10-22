@@ -16,3 +16,9 @@ scope module: :netbank do
     end
   end
 end
+
+# わたしの出来事（イベント）: 自分の口座にかかわる出来事だけを日本語で・図で見る（MyEvents::。表示の部品は packs/event_lens）
+scope module: :my_events do
+  get "events/time_machine" => "events#time_machine", as: :event_time_machine
+  resources :events, only: %i[index show]
+end

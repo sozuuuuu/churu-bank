@@ -1,0 +1,49 @@
+<% content_for :title, "わたしの出来事 | ちゅーる銀行" %>
+<% cat_says "ここには、きみの口座で起きた出来事が、起きた順にぜんぶ並んでるにゃ。銀行は出来事を消したり書きかえたりしないで、足していくだけなんだにゃ。" %>
+
+<%= render "my_events/events/head" %>
+
+<section class="hero card tone my-events-hero">
+  <%= sparkle(size: 26, css: "hero-star") %>
+  <h1><%= icon(:clock, size: 26) %><span class="marker">わたしの出来事</span></h1>
+  <p class="muted">入金・振込・お買いもの・出金の依頼……。残高も通帳も、この出来事を順番に足し合わせて作っています。</p>
+</section>
+
+<%= form_with url: events_path, method: :get, class: "card ev-filters", data: { controller: "autosubmit", turbo_action: "advance" } do |f| %>
+  <label>種類
+    <%= f.select :kind, EventLens::Catalog::KINDS.values.map { [ it.label, it.key ] },
+                 { include_blank: "すべて", selected: @kind }, data: { action: "change->autosubmit#submit" } %>
+  </label>
+  <label>口座
+    <%= f.select :account, @accounts.map { [ "#{it.number}（#{it.holder_name}）", it.number ] },
+                 { include_blank: "すべての口座", selected: @account&.number }, data: { action: "change->autosubmit#submit" } %>
+  </label>
+  <noscript><%= f.submit "絞り込む", class: "button", name: nil %></noscript>
+<% end %>
+
+<% if @account || @kind %>
+  <p class="hint">絞り込み中は生中継を止めています。<%= link_to "すべて表示", events_path %></p>
+  <ul class="ev-list">
+    <%= render partial: "event_lens/event", collection: @events, as: :event, locals: { names: } %>
+  </ul>
+<% else %>
+  <%= customer_stream_from current_customer, :events %>
+  <section class="ev-live" data-controller="event-lens--live" data-event-lens--live-say-value="true">
+    <div class="ev-live-bar">
+      <span class="ev-live-dot" data-event-lens--live-target="dot" aria-hidden="true"></span>
+      <strong data-event-lens--live-target="status">生中継中</strong>
+      <span class="muted small">新しい出来事が上から1件ずつ届きます</span>
+      <span class="ev-live-pending" data-event-lens--live-target="pending" hidden></span>
+      <button type="button" class="button small" data-event-lens--live-target="toggle" data-action="event-lens--live#toggle">止める</button>
+    </div>
+    <ul class="ev-list" id="<%= MyEvents::EventsLiveJob::TARGET %>" data-event-lens--live-target="list" aria-live="polite">
+      <%= render partial: "event_lens/event", collection: @events, as: :event, locals: { names: } %>
+    </ul>
+  </section>
+<% end %>
+
+<% if @events.empty? %>
+  <p class="empty">まだ出来事はありません。</p>
+<% elsif @events.size >= MyEvents::EventsController::LIMIT %>
+  <p class="muted small">新しいほうから <%= MyEvents::EventsController::LIMIT %> 件を出しています。</p>
+<% end %>

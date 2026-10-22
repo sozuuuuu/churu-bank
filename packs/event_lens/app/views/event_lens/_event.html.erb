@@ -1,0 +1,12 @@
+<%# 一覧の1行（生中継で LiveJob が配信するのも、この部品） %>
+<% entry = event_entry(event) %>
+<li id="event_<%= event.event_id %>" class="ev-row <%= kind_class(entry.kind) %>">
+  <span class="ev-row-icon"><%= icon(entry.icon, size: 18) %></span>
+  <span class="ev-row-time"><%= event_time(event.timestamp) %></span>
+  <span class="ev-row-main">
+    <%= link_to entry.label, lens_event_path(event.event_id), class: "ev-row-label" %>
+    <span class="ev-row-where"><%= names.stream(EventLens::Catalog.home_stream(event) || "") %></span>
+  </span>
+  <span class="ev-row-summary"><%= event_summary(event) %></span>
+  <span class="ev-row-actor muted"><%= names.actor(event.metadata[:actor]) %></span>
+</li>

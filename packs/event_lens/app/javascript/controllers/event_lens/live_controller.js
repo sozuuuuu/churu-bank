@@ -9,8 +9,6 @@ const MAX_ROWS = 200
 
 export default class extends Controller {
   static targets = ["list", "toggle", "status", "pending", "dot"]
-  // say: 利用者の画面では、届いた出来事をねこのセリフ窓でも知らせる（window の cat:say）
-  static values = { say: Boolean }
 
   connect() {
     this.queue = []
@@ -65,11 +63,6 @@ export default class extends Controller {
     }
     this.listTarget.prepend(row)
     while (this.listTarget.children.length > MAX_ROWS) this.listTarget.lastElementChild.remove()
-    const label = row.querySelector(".ev-row-label")?.textContent
-    if (this.sayValue && label) {
-      const text = `新しい出来事「${label}」が届いたにゃ。いちばん上に足したにゃ。`
-      window.dispatchEvent(new CustomEvent("cat:say", { detail: { text, face: "happy", bounce: true } }))
-    }
   }
 
   showPending() {

@@ -28,7 +28,7 @@
   </ul>
 <% else %>
   <%= customer_stream_from current_customer, :events %>
-  <section class="ev-live" data-controller="event-lens--live" data-event-lens--live-say-value="true">
+  <section class="ev-live" data-controller="event-lens--live">
     <div class="ev-live-bar">
       <span class="ev-live-dot" data-event-lens--live-target="dot" aria-hidden="true"></span>
       <strong data-event-lens--live-target="status">生中継中</strong>

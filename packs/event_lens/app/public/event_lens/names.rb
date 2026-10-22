@@ -33,6 +33,8 @@ module EventLens
 
     def holder(number) = holders[number.to_s]
 
+    def product(sku) = products[sku.to_s]
+
     # short: true なら口座の名義を省く（図の小さい字の欄）
     def stream(name, short: false)
       kind, id = name.to_s.split("$", 2)

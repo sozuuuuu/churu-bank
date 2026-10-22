@@ -220,3 +220,37 @@ body.cat-theme .tm-slider input { accent-color: var(--pink); }
 body.cat-theme .tm-passbook tr.is-now td { background: var(--sky-soft); }
 body.cat-theme .tm-passbook tr.is-now td:first-child { box-shadow: inset 5px 0 var(--ink); }
 body.cat-theme .ev-live-pending { border: var(--line-thin) solid var(--ink); }
+
+/* ねこの実況（event_lens/_commentary_line）。行員の実況の画面（ねこテーマ）で一覧に並べる。利用者の画面では一覧は隠して、セリフ窓がしゃべる。
+   表情ごとに左の印の色を変える（うれしい = 空色、びっくり = 星、しょんぼり = ピンク） */
+.ev-commentary h2 { margin-top: 0; }
+.ev-commentary-list { list-style: none; margin: 0; padding: 0; }
+.ev-commentary-line {
+  --face: var(--muted);
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 4px 12px; align-items: baseline;
+  padding: 10px 12px; border-left: 6px solid var(--face); border-bottom: 1px dashed var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.ev-commentary-line:last-child { border-bottom: 0; }
+.ev-commentary-line.face-happy { --face: var(--sky, #9ED8F5); }
+.ev-commentary-line.face-surprised { --face: var(--star, #FFD84D); }
+.ev-commentary-line.face-sad { --face: var(--pink, #FFB7C9); }
+.ev-commentary-face {
+  font-size: .75rem; font-weight: 700; padding: 0 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--face) 45%, transparent);
+}
+.ev-commentary-time { color: var(--muted); font-size: .85rem; }
+.ev-commentary-text { font-weight: 700; color: inherit; text-decoration: none; overflow-wrap: anywhere; }
+a.ev-commentary-text:hover { text-decoration: underline; }
+.ev-commentary-line.is-arriving { animation: ev-commentary-arrive .6s ease-out; }
+@keyframes ev-commentary-arrive {
+  from { opacity: 0; transform: translateX(-10px); background: color-mix(in srgb, var(--face) 30%, transparent); }
+  to { opacity: 1; transform: none; background: transparent; }
+}
+@media (max-width: 720px) {
+  .ev-commentary-line { grid-template-columns: auto minmax(0, 1fr); }
+  .ev-commentary-text { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { .ev-commentary-line.is-arriving { animation: none; } }
+body.cat-theme .ev-commentary-face { border: var(--line-thin) solid var(--ink); }
+body.cat-theme .ev-commentary-line { border-bottom: var(--line-thin) dashed color-mix(in srgb, var(--ink) 35%, transparent); }

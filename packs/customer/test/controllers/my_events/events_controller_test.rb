@@ -130,4 +130,15 @@ class MyEvents::EventsControllerTest < ActionDispatch::IntegrationTest
     get accounts_path
     assert_select "a[href='#{events_path}']", text: /わたしの出来事/
   end
+
+  test "ねこの実況: 利用者の画面はどこでも、自分の実況だけを購読する（他人の実況のストリームは埋め込まない）" do
+    sign_in_as_customer @orca
+    [ events_path, accounts_path ].each do |path|
+      get path
+      assert_select "turbo-cable-stream-source[channel=CustomerStreamsChannel][signed-stream-name=?]",
+                    CustomerStreamsChannel.signed_stream_name([ @orca, :commentary ])
+      assert_select "#cat_commentary_feed[data-turbo-permanent][data-controller=event-lens--commentary] ##{MyEvents::CommentaryJob::TARGET}[hidden]"
+      assert_no_match CustomerStreamsChannel.signed_stream_name([ @zingiber, :commentary ]), response.body
+    end
+  end
 end

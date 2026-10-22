@@ -3,6 +3,7 @@
 scope "admin/events", module: "event_viewer", as: "event_viewer" do
   resource :time_machine, only: :show # 口座の残高を、出来事を1件ずつ足して確かめる
   resources :lanes, only: :index      # 振込・注文などを選んで、関係者のレーン図
+  resource :commentary, only: :show   # ねこの実況（events/:id より先に書く）
 end
 scope "admin", module: "event_viewer", as: "event_viewer" do
   resources :events, only: %i[index show] # 一覧と生中継・1件の中身とつながりの図

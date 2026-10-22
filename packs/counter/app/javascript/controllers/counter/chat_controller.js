@@ -77,6 +77,7 @@ export default class extends Controller {
     item.append(this.#el("span", "chat-name", data.name), this.#el("p", "chat-body", data.body))
     if (data.kind === "withdrawal_guide" && this.hasGuideTarget) item.append(this.guideTarget.content.cloneNode(true))
     item.append(this.#el("time", "chat-time", data.at))
+    this.logTarget.querySelector(".chat-note.is-empty")?.remove() // 「まだ発言はありません」
     this.logTarget.append(item)
     if (!mine) {
       this.#hideTyping()

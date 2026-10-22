@@ -17,7 +17,7 @@
   </header>
 
   <ol class="chat-log" data-counter--chat-target="log" aria-live="polite">
-    <li class="chat-note">窓口の <%= ticket.staff_name %> さんにつながりました。ご用件をどうぞ。</li>
+    <li class="chat-note"><%= ticket.staff_name %>さんにつながりました。ご用件をどうぞ。</li>
     <%= render partial: "counter/tickets/message", collection: ticket.messages, locals: { me: "customer", accounts: } %>
   </ol>
   <p class="chat-typing" data-counter--chat-target="typing" hidden><%= ticket.staff_name %>さんが入力中…</p>

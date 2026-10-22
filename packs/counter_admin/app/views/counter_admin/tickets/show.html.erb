@@ -32,7 +32,7 @@
 
     <ol class="chat-log" <% if @ticket.called? %>data-counter--chat-target="log"<% end %> aria-live="polite">
       <%= render partial: "counter_admin/tickets/message", collection: @ticket.messages %>
-      <% if @ticket.messages.empty? %><li class="chat-note">まだ発言はありません。</li><% end %>
+      <% if @ticket.messages.empty? %><li class="chat-note is-empty">まだ発言はありません。</li><% end %>
     </ol>
 
     <% if @ticket.called? %>

@@ -500,6 +500,19 @@ RES の集約にすると、読み取りモデル・プロジェクション・�
   `createConsumer()` を1つ作り（`consumer.js`）、`consumer.subscriptions.create({ channel, … }, { received })` で購読。Stimulus の `disconnect` で `unsubscribe`
 - Turbo のライブ更新（`StaffStreamsChannel` / `CustomerStreamsChannel`）とは別の接続（Turbo は自分の consumer を持つ）。どちらも同じ `ApplicationCable::Connection` を通る
 
+### 試し方（1つのブラウザで3人）
+
+Cookie はホストごとに別なので、`localhost` と `127.0.0.1` で別の利用者になれる（開発では Action Cable も `127.0.0.1` からつなげるようにしてある。`config/environments/development.rb`）。
+行員と利用者は Cookie の名前が別なので、同じホストでも両方にログインできる。
+
+1. タブ1 `http://localhost:3002/session/new` でジンジベル → `/counter` で番号札を取る（1 番）
+2. タブ2 `http://127.0.0.1:3002/session/new` でミケ → `/counter` で番号札を取る（2 番・前に 1 人）
+3. タブ3 `http://localhost:3002/admin/session/new` でたま → `/admin/counter/queue`（タブ1・2 に「窓口に行員がいます」）→「次の方」
+   → タブ1 でねこが「1 番の方、窓口へどうぞにゃ！」、タブ2 は「次があなたの番です」
+4. タブ1 とタブ3 でチャット（入力中・在席が出る）。タブ3 の「出金依頼の画面を案内する」→ タブ1 にボタン →「終わる（次の方へ）」→ もう一度「次の方」でミケ
+
+Turbo の画面の入れ替えは、ブラウザのタブが見えていないと止まることがある（組み込みのブラウザのペインが隠れているときなど）。
+
 ### Q1 の窓口取引とのつながり
 
 - 行員のチャットの横に、その利用者の**受付中の出金依頼**（`WithdrawalRequest.open`、口座は顧客台帳から）と「窓口（出金依頼）で処理する」。依頼が出たら Turbo の refresh で増える（チャットの欄は `data-turbo-permanent` で morph から外す）

@@ -1,0 +1,26 @@
+<%# 待っているあいだ: 番号と「前に何人」。Stimulus の counter--ticket が TicketChannel を購読して、その場で書き換える。
+    呼ばれたら、ねこが知らせて、この Frame を読み直す（チャットになる） %>
+<section class="card counter-ticket tone"
+         data-controller="counter--ticket"
+         data-counter--ticket-ticket-id-value="<%= ticket.id %>"
+         data-counter--ticket-number-value="<%= ticket.number %>">
+  <div class="ticket-stub">
+    <span class="ticket-label">番号札</span>
+    <span class="ticket-number"><strong><%= ticket.number %></strong> 番</span>
+    <span class="ticket-date muted"><%= jp_date(ticket.service_date) %></span>
+  </div>
+  <div class="ticket-status">
+    <% ahead = ticket.ahead %>
+    <p class="ticket-ahead" aria-live="polite" data-counter--ticket-target="ahead">
+      <%= ahead.zero? ? "次があなたの番です" : "前に #{ahead} 人" %>
+    </p>
+    <% at_counter = CounterPresence.in_room(CounterPresence::LOBBY).exists? %>
+    <p class="presence <%= "is-present" if at_counter %>" data-counter--ticket-target="staff">
+      <span class="presence-dot" aria-hidden="true"></span>
+      <span data-counter--ticket-target="staffText"><%= at_counter ? "窓口に行員がいます" : "いま窓口に行員がいません（もうすこしお待ちください）" %></span>
+    </p>
+    <p class="hint">このページを開いたままにしてください。呼ばれたらお知らせします。</p>
+    <%= button_to "札を返す", counter_path, method: :delete, class: "button small",
+                  form: { data: { turbo_frame: "_top", turbo_confirm: "#{ticket.number} 番の札を返しますか？" } } %>
+  </div>
+</section>

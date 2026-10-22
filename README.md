@@ -21,6 +21,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - `/res` … RES Browser（イベントストアの中身を見る。行員だけ）
 - `/notices` … 銀行からのお知らせ（利用者）、`/admin/notices` … お知らせを出す・直す・掲載終了（行員）
 - `/shop` … ちゅ〜る商店（利用者の買い物）、`/shop/admin` … 商品と在庫の管理（行員）
+- `/counter` … 窓口の番号札とチャット（利用者）、`/admin/counter/queue` … 整理券の列と窓口チャット（行員）
 
 ## パッケージ（packwerk）
 
@@ -39,6 +40,8 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/ui` | 画面の共通部品: 外枠のレイアウト（`layouts/application`。`content_for :nav` / `:account` / `:home_path` / `:page_top` で差し込む）、ねこテーマ（`layouts/cat` と `ui/cat.css`、画面下のセリフ窓 `ui/_serif`）、`Ui::FormatHelper`（`churu` / `jp_date` / `jp_time`）、`Ui::ThemeHelper`（線画のアイコン・表情4種のねこ・ねこのセリフ）。だれがログインしているかは知らない | platform |
 | `packs/notices` | 銀行からのお知らせ・お願い・メンテナンス（ふつうの ActiveRecord）と、利用者の `/notices`・ねこの吹き出し。外から使えるのは `app/public`（`Notices::InboxHelper` / `Notices::Board` / `Notice`） | platform, customer_identity, customer_registry, ui |
 | `packs/notices_admin` | お知らせの管理 `/admin/notices`（`NoticesAdmin::`）。出す・直す・掲載終了。行員だけ | platform, notices, staff_identity, customer_registry, ui |
+| `packs/counter` | **窓口の整理券と窓口チャット**（ふつうの表）と、Action Cable のチャンネル（`Counter::TicketChannel`・`ChatChannel`・`QueueChannel`）、利用者の画面 `/counter`。外から使えるのは `app/public`（`Counter::Desk` / `CounterTicket` / `CounterMessage`） | platform, customer_identity, customer_registry, ui |
+| `packs/counter_admin` | 整理券の列と窓口チャットの行員の画面 `/admin/counter/queue`（`CounterAdmin::`）。次の方・終わる、チャットの横に受付中の出金依頼。行員だけ | platform, counter, banking, staff_identity, customer_registry, ui |
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
@@ -442,6 +445,80 @@ RES の集約にすると、読み取りモデル・プロジェクション・�
 - キャンペーンのパック（例: `packs/campaigns`、依存は banking・notices）が条件と特典を持ち、銀行のイベントを購読して `Banking::Bank` で入金し、`Notices::Board` で知らせる
 - お知らせから「参加する」ボタンなどへつなぐなら、そのときに `notices` にリンク先の列を足す
 
+## 窓口の整理券と窓口チャット（packs/counter・packs/counter_admin、TODO の S）
+
+いままで画面の自動更新は Turbo に任せていた（「取り直して」の合図 refresh を送るだけ）。ここでは **Action Cable のチャンネルを自分で書いた**。
+サーバーとブラウザが同じ線（WebSocket）の上で、小さな JSON を**両方向**にやりとりする。
+
+| だれ | 場所 | できること |
+|---|---|---|
+| 利用者 | `/counter`（メニューの「窓口」） | 番号札を取る →「あなたは 5 番。前に 2 人」がその場で進む。窓口に行員がいるか。札を返す。呼ばれたら、ねこが「5 番の方、窓口へどうぞにゃ！」（うれしい顔で弾む）、同じページがチャットになる |
+| 行員 | `/admin/counter/queue`（メニューの「整理券とチャット」。窓口（出金依頼）の隣） | お待ち・対応中・最近の終わりの列。「次の方」で呼ぶとチャットへ。チャットの横にその利用者の受付中の出金依頼。「出金依頼の画面を案内する」「終わる（次の方へ）」 |
+
+### Action Cable の流れ（だれが何を購読し、何がどこへ流れるか）
+
+```
+                    ┌───────── WebSocket 1本（/cable）。Cookie でだれの接続かが決まる ─────────┐
+                    │  ApplicationCable::Connection … current_customer（利用者）/ current_staff（行員）│
+                    └──────────────────────────────────────────────────────────────┘
+
+ 利用者（ミケ）のブラウザ                       サーバー（packs/counter）                       行員（たま）のブラウザ
+ ─────────────────────                 ─────────────────────                 ─────────────────────
+ counter--ticket                        Counter::TicketChannel
+   購読 {ticket_id: ミケの札}  ─────────▶  持ち主か確かめて stream_for 札
+                               ◀─────────  position {ahead: 1, staff_at_counter}           counter--queue
+                               ◀─────────  called {number: 5, staff_name: "たま"}           購読 {} ─────▶ Counter::QueueChannel
+                               ◀─────────  closed                                               行員か確かめて stream_from "counter:queue"
+                                                                                                 subscribed で在席（窓口に行員がいる）
+                                                                        changed ─────────▶ 列の Frame を読み直す
+ counter--chat（呼ばれたら）             Counter::ChatChannel（札ごとの部屋）              counter--chat
+   購読 {ticket_id, role: "customer"} ─▶  role と接続の持ち主を確かめて stream_for 札  ◀─ 購読 {ticket_id, role: "staff"}
+   perform("speak", {body})  ─────────▶  Desk.speak → 保存 → broadcast_to 札        ◀─ perform("speak", {body})
+   perform("typing")         ─────────▶  broadcast_to 札（保存しない）              ◀─ perform("typing")
+                               ◀─────────  message / typing / presence / closed ─────────▶
+   subscribed / unsubscribed  ─────────▶  在席（CounterPresence）の出入り → presence ─────▶「ミケ さん: チャットを開いています」
+
+ ふつうの HTTP（フォーム）: 札を取る POST /counter・返す DELETE /counter・次の方 POST …/queue/call・終わる POST …/tickets/:id/finish
+   → Counter::Desk が書いて、Counter::Broadcasts が上の矢印（◀──）を流す
+```
+
+| チャンネル | 購読できる人（接続の持ち主で確かめる） | サーバー → ブラウザ | ブラウザ → サーバー |
+|---|---|---|---|
+| `Counter::TicketChannel`（`stream_for 札`） | 利用者としてつないだ、**その札の持ち主だけ**。他人の札の id・行員の接続・返した札は断る | `position`（前に何人・窓口に行員がいるか。購読した瞬間にも `transmit`）/ `called` / `closed` | なし |
+| `Counter::ChatChannel`（`stream_for 札`） | `role: "customer"` … 利用者としてつないだ、札の持ち主。`role: "staff"` … 行員としてつないだ人（だれでも見られる）。どちらも札が「対応中」のときだけ。名乗った role と接続が合わなければ断る | `message` / `typing` / `presence` / `closed` / `error`（自分にだけ） | `speak`（発言。行員は `kind: "withdrawal_guide"` も）/ `typing` |
+| `Counter::QueueChannel`（`stream_from "counter:queue"`） | 行員としてつないだ人だけ | `changed`（列が変わった） | なし |
+
+- **だれかを確かめる場所**: 購読（`subscribed`）のときに接続の `current_customer` / `current_staff` で確かめ、だめなら `reject`。
+  発言（`speak`）のときも `Counter::Desk` がもう一度確かめる（発言できるのは札の利用者と**呼んだ行員だけ**。ほかの行員は見るだけで、送ると `error` が自分にだけ返る）
+- **同じブラウザで行員と利用者の両方にログイン**していると、接続は両方を持つ。チャットは `role` で「どちらとして入るか」を決め、その role の人が接続にいるかを確かめる
+- **中身は JSON だけ**（HTML を送らない）。発言はブラウザで `textContent` として入れる（HTML が書かれても文字のまま）。行員の列だけは
+  「変わった」の合図を受けて Turbo Frame を読み直す（列の見た目をサーバーの ERB 1か所で持つため）
+- **在席**: 購読ごとに `counter_presences` に1行（`subscribed` で足し `unsubscribed` で消す）。タブを2つ開けば2行なので、1つ閉じてもまだ在席。
+  サーバーが落ちると `unsubscribed` が呼ばれず残るので、サーバーの起動時に全部消す（`packs/counter/config/initializers/counter.rb`）
+- **入力中**: 1.5 秒に1回まで `typing` を送り、相手の画面は最後に届いてから 3 秒「入力中…」を出す。保存しない。日本語の変換中の Enter では送らない
+- **ブラウザ側**: Stimulus（`packs/counter/app/javascript/controllers/counter`）で `@rails/actioncable`（importmap で gem の `actioncable.esm.js` を pin）の
+  `createConsumer()` を1つ作り（`consumer.js`）、`consumer.subscriptions.create({ channel, … }, { received })` で購読。Stimulus の `disconnect` で `unsubscribe`
+- Turbo のライブ更新（`StaffStreamsChannel` / `CustomerStreamsChannel`）とは別の接続（Turbo は自分の consumer を持つ）。どちらも同じ `ApplicationCable::Connection` を通る
+
+### Q1 の窓口取引とのつながり
+
+- 行員のチャットの横に、その利用者の**受付中の出金依頼**（`WithdrawalRequest.open`、口座は顧客台帳から）と「窓口（出金依頼）で処理する」。依頼が出たら Turbo の refresh で増える（チャットの欄は `data-turbo-permanent` で morph から外す）
+- 行員が「出金依頼の画面を案内する」を押すと、決まった文の発言（`kind: "withdrawal_guide"`）が届き、利用者の画面ではその発言に**自分の口座の「出金の依頼」へのボタン**が付く（新しいタブで開くのでチャットは切れない）
+- 出金そのものは今までどおり「利用者が依頼 → 行員が窓口で処理」。チャットからお金は動かさない
+
+### 決めたこと
+
+| 決めたこと | 中身 |
+|---|---|
+| 記録 | **ふつうの表**（`counter_tickets`・`counter_messages`）。イベントソーシングにしない。お金も、ほかの集約とまたがる決まりもなく、番号札は「待っている → 呼ばれた → 終わり／返した」という単純な状態。チャットは文の積み重ねで、書き直さない。消さずに状態と時刻（取った・呼んだ・終わった、だれが）を残せば記録として足りる。RES にすると読み取りモデルとプロジェクションまで要るのに、得るものがない（お知らせと同じ考え方） |
+| 番号 | 日ごとに 1 から（`service_date` と `number` の一意インデックス）。同時に取ってぶつかったら取り直す |
+| 1人1枚 | 「お待ち」「対応中」の札は1人1枚（部分インデックス）。もう持っていれば同じ札を返す |
+| 次の方 | いちばん前の札を `UPDATE … WHERE status = 'waiting'` で取る。2人の行員が同時に押しても、1枚を呼ぶのは1人だけ（負けたほうは次の札へ）。話している途中の行員は呼べない（先に「終わる」） |
+| 終わる | 呼んだ行員でなくても終われる（席を外したままの人の代わりに閉じられるように）。発言は呼んだ行員だけ |
+| 札を返す | 待っているあいだも、呼ばれたあとも返せる（呼ばれたあとなら行員のチャットに closed が届く） |
+| パック | 整理券とチャットのドメイン・チャンネル・利用者の画面は `packs/counter`（利用者のログインに依存）。行員の画面は `packs/counter_admin`（行員のログイン・銀行・顧客台帳に依存）。お知らせ・商店と同じ分け方。チャンネルは接続の `current_staff` を見るだけで `Staff` の定数は使わないので、counter は staff_identity に依存しない |
+| メニュー | 管理画面の `layouts/admin` と利用者画面の `layouts/customer` に1行ずつ（ルート名だけ。定数の依存はない） |
+
 ## 利用者画面の見た目（日本アニメ的 kawaii、TODO の M）
 
 最初の「ねこ・ちゅ〜る」のテーマは「かわいいというより幼い」ので、方向を**日本アニメ的 kawaii**に変えた
@@ -488,6 +565,7 @@ RES の集約にすると、読み取りモデル・プロジェクション・�
 | 利用者画面の動き（Stimulus + CSS、外部ライブラリなし） | `serif_controller`（ねこのセリフ窓。1文字ずつ・表情の切り替え）、`cat_say_controller`（Frame の中からセリフを変える）、`count_up_controller`（morph で残高が変わると前の値から数える）、`arrival_controller`（morph で届いた通帳の行を出し、種類に合わせてねこのセリフ）、`transfer_status_controller` → `celebrate_controller`（振込完了の演出 `dialog.hooray`）。`prefers-reduced-motion` なら止める |
 | View Transitions | 利用者画面だけ `<meta name="view-transition">`。一覧と口座ページで残高がつながる |
 | Turbo の refresh（morph）+ Solid Queue の予約 | 銀行からのお知らせ。出した・直した・掲載の始まり / 終わりの時刻に `Notices::RefreshJob`。新しい吹き出しだけ CSS で出る。`data-turbo-prefetch="false"`（開くと既読のため） |
+| Action Cable（自作のチャンネル）+ Stimulus + `@rails/actioncable` | 窓口の整理券とチャット。`counter--ticket`（自分の札）・`counter--chat`（双方向。発言・入力中・在席）・`counter--queue`（行員の列。届いたら Frame を読み直す） |
 
 ## MCP（packs/mcp）
 
@@ -546,7 +624,7 @@ curl -s localhost:3000/mcp -H 'Content-Type: application/json' -H 'Accept: appli
 | P | 利用者画面に銀行からのお知らせ・お願い・キャンペーン（**お知らせ・お願いは済**。キャンペーン = 条件を満たすと特典が自動入金、は未） | C, N（キャンペーンは L） | `packs/notices`（キャンペーンは新しいパック） |
 | Q | 行員の権限を本物の銀行に寄せる。~~**Q0** 行員と利用者の完全な分離: 別のモデル・テーブル・ログイン画面・セッション・Cookie、Action Cable も別、actor は `staff:` / `customer:`、パックも `staff_identity` / `customer_identity` に分ける~~（済。「認証と権限」）。~~Q1 窓口取引: 出金は利用者の「出金依頼」があるときだけ行員が処理（入金は現金持ち込みとして行員のみ）~~（**済**）。~~Q2 二人承認: 取消・組戻し・凍結の解除は「申請 → 別の行員が承認 → 実行」~~（**済**。どちらも「行員の権限: 窓口取引と二人承認」）。~~Q3 振込の差し止め: 予約振込と高額振込の保留を足し、実行前なら利用者は取消・行員は差し止めできる~~（**済**。「予約振込・高額振込の保留・取消と差し止め」） | O | `packs/banking`・`packs/admin`・`packs/customer`（承認は新しいパック） |
 | R | 日本語のイベントビューア（RES Browser の代わり）: イベント名・ストリーム名を日本語に、中身を表で、correlation / causation の連鎖を図で。管理画面の中、行員だけ | Q0 | 新しいパック（例 `packs/event_viewer`） |
-| S | WebSocket（Action Cable）を自分で書く: 窓口の整理券（番号札を取ると順番がライブで進み、呼ばれたらねこが知らせる）と、利用者と行員の窓口チャット（入力中の表示・在席表示）。自作チャンネル・presence・双方向。Q1 の窓口取引とつなげる | Q0, Q1 | 新しいパック（例 `packs/counter`） |
+| ~~S~~ | ~~WebSocket（Action Cable）を自分で書く: 窓口の整理券（番号札を取ると順番がライブで進み、呼ばれたらねこが知らせる）と、利用者と行員の窓口チャット（入力中の表示・在席表示）。自作チャンネル・presence・双方向。Q1 の窓口取引とつなげる~~（済。「窓口の整理券と窓口チャット」） | Q0, Q1 | 新しいパック（例 `packs/counter`） |
 | T | デビットカード決済（二段階）: 商店での購入はまずオーソリ（お金を押さえる）→ 発送で売上確定 → キャンセルなら押さえを解除。残高と「使えるお金」を分ける。押さえの期限切れはジョブで解除 | D, Q0 | `packs/banking`（カード）・`packs/shop`（支払い） |
 | U | 為替・外貨預金: 「ちゅ〜る ⇄ かつおぶし」など別の通貨の口座と両替。レートは数秒ごとに動き、WebSocket（Action Cable）で配信。両替の端数・手数料 | S | 新しいパック（例 `packs/fx`） |
 | V | 不正検知: 「短時間に何度も出金」「深夜の高額振込」などのルールで自動凍結し、行員に通知。銀行のイベントを購読するだけで、銀行は検知を知らない（L のイベントの連鎖の実例） | L, Q0 | 新しいパック（例 `packs/fraud`） |

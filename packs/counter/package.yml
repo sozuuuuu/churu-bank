@@ -1,0 +1,21 @@
+# 窓口の整理券と窓口チャット（TODO の S）。Action Cable のチャンネルを自分で書いた（Turbo に任せない）。
+#   - 整理券: 利用者が番号札を取り、行員が「次の方」で呼ぶ。待っている人の画面の「前に何人」がその場で進む
+#   - 窓口チャット: 呼ばれた利用者と呼んだ行員が文字でやりとりする。入力中・在席の表示
+#   - チャンネル（app/channels/counter）: TicketChannel（自分の札）・ChatChannel（札ごとの部屋）・QueueChannel（行員の列）
+#   - 利用者の画面 /counter（ねこテーマ）。行員の画面は別のパック packs/counter_admin（/admin/counter/queue）
+# 記録はふつうの表（イベントソーシングにしない。README の「窓口の整理券と窓口チャット」の節）
+#
+# 外から使ってよいのは app/public にあるものだけ:
+#   - Counter::Desk  … 札を取る・返す・次の方・終わる・発言する、の唯一の入口
+#   - CounterTicket  … 番号札（読み取り。行員の列とチャットの画面で使う）
+#   - CounterMessage … チャットの発言（読み取り）
+# チャンネル・在席（CounterPresence）・配信（Counter::Broadcasts）・画面は非公開。
+# チャンネルは接続の current_staff / current_customer（ルートの ApplicationCable::Connection）を見るだけで、Staff の定数は使わない
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/customer_identity
+  - packs/customer_registry
+  - packs/ui

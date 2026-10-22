@@ -1,0 +1,80 @@
+<% content_for :title, "#{@ticket.number} 番のチャット | ちゅーる銀行" %>
+<% customer = @ticket.customer %>
+
+<p><%= link_to "← 整理券とチャット", counter_admin_queue_path %></p>
+<h1><%= @ticket.number %> 番 <%= customer.name %> さん <span class="badge"><%= @ticket.status_label %></span></h1>
+
+<%# このページを開いているあいだも「窓口に行員がいる」に数える（Counter::QueueChannel）。列の Frame はないので読み直しはしない %>
+<%# 利用者が出金依頼を出した・取り消したら、右の「受付中の出金依頼」が Turbo の refresh（morph）で変わる。
+    チャットは data-turbo-permanent で morph から外す（入力中の文字や、あとから届いた発言を消さない）。
+    id に状態を入れて、終わったあとの読み直しでは入れ替わるようにする %>
+<%= staff_stream_from "withdrawal_requests" %>
+<div class="counter-admin" data-controller="counter--queue">
+  <section class="card counter-chat" id="counter-chat-<%= @ticket.id %>-<%= @ticket.status %>" data-turbo-permanent
+           <% if @ticket.called? %>
+           data-controller="counter--chat"
+           data-counter--chat-ticket-id-value="<%= @ticket.id %>"
+           data-counter--chat-role-value="staff"
+           data-counter--chat-present-text-value="<%= customer.name %> さん: チャットを開いています"
+           data-counter--chat-absent-text-value="<%= customer.name %> さんはチャットを開いていません"
+           <% end %>>
+    <header class="chat-head">
+      <h2>窓口チャット</h2>
+      <% if @ticket.called? %>
+        <% present = @ticket.present?("customer") %>
+        <p class="presence <%= "is-present" if present %>" data-counter--chat-target="presence">
+          <span class="presence-dot" aria-hidden="true"></span>
+          <span data-counter--chat-target="presenceText"><%= present ? "#{customer.name} さん: チャットを開いています" : "#{customer.name} さんはチャットを開いていません" %></span>
+        </p>
+      <% end %>
+    </header>
+    <p class="muted small">担当 <%= @ticket.staff_name || "—" %>。札を取った <%= jp_time(@ticket.taken_at) %>、呼んだ <%= jp_time(@ticket.called_at) if @ticket.called_at %><% if @ticket.closed_at %>、<%= @ticket.status_label %> <%= jp_time(@ticket.closed_at) %><% end %></p>
+
+    <ol class="chat-log" <% if @ticket.called? %>data-counter--chat-target="log"<% end %> aria-live="polite">
+      <%= render partial: "counter_admin/tickets/message", collection: @ticket.messages %>
+      <% if @ticket.messages.empty? %><li class="chat-note">まだ発言はありません。</li><% end %>
+    </ol>
+
+    <% if @ticket.called? %>
+      <p class="chat-typing" data-counter--chat-target="typing" hidden><%= customer.name %> さんが入力中…</p>
+      <p class="chat-status" data-counter--chat-target="status" role="status"></p>
+      <% if @speakable %>
+        <form class="chat-form" data-counter--chat-target="form" data-action="submit->counter--chat#send">
+          <label class="visually-hidden" for="chat-body">メッセージ</label>
+          <textarea id="chat-body" rows="2" maxlength="<%= Counter::Desk::MAX_MESSAGE_LENGTH %>" placeholder="メッセージ（Enter で送る・Shift+Enter で改行）"
+                    data-counter--chat-target="input" data-action="input->counter--chat#typing keydown->counter--chat#submitOnEnter"></textarea>
+          <button type="submit" class="button primary">送る</button>
+        </form>
+        <div class="actions">
+          <button type="button" class="button small" data-action="counter--chat#guideWithdrawal">出金依頼の画面を案内する</button>
+          <%= button_to "終わる（次の方へ）", counter_admin_ticket_finish_path(@ticket), class: "button small",
+                        form: { data: { turbo_confirm: "#{@ticket.number} 番の対応を終えますか？" } } %>
+        </div>
+      <% else %>
+        <p class="muted">呼んだ行員（<%= @ticket.staff_name %>）だけが発言できます。ここでは見るだけです。</p>
+        <form data-counter--chat-target="form" hidden></form>
+        <%= button_to "代わりに終わる", counter_admin_ticket_finish_path(@ticket), class: "button small",
+                      form: { data: { turbo_confirm: "#{@ticket.staff_name} さんの代わりに、#{@ticket.number} 番の対応を終えますか？" } } %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <aside class="card">
+    <h2>受付中の出金依頼</h2>
+    <% if @withdrawal_requests.empty? %>
+      <p class="empty"><%= customer.name %> さんの受付中の出金依頼はありません。必要なら「出金依頼の画面を案内する」で案内してください。</p>
+    <% else %>
+      <ul class="queue-list">
+        <% @withdrawal_requests.each do |request| %>
+          <li>
+            <strong><%= churu(request.amount) %></strong>
+            口座 <%= request.account_number %>（残高 <%= churu(request.account.balance) %>）
+            <span class="muted small"><%= jp_time(request.requested_at) %> <%= request.memo %></span>
+          </li>
+        <% end %>
+      </ul>
+      <p><%= link_to "窓口（出金依頼）で処理する", admin_withdrawal_requests_path(anchor: dom_id(@withdrawal_requests.first)), class: "button small primary", target: "_blank", rel: "noopener" %></p>
+    <% end %>
+    <p class="muted small">口座: <% customer.account_numbers.each do |number| %><%= link_to number, admin_account_path(number) %> <% end %></p>
+  </aside>
+</div>

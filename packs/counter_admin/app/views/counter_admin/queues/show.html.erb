@@ -1,0 +1,82 @@
+<% content_for :title, "整理券とチャット | ちゅーる銀行" %>
+
+<%# Counter::QueueChannel を購読する（このページを開いているあいだ、待っている利用者の画面に「窓口に行員がいます」と出る）。
+    列が変わったら、下の Frame だけを読み直す %>
+<div data-controller="counter--queue">
+  <h1>整理券とチャット</h1>
+  <p class="muted">利用者が番号札を取ると、ここに並びます。「次の方」で呼ぶと、その方とのチャットが開きます。
+    出金のご相談なら、チャットから出金依頼の画面へ案内し、出た依頼を<%= link_to "窓口（出金依頼）", admin_withdrawal_requests_path %>で処理してください。</p>
+
+  <%= turbo_frame_tag "counter_queue", data: { counter__queue_target: "frame", url: counter_admin_queue_path } do %>
+    <section class="card queue-call">
+      <% if @my_ticket %>
+        <p>いま <strong><%= @my_ticket.number %> 番 <%= @my_ticket.customer.name %> さん</strong>と話しています。
+          <%= link_to "チャットへ戻る", counter_admin_ticket_path(@my_ticket), class: "button small primary", data: { turbo_frame: "_top" } %></p>
+      <% else %>
+        <%= button_to "次の方", counter_admin_call_path, class: "button primary queue-next", disabled: @waiting.empty?,
+                      form: { data: { turbo_frame: "_top" } } %>
+        <span class="muted"><%= @waiting.empty? ? "お待ちの方はいません" : "お待ち #{@waiting.size} 人" %></span>
+      <% end %>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>お待ち <span class="badge"><%= @waiting.size %></span></h2>
+        <% if @waiting.empty? %>
+          <p class="empty">いまはだれも待っていません。</p>
+        <% else %>
+          <ol class="queue-list">
+            <% @waiting.each do |ticket| %>
+              <li id="<%= dom_id(ticket) %>">
+                <strong class="queue-number"><%= ticket.number %> 番</strong>
+                <%= ticket.customer.name %> さん
+                <span class="muted small"><%= jp_time(ticket.taken_at) %> から</span>
+              </li>
+            <% end %>
+          </ol>
+        <% end %>
+      </section>
+
+      <section class="card">
+        <h2>対応中 <span class="badge"><%= @called.size %></span></h2>
+        <% if @called.empty? %>
+          <p class="empty">いまはありません。</p>
+        <% else %>
+          <ul class="queue-list">
+            <% @called.each do |ticket| %>
+              <li id="<%= dom_id(ticket) %>">
+                <strong class="queue-number"><%= ticket.number %> 番</strong>
+                <%= link_to "#{ticket.customer.name} さん", counter_admin_ticket_path(ticket), data: { turbo_frame: "_top" } %>
+                <span class="muted small">担当 <%= ticket.staff_name %>（<%= jp_time(ticket.called_at) %>）</span>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>最近の終わり</h2>
+      <% if @closed.empty? %>
+        <p class="empty">まだありません。</p>
+      <% else %>
+        <table class="table">
+          <thead><tr><th>番号</th><th>利用者</th><th>状態</th><th>担当</th><th>札を取った</th><th>終わった</th><th></th></tr></thead>
+          <tbody>
+            <% @closed.each do |ticket| %>
+              <tr id="<%= dom_id(ticket) %>">
+                <td><%= ticket.number %> 番</td>
+                <td><%= ticket.customer.name %></td>
+                <td><span class="badge"><%= ticket.status_label %></span></td>
+                <td><%= ticket.staff_name || "—" %></td>
+                <td><%= jp_time(ticket.taken_at) %></td>
+                <td><%= jp_time(ticket.closed_at) %></td>
+                <td><%= link_to "やりとり", counter_admin_ticket_path(ticket), data: { turbo_frame: "_top" } if ticket.called_at %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </section>
+  <% end %>
+</div>

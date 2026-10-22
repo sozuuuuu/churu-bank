@@ -3,6 +3,7 @@
 <%= customer_header %>
 <% content_for :nav do %>
   <%= link_to accounts_path, "aria-current": ("page" if controller_path.start_with?("netbank")) do %><%= icon(:wallet, size: 18) %> わたしの口座<% end %>
+  <%= link_to counter_path do %><%= icon(:ticket, size: 18) %> 窓口<% end %>
   <%= link_to shop_root_path, "aria-current": ("page" if controller_path.start_with?("shop")) do %><%= icon(:cart, size: 18) %> ちゅ〜る商店<% end %>
 <% end %>
 <%# 銀行からのお知らせ（packs/notices）: メニューの「お知らせ」とバッジ、ページの頭のねこの吹き出し、ライブ更新 %>

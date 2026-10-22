@@ -1,0 +1,24 @@
+<% content_for :title, "窓口 | ちゅーる銀行" %>
+<% if @ticket&.called? %>
+  <% cat_says "#{@ticket.number} 番の方、窓口へどうぞにゃ。#{@ticket.staff_name}さんとお話しできるにゃ。", face: :happy %>
+<% elsif @ticket %>
+  <% cat_says "#{@ticket.number} 番の札をとったにゃ。呼ばれたらここでお知らせするにゃ。" %>
+<% else %>
+  <% cat_says "窓口で相談したいときは、番号札をとってにゃ。順番が来たら呼ぶにゃ。" %>
+<% end %>
+
+<header class="page-title">
+  <p>窓口</p>
+  <h1><span class="marker">窓口の番号札</span></h1>
+</header>
+
+<%# 札の状態（待っている → 呼ばれた → 終わり）が変わると、Stimulus がこの Frame だけを読み直す（セリフ窓はそのまま） %>
+<%= turbo_frame_tag "counter_ticket" do %>
+  <% if @ticket.nil? %>
+    <%= render "counter/tickets/take", last_ticket: @last_ticket %>
+  <% elsif @ticket.waiting? %>
+    <%= render "counter/tickets/waiting", ticket: @ticket %>
+  <% else %>
+    <%= render "counter/tickets/chat", ticket: @ticket %>
+  <% end %>
+<% end %>

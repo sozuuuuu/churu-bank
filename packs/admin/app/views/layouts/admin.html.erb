@@ -9,6 +9,7 @@
   <%= link_to "口座一覧", admin_accounts_path %>
   <%# 窓口（出金依頼）と承認待ち（二人承認）。件数があればバッジ %>
   <%= link_to admin_withdrawal_requests_path do %>窓口<% if (n = WithdrawalRequest.open.count).positive? %> <span class="badge"><%= n %></span><% end %><% end %>
+  <%= link_to "整理券とチャット", counter_admin_queue_path %><%# packs/counter_admin（ルート名だけ。定数の依存はない） %>
   <%= link_to admin_approvals_path do %>承認待ち<% if (n = ApprovalRequest.pending.count).positive? %> <span class="badge"><%= n %></span><% end %><% end %>
   <%= link_to "振込一覧", admin_transfers_path %>
   <%= link_to "利息", admin_interest_path %>

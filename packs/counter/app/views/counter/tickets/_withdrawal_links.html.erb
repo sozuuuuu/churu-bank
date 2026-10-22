@@ -1,0 +1,8 @@
+<%# 出金依頼の画面（窓口取引、TODO の Q1）へのリンク。口座ページの「出金の依頼」のカードへ。新しいタブで開くので、チャットはつながったまま %>
+<p class="chat-links">
+  <% accounts.each do |number| %>
+    <%= link_to account_path(number, anchor: "withdrawal-requests"), class: "button small", target: "_blank", rel: "noopener" do %>
+      <%= icon(:wallet, size: 16) %> 口座 <%= number %> の出金の依頼へ
+    <% end %>
+  <% end %>
+</p>

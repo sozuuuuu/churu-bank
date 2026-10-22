@@ -28,10 +28,12 @@
 <section class="card" id="flow">
   <div class="ev-section-head">
     <h2>つながりの図</h2>
-    <% if (business = EventLens::EventIndex.keys(@event).first) %>
-      <%= link_to "レーン図で見る", event_viewer_lanes_path(stream: business), class: "button small" %>
-    <% end %>
-    <%= link_to "ふせんの壁で見る", event_viewer_wall_path(correlation: @event.correlation_id), class: "button small" %>
+    <span class="ev-section-actions">
+      <% if (business = EventLens::EventIndex.keys(@event).first) %>
+        <%= link_to "レーン図で見る", event_viewer_lanes_path(stream: business), class: "button small" %>
+      <% end %>
+      <%= link_to "ふせんの壁で見る", event_viewer_wall_path(correlation: @event.correlation_id), class: "button small" %>
+    </span>
   </div>
   <p class="muted small">この出来事とひとつながりの出来事（<%= @flow.events.size %> 件）。上から下へ時間が進みます。「再生」を押すと、起きた順に1つずつ光ります。枠で囲んだ出来事をクリックすると、その出来事へ移ります。</p>
   <%= render "event_lens/tree", flow: @flow %>

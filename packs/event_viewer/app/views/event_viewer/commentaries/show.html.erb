@@ -1,0 +1,21 @@
+<% content_for :title, "ねこの実況 | ちゅーる銀行" %>
+<% cat_says "ここで、銀行で起きたことをぜんぶ実況するにゃ！ 入金も振込もお買いものも、見のがさないにゃ。" %>
+
+<div class="ev-head">
+  <h1><%= icon(:megaphone, size: 26) %> ねこの実況</h1>
+  <p class="muted">出来事が起きるたびに、ちゅーるがひとことしゃべります（画面の下のセリフ窓）。
+    実況する係は出来事を購読しているだけで、銀行の側は実況のことを知りません。</p>
+</div>
+
+<%= staff_stream_from EventViewer::CommentaryJob::STREAM %>
+<section class="card ev-commentary" data-controller="event-lens--commentary">
+  <h2><%= icon(:bell, size: 18) %> これまでの実況</h2>
+  <ol class="ev-commentary-list" id="<%= EventViewer::CommentaryJob::TARGET %>" data-event-lens--commentary-target="list" aria-live="polite">
+    <% @events.each do |event| %>
+      <%= render "event_lens/commentary_line", event:, line: @commentary.line(event) %>
+    <% end %>
+  </ol>
+  <% if @events.empty? %>
+    <p class="empty">まだ出来事はありません。<code>bin/rails churu:demo_events</code> で起こせます。</p>
+  <% end %>
+</section>

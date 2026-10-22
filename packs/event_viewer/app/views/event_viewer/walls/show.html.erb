@@ -1,0 +1,89 @@
+<% content_for :title, "ふせんの壁 | イベント | ちゅーる銀行" %>
+
+<div class="ev-head">
+  <h1>ふせんの壁</h1>
+  <p class="muted">イベントストーミングの壁を、本物の記録から作りました。1段が「ひとつながりの流れ」で、左から右へ時間が進みます。
+    だれ（黄）や係（紫）が、何かを頼み（青）、出来事（オレンジ）が起きる。続きが来ていないところには、ピンクのふせんを貼ります。</p>
+</div>
+
+<nav class="wall-views" aria-label="壁の見せ方">
+  <%= link_to "流れごと", wall_path_with(view: nil), class: ("is-current" unless @patterns) %>
+  <%= link_to "いつもの流れ", wall_path_with(view: "patterns", correlation: nil), class: ("is-current" if @patterns) %>
+</nav>
+
+<%= form_with url: event_viewer_wall_path, method: :get, class: "ev-filters card", data: { turbo_action: "advance" } do |f| %>
+  <% if @patterns %><%= hidden_field_tag :view, "patterns" %><% end %>
+  <label>種類
+    <%= f.select :kind, EventLens::Catalog::KINDS.values.map { [ it.label, it.key ] }, { include_blank: "すべて", selected: @wall.kind } %>
+  </label>
+  <label>この日から
+    <%= f.date_field :from, value: @wall.from&.to_date %>
+  </label>
+  <label>この日まで
+    <%= f.date_field :to, value: @wall.to&.to_date %>
+  </label>
+  <% if @wall.correlation %>
+    <%= hidden_field_tag :correlation, @wall.correlation %>
+  <% end %>
+  <div class="ev-filters-actions">
+    <%= f.submit "絞り込む", class: "button primary", name: nil %>
+    <% if @wall.filtered? %><%= link_to "すべて表示", wall_path_with(kind: nil, from: nil, to: nil, correlation: nil), class: "button" %><% end %>
+  </div>
+<% end %>
+
+<% if @wall.correlation %>
+  <p class="wall-chip">
+    <%= icon(:ticket, size: 16) %>ひとつながりの流れ <code><%= names.short(@wall.correlation) %></code> だけを見ています。
+    <%= link_to "ほかの流れも見る", wall_path_with(correlation: nil) %>
+  </p>
+<% end %>
+
+<ul class="wall-legend" aria-label="ふせんの色">
+  <li><span class="sticky-swatch sticky-event"></span>出来事</li>
+  <li><span class="sticky-swatch sticky-command"></span>命令（何を頼んだか）</li>
+  <li><span class="sticky-swatch sticky-policy"></span>方針・係（出来事を受けて次を動かす）</li>
+  <li><span class="sticky-swatch sticky-person"></span>人</li>
+  <li><span class="sticky-swatch sticky-hotspot"></span>流れの抜け・待ち</li>
+</ul>
+
+<% if @wall.matching.empty? %>
+  <p class="empty">この絞り込みでは、流れはありません。</p>
+<% elsif @patterns %>
+  <p class="muted small">
+    <%= @wall.matching.size %> 本の流れを、「だれが・何を頼んで・どの出来事が起きたか」の並びでまとめると、<%= @wall.patterns.size %> 通りでした。多いものから並べます。
+    ふせんは、その並びのいちばん新しい流れのものです。
+  </p>
+  <% @wall.patterns.each do |pattern| %>
+    <section class="wall-row">
+      <div class="wall-row-head">
+        <strong class="wall-count"><%= pattern.count %> 回</strong>
+        <span class="muted small">いちばん新しいのは <%= event_time(pattern.sample.started_at) %></span>
+        <%= link_to "この流れを見る", wall_row_path(pattern.sample), class: "button small" %>
+      </div>
+      <ol class="wall-strip">
+        <%= render partial: "beat", collection: pattern.sample.beats, locals: { wall: @wall, generic: true } %>
+      </ol>
+    </section>
+  <% end %>
+<% else %>
+  <p class="muted small">
+    <%= @wall.matching.size %> 本の流れ<% if @wall.truncated? %>のうち、新しい <%= @wall.rows.size %> 本<% end %>を、新しい順に上から並べます。
+    オレンジのふせんを押すと、その出来事の中身とつながりの図へ移ります。
+  </p>
+  <% @wall.rows.each do |row| %>
+    <section class="wall-row<%= " is-waiting" if row.waiting? %>">
+      <div class="wall-row-head">
+        <strong><%= event_time(row.started_at) %></strong>
+        <% if (key = row.business_key) %><span class="muted small"><%= names.stream(key) %></span><% end %>
+        <span class="wall-row-links">
+          <% unless @wall.correlation %><%= link_to "この流れだけ", wall_row_path(row) %><% end %>
+          <%= link_to "つながりの図", event_viewer_event_path(row.events.first.event_id, anchor: "flow") %>
+          <% if key %><%= link_to "レーン図", event_viewer_lanes_path(stream: key) %><% end %>
+        </span>
+      </div>
+      <ol class="wall-strip">
+        <%= render partial: "beat", collection: row.beats, locals: { wall: @wall, generic: false } %>
+      </ol>
+    </section>
+  <% end %>
+<% end %>

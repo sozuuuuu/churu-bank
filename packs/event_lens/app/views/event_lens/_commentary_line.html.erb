@@ -1,0 +1,12 @@
+<%# ねこの実況の1行（EventLens::Commentary の Line）。実況の係のジョブが配信するのも、行員の実況の画面の「これまで」も、この部品。
+    data-text / data-face を event_lens--commentary（Stimulus）が読んで、セリフ窓にしゃべらせる %>
+<li id="commentary_<%= event.event_id %>" class="ev-commentary-line face-<%= line.face %>"
+    data-text="<%= line.text %>" data-face="<%= line.face %>" data-bounce="<%= line.bounce %>">
+  <span class="ev-commentary-face" aria-hidden="true"><%= Ui::ThemeHelper::CAT_FACES.fetch(line.face) %></span>
+  <span class="ev-commentary-time"><%= event_time(event.timestamp) %></span>
+  <% if (path = lens_event_path(event.event_id)) %>
+    <%= link_to line.text, path, class: "ev-commentary-text" %>
+  <% else %>
+    <span class="ev-commentary-text"><%= line.text %></span>
+  <% end %>
+</li>

@@ -9,4 +9,14 @@
 <% end %>
 <%# 銀行からのお知らせ（packs/notices）: メニューの「お知らせ」とバッジ、ページの頭のねこの吹き出し、ライブ更新 %>
 <%= notices_inbox %>
+<%# ねこの実況（MyEvents::CommentaryJob）: 自分の口座にかかわる出来事が起きたら、セリフ窓のちゅーるがしゃべる。
+    行は隠しておく（セリフ窓が読み上げる）。ページを移っても・morph でも、しゃべる順番の待ち行列を消さないように permanent %>
+<% if current_customer %>
+  <% content_for :overlay do %>
+    <%= customer_stream_from current_customer, :commentary %>
+    <div id="cat_commentary_feed" data-turbo-permanent data-controller="event-lens--commentary">
+      <ol id="<%= MyEvents::CommentaryJob::TARGET %>" hidden data-event-lens--commentary-target="list"></ol>
+    </div>
+  <% end %>
+<% end %>
 <%= render template: "layouts/cat" %>

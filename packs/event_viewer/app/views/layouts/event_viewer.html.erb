@@ -1,6 +1,7 @@
-<%# イベントビューア: 管理画面と同じ見た目（packs/ui の layouts/application）に、図のための CSS を足して描く %>
+<%# イベントビューア: 管理画面と同じ見た目（packs/ui の layouts/application）に、図のための CSS を足して描く。
+    ねこの実況の画面だけは、ねこテーマ（packs/ui の layouts/cat。画面下のセリフ窓がしゃべる） %>
 <%= staff_header %>
-<% content_for :body_class, "event-viewer" %>
+<% content_for :body_class, "event-viewer" unless controller_name == "commentaries" %>
 <% content_for :head, stylesheet_link_tag("event_lens/event_lens", "event_viewer/event_viewer", "data-turbo-track": "dynamic") %>
 <% content_for :nav do %>
   <span class="badge">管理画面</span>
@@ -11,9 +12,11 @@
 <% content_for :page_top do %>
   <nav class="ev-tabs" aria-label="イベントビューアの中のメニュー">
     <%= link_to event_viewer_events_path, class: ("is-current" if controller_name == "events") do %><%= icon(:bell, size: 16) %>一覧と生中継<% end %>
+    <%= link_to event_viewer_commentary_path, class: ("is-current" if controller_name == "commentaries") do %><%= icon(:megaphone, size: 16) %>ねこの実況<% end %>
     <%= link_to event_viewer_time_machine_path, class: ("is-current" if controller_name == "time_machines") do %><%= icon(:clock, size: 16) %>タイムマシン<% end %>
     <%= link_to event_viewer_lanes_path, class: ("is-current" if controller_name == "lanes") do %><%= icon(:send, size: 16) %>レーン図<% end %>
+    <%= link_to event_viewer_wall_path, class: ("is-current" if controller_name == "walls") do %><%= icon(:ticket, size: 16) %>ふせんの壁<% end %>
     <%= link_to "/res", class: "ev-tabs-res", data: { turbo: false } do %>詳しく見る（英語）<% end %>
   </nav>
 <% end %>
-<%= render template: "layouts/application" %>
+<%= render template: (controller_name == "commentaries" ? "layouts/cat" : "layouts/application") %>

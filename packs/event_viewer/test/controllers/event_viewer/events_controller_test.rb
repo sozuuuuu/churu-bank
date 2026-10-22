@@ -120,4 +120,22 @@ class EventViewer::EventsControllerTest < ActionDispatch::IntegrationTest
     get event_viewer_events_path
     assert_select "a[href='/res']", text: "詳しく見る（英語）"
   end
+
+  test "ねこの実況: 行員だけ。最近の出来事を実況の文で並べ、実況の係の配信を購読する（この画面だけねこテーマ）" do
+    get event_viewer_commentary_path
+    assert_redirected_to new_staff_session_path
+    sign_in_as_customer @orca
+    get event_viewer_commentary_path
+    assert_redirected_to new_staff_session_path
+
+    sign_in_as_staff @staff
+    get event_viewer_commentary_path
+    assert_response :success
+    assert_select "body.cat-theme"
+    assert_select "#serif[data-controller=serif]"
+    assert_select "##{EventViewer::CommentaryJob::TARGET} .ev-commentary-text", text: "オルカさんからジンジベルさんへの振込、ぶじに終わったにゃ！"
+    assert_select "turbo-cable-stream-source[channel=StaffStreamsChannel][signed-stream-name=?]",
+                  StaffStreamsChannel.signed_stream_name([ EventViewer::CommentaryJob::STREAM ])
+    assert_select ".ev-tabs a.is-current", text: "ねこの実況"
+  end
 end

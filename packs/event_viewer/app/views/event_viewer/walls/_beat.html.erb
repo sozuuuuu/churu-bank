@@ -1,0 +1,46 @@
+<%# 1回の処理: 左に だれ（黄の人 / 紫の係）と 何を頼んだか（青の命令）、右に 起きた出来事（オレンジ）と抜け（ピンク） %>
+<li class="wall-beat<%= " is-caused" if beat.cause %>">
+  <% if beat.cause %>
+    <span class="wall-arrow-note">「<%= event_entry(beat.cause).label %>」が来たので</span>
+  <% end %>
+  <div class="wall-beat-body">
+    <div class="wall-col">
+      <% if beat.policy %>
+        <div class="sticky sticky-policy" title="<%= beat.policy.rule %>">
+          <span class="sticky-tag">方針・係</span>
+          <strong><%= beat.policy.label %></strong>
+          <small><%= beat.policy.rule %></small>
+        </div>
+      <% else %>
+        <div class="sticky sticky-person">
+          <span class="sticky-tag">人</span>
+          <strong><%= wall_person(beat, generic:) %></strong>
+        </div>
+      <% end %>
+      <div class="sticky sticky-command">
+        <span class="sticky-tag">命令</span>
+        <strong><%= beat.command %></strong>
+      </div>
+    </div>
+    <div class="wall-col">
+      <% wall_event_chunks(beat).each do |events| %>
+        <% event = events.first %>
+        <% entry = event_entry(event) %>
+        <%= link_to event_viewer_event_path(event.event_id),
+              class: [ "sticky", "sticky-event", kind_class(entry.kind), ("is-dim" unless events.any? { wall.highlighted?(it) }) ],
+              title: entry.description do %>
+          <span class="sticky-tag"><%= icon(entry.icon, size: 14) %><%= entry.kind_label %></span>
+          <strong><%= entry.label %><% if events.size > 1 %> ×<%= events.size %><% end %></strong>
+          <% unless generic %><small><%= event_summary(event) %></small><% end %>
+        <% end %>
+      <% end %>
+      <% if beat.waiting %>
+        <div class="sticky sticky-hotspot">
+          <span class="sticky-tag"><%= icon(:alert, size: 14) %>流れの抜け</span>
+          <strong><%= beat.waiting %></strong>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  <time class="wall-time" datetime="<%= beat.time.iso8601 %>"><%= event_time(beat.time) %></time>
+</li>

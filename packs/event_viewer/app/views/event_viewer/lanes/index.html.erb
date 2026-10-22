@@ -29,7 +29,10 @@
 
   <section class="card ev-lanes-frame">
     <% if @flow %>
-      <h2><%= names.stream(@stream) %> のレーン図</h2>
+      <div class="ev-section-head">
+        <h2><%= names.stream(@stream) %> のレーン図</h2>
+        <%= link_to "ふせんの壁で見る", event_viewer_wall_path(correlation: @flow.seed.correlation_id), class: "button small" %>
+      </div>
       <p class="muted small">左の時刻は記帳した時刻。点をクリックすると、その出来事の中身とつながりの図へ移ります。</p>
       <%= render "event_lens/lanes", flow: @flow %>
     <% else %>

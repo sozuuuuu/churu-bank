@@ -20,3 +20,81 @@
 .ev-picker a:hover { background: var(--bg); }
 .ev-picker a.is-current { background: color-mix(in srgb, var(--k-transfer) 12%, var(--surface)); outline: 1px solid var(--k-transfer); }
 @media (max-width: 860px) { .ev-lanes-layout { grid-template-columns: 1fr; } }
+
+/* ---- ふせんの壁（イベントストーミング） ----
+   ふせんの紙の色は、暗い画面でも紙のまま（字はいつも濃い色）。少し傾けて、影をつける */
+:root {
+  --sticky-event: #ffb35c;
+  --sticky-command: #8ec5ff;
+  --sticky-policy: #d2b4ff;
+  --sticky-person: #ffe474;
+  --sticky-hotspot: #ff9fc6;
+  --sticky-ink: #2b2620;
+  --wall-board: #f4efe6;
+  --wall-dot: rgba(120, 100, 70, .16);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --wall-board: #2a2620; --wall-dot: rgba(255, 240, 210, .08); }
+}
+
+.wall-views { display: inline-flex; gap: 0; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.wall-views a { padding: 6px 16px; color: var(--text); text-decoration: none; font-size: .9rem; background: var(--surface); }
+.wall-views a + a { border-left: 1px solid var(--border); }
+.wall-views a.is-current { background: var(--k-transfer); color: #fff; font-weight: 600; }
+
+.wall-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 10px;
+  background: color-mix(in srgb, var(--sticky-person) 35%, var(--surface)); }
+
+.wall-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0; margin: 12px 0; font-size: .85rem; }
+.wall-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.wall-legend .sticky-swatch { width: 18px; height: 18px; border-radius: 2px; min-height: 0; box-shadow: 1px 2px 3px rgba(0, 0, 0, .2); }
+.wall-legend .sticky-swatch.sticky-event { background: var(--sticky-event); }
+.wall-legend .sticky-swatch.sticky-command { background: var(--sticky-command); }
+.wall-legend .sticky-swatch.sticky-policy { background: var(--sticky-policy); }
+.wall-legend .sticky-swatch.sticky-person { background: var(--sticky-person); }
+.wall-legend .sticky-swatch.sticky-hotspot { background: var(--sticky-hotspot); }
+
+/* 1段 = ひとつながりの流れ。コルクボードのような点々の地に、横へ流す（はみ出したら横にすべらせる） */
+.wall-row {
+  margin-bottom: 14px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  background: var(--wall-board) radial-gradient(var(--wall-dot) 1px, transparent 1.5px) 0 0 / 14px 14px;
+}
+.wall-row.is-waiting { border-color: var(--sticky-hotspot); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sticky-hotspot) 45%, transparent); }
+.wall-row-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.wall-row-links { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .85rem; }
+.wall-count { font-size: 1.15rem; color: var(--k-transfer); }
+
+.wall-strip { list-style: none; margin: 0; padding: 18px 14px 12px; display: flex; align-items: flex-start; gap: 34px; overflow-x: auto; }
+.wall-beat { position: relative; flex: 0 0 auto; display: grid; gap: 6px; padding-top: 18px; }
+/* 処理と処理のあいだの矢印。係が「来たので」動いたときは紫 */
+.wall-beat + .wall-beat::before {
+  content: "→"; position: absolute; left: -28px; top: 46px; font-size: 1.3rem; font-weight: 700; color: var(--muted);
+}
+.wall-beat.is-caused::before { color: #7b4fb5; }
+.wall-arrow-note { position: absolute; top: 0; left: 0; font-size: .72rem; color: #7b4fb5; white-space: nowrap; font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  .wall-beat.is-caused::before, .wall-arrow-note { color: var(--sticky-policy); }
+}
+.wall-beat-body { display: flex; gap: 8px; align-items: flex-start; }
+.wall-col { display: grid; gap: 8px; align-content: start; }
+.wall-time { font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.sticky {
+  display: grid; gap: 2px; width: 9.5em; min-height: 4.6em; padding: 8px 9px 10px; border-radius: 2px;
+  color: var(--sticky-ink); text-decoration: none; line-height: 1.3; font-size: .85rem;
+  box-shadow: 1px 3px 0 rgba(0, 0, 0, .06), 2px 6px 10px rgba(0, 0, 0, .18);
+  transform: rotate(var(--tilt, -1deg)); transition: transform .15s ease, box-shadow .15s ease;
+}
+.wall-col > .sticky:nth-child(3n + 2) { --tilt: 1.2deg; }
+.wall-col > .sticky:nth-child(3n) { --tilt: -.4deg; }
+.wall-beat:nth-child(even) .wall-col > .sticky:nth-child(odd) { --tilt: .8deg; }
+.sticky strong { font-size: .92rem; }
+.sticky small { font-size: .74rem; opacity: .8; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.sticky-tag { display: inline-flex; align-items: center; gap: 3px; font-size: .68rem; font-weight: 700; letter-spacing: .04em; opacity: .7; }
+.sticky-event { background: var(--sticky-event); border-top: 5px solid color-mix(in srgb, var(--kind) 70%, var(--sticky-event)); }
+.sticky-command { background: var(--sticky-command); }
+.sticky-policy { background: var(--sticky-policy); }
+.sticky-person { background: var(--sticky-person); width: 8em; min-height: 3em; }
+.sticky-hotspot { background: var(--sticky-hotspot); transform: rotate(2deg); }
+a.sticky:hover, a.sticky:focus-visible { transform: rotate(0) translateY(-2px) scale(1.03); box-shadow: 2px 10px 16px rgba(0, 0, 0, .25); }
+.sticky.is-dim { opacity: .35; }

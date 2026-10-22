@@ -4,6 +4,7 @@
   <h1>イベント（出来事の記録）</h1>
   <p class="muted">ちゅーる銀行で起きたことは、すべて「出来事」として順に書き足されていきます。消したり書き換えたりはしません。
     残高も通帳も、この出来事を順に足し合わせて作っています。</p>
+  <p class="small">流れの全体をイベントストーミングの形で見るなら <%= link_to "ふせんの壁", event_viewer_wall_path %>。</p>
 </div>
 
 <%= form_with url: event_viewer_events_path, method: :get, class: "ev-filters card", data: { turbo_action: "advance" } do |f| %>

@@ -13,6 +13,7 @@
     <%= link_to event_viewer_events_path, class: ("is-current" if controller_name == "events") do %><%= icon(:bell, size: 16) %>一覧と生中継<% end %>
     <%= link_to event_viewer_time_machine_path, class: ("is-current" if controller_name == "time_machines") do %><%= icon(:clock, size: 16) %>タイムマシン<% end %>
     <%= link_to event_viewer_lanes_path, class: ("is-current" if controller_name == "lanes") do %><%= icon(:send, size: 16) %>レーン図<% end %>
+    <%= link_to event_viewer_wall_path, class: ("is-current" if controller_name == "walls") do %><%= icon(:ticket, size: 16) %>ふせんの壁<% end %>
     <%= link_to "/res", class: "ev-tabs-res", data: { turbo: false } do %>詳しく見る（英語）<% end %>
   </nav>
 <% end %>

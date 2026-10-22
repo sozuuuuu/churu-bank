@@ -1,0 +1,215 @@
+/* イベントビューア（packs/event_viewer）。管理画面の落ち着いた見た目に合わせ、図の部分だけ色と動きをつける。
+   色は application.css の変数と、出来事の種類ごとの色（--k-*）。.kind-<種類> が --kind を決める */
+:root {
+  --k-money-in: #1f7a4d;
+  --k-money-out: #b3261e;
+  --k-transfer: #2f6db5;
+  --k-guard: #a86a12;
+  --k-request: #7b4fb5;
+  --k-shop: #c2457a;
+  --k-account: #55657f;
+  --k-other: #7a6f66;
+  --ev-glow: rgba(47, 109, 181, .35);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --k-money-in: #6fd3a0;
+    --k-money-out: #ff8a80;
+    --k-transfer: #82b4f5;
+    --k-guard: #f0b45a;
+    --k-request: #c4a2f2;
+    --k-shop: #f59ac0;
+    --k-account: #a9b6cc;
+    --k-other: #a99d92;
+    --ev-glow: rgba(130, 180, 245, .35);
+  }
+}
+.kind-money-in { --kind: var(--k-money-in); }
+.kind-money-out { --kind: var(--k-money-out); }
+.kind-transfer { --kind: var(--k-transfer); }
+.kind-guard { --kind: var(--k-guard); }
+.kind-request { --kind: var(--k-request); }
+.kind-shop { --kind: var(--k-shop); }
+.kind-account { --kind: var(--k-account); }
+.kind-other { --kind: var(--k-other); }
+
+.event-viewer .container { max-width: 1200px; }
+.ev-head p { margin: 0 0 12px; }
+.ev-lead strong { color: var(--text); }
+
+/* 中のメニュー */
+.ev-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.ev-tabs a {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none; font-size: .9rem;
+}
+.ev-tabs a.is-current { border-color: var(--k-transfer); color: var(--k-transfer); font-weight: 600; }
+.ev-tabs .ev-tabs-res { margin-left: auto; color: var(--muted); }
+
+/* 絞り込み */
+.ev-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.ev-filters label { display: grid; gap: 4px; font-size: .85rem; min-width: 12em; }
+.ev-filters-actions { display: flex; gap: 8px; }
+.ev-basis { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .9rem; }
+.ev-basis legend { font-size: .85rem; padding: 0; margin-bottom: 4px; }
+.ev-basis label { display: flex; align-items: center; gap: 4px; min-width: 0; }
+
+/* 種類のバッジ */
+.event-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px 1px 6px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--kind) 45%, transparent); color: var(--kind);
+  background: color-mix(in srgb, var(--kind) 8%, var(--surface)); text-decoration: none; font-size: .85rem; font-weight: 600;
+}
+
+/* 一覧と生中継 */
+.ev-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.ev-row {
+  display: grid; grid-template-columns: 28px 7.5em minmax(12em, 1.2fr) minmax(10em, 1.6fr) minmax(8em, .9fr);
+  gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border);
+  border-left: 4px solid var(--kind); font-variant-numeric: tabular-nums;
+}
+.ev-row:last-child { border-bottom: 0; }
+.ev-row-icon { color: var(--kind); display: grid; place-items: center; }
+.ev-row-time { color: var(--muted); font-size: .85rem; }
+.ev-row-main { display: grid; line-height: 1.3; }
+.ev-row-label { font-weight: 700; color: var(--kind); text-decoration: none; }
+.ev-row-label:hover { text-decoration: underline; }
+.ev-row-where { font-size: .8rem; color: var(--muted); }
+.ev-row-summary { font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-row-actor { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) {
+  .ev-row { grid-template-columns: 24px 1fr; }
+  .ev-row-time, .ev-row-summary, .ev-row-actor { grid-column: 2; }
+}
+
+.ev-live-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.ev-live-bar .button { margin-left: auto; }
+.ev-live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--k-money-out); box-shadow: 0 0 0 3px color-mix(in srgb, var(--k-money-out) 25%, transparent); }
+.ev-live.is-paused .ev-live-dot { background: var(--muted); box-shadow: none; }
+.ev-live-dot.is-blink { animation: ev-blink .9s ease-out; }
+.ev-live-pending { font-size: .85rem; padding: 2px 10px; border-radius: 999px; background: var(--warn-bg); }
+.ev-row.is-arriving { animation: ev-arrive .7s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes ev-arrive {
+  from { opacity: 0; transform: translateY(-14px) scale(.98); background: color-mix(in srgb, var(--kind) 22%, var(--surface)); }
+  60% { opacity: 1; background: color-mix(in srgb, var(--kind) 14%, var(--surface)); }
+  to { transform: none; background: var(--surface); }
+}
+@keyframes ev-blink {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--k-money-out) 70%, transparent); }
+  to { box-shadow: 0 0 0 12px transparent; }
+}
+
+/* 1件の中身 */
+.ev-hero { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; align-items: start; border-top: 4px solid var(--kind); }
+.ev-hero h1 { margin: 0; color: var(--kind); }
+.ev-hero p { margin: 0; }
+.ev-hero-icon { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; color: var(--kind); background: color-mix(in srgb, var(--kind) 12%, var(--surface)); }
+.ev-hero-kind { font-size: .8rem; color: var(--kind); font-weight: 700; }
+.ev-hero-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 12px 0 0; }
+.ev-hero-facts div { padding: 2px 8px; border-radius: 6px; }
+.ev-hero-facts dt { font-size: .75rem; color: var(--muted); }
+.ev-hero-facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.card .table.ev-fields { display: table; table-layout: fixed; }
+.table.ev-fields th { width: 8.5em; white-space: normal; }
+.ev-fields td.ev-key { width: 8.5em; }
+.card .table.tm-passbook { display: table; }
+.table.ev-fields td { white-space: normal; word-break: break-all; }
+.ev-key, .ev-key code { color: var(--muted); font-size: .72rem; text-align: right; }
+.ev-streams { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.ev-section-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ev-section-head h2 { margin: 0; }
+ul.plain { margin: 0; padding-left: 1.2em; }
+
+/* 図（つながりの図・レーン図） */
+.ev-diagram-bar { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.ev-diagram-caption { font-size: .9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ev-diagram-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.ev-svg { display: block; font-family: inherit; }
+.ev-svg a { cursor: pointer; }
+
+.ev-step-box { fill: color-mix(in srgb, var(--surface) 60%, transparent); stroke: var(--border); stroke-dasharray: 4 3; }
+.ev-step-label { font-size: 11px; fill: var(--muted); }
+
+.ev-node-box { fill: var(--surface); stroke: color-mix(in srgb, var(--kind) 55%, var(--border)); stroke-width: 1.5; }
+.ev-node-stripe { fill: var(--kind); }
+.ev-node .ev-svg-icon { color: var(--kind); }
+.ev-node-label { font-size: 13px; font-weight: 700; fill: var(--text); }
+.ev-node-sub { font-size: 10.5px; fill: var(--muted); }
+.ev-node.is-seed .ev-node-box { stroke: var(--kind); stroke-width: 3; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--kind) 45%, transparent)); }
+.ev-svg a:hover .ev-node-box, .ev-svg a:focus-visible .ev-node-box { stroke: var(--kind); stroke-width: 2.5; }
+
+.ev-edge { fill: none; stroke-width: 2; stroke-linecap: round; }
+.ev-edge-cause { stroke: var(--k-transfer); }
+.ev-edge-then { stroke: var(--muted); stroke-dasharray: 5 4; }
+.ev-edge-same { stroke: var(--border); stroke-width: 2.5; }
+.ev-arrowhead-cause { fill: var(--k-transfer); }
+.ev-arrowhead-then { fill: var(--muted); }
+.ev-arrowhead-same { fill: var(--border); }
+
+.ev-lane-bg { fill: var(--surface); stroke: var(--border); }
+.ev-lane.is-odd .ev-lane-bg { fill: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.ev-lane-kind { font-size: 11px; fill: var(--muted); }
+.ev-lane-name { font-size: 13px; font-weight: 700; fill: var(--text); }
+.ev-lane-line { stroke: var(--border); stroke-dasharray: 2 4; }
+.ev-dot-circle { fill: var(--kind); stroke: var(--surface); stroke-width: 2.5; }
+.ev-dot-label, .ev-dot-sub, .ev-dot-time { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.ev-dot-label { font-size: 12.5px; font-weight: 700; fill: var(--kind); }
+.ev-dot-sub { font-size: 10px; fill: var(--muted); }
+.ev-dot-time { font-size: 10.5px; fill: var(--muted); stroke: var(--bg); font-variant-numeric: tabular-nums; }
+.ev-legend { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--muted); }
+.ev-legend li { display: flex; align-items: center; gap: 6px; }
+
+/* 再生: 全体をうすくして、光ったものだけはっきり。いまの出来事はふくらんで光る */
+.ev-diagram [data-step] { transition: opacity .35s ease; }
+.ev-diagram.is-playing [data-step] { opacity: .12; }
+.ev-diagram.is-playing [data-step].is-lit { opacity: 1; }
+.ev-diagram.is-playing .ev-edge.is-now { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: ev-draw .6s ease-out forwards; }
+.ev-diagram.is-playing .ev-edge-then.is-now { stroke-dasharray: 5 4; animation: none; }
+.ev-node, .ev-dot-circle { transform-box: fill-box; transform-origin: center; }
+.ev-diagram.is-playing .ev-node.is-now .ev-node-box { filter: drop-shadow(0 0 10px var(--ev-glow)) drop-shadow(0 0 4px color-mix(in srgb, var(--kind) 60%, transparent)); stroke: var(--kind); stroke-width: 3; }
+.ev-diagram.is-playing .ev-dot.is-now .ev-dot-circle { animation: ev-pop .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes ev-draw { to { stroke-dashoffset: 0; } }
+@keyframes ev-pop { from { transform: scale(.3); } 60% { transform: scale(1.7); } to { transform: scale(1); } }
+
+/* レーン図の選ぶところ */
+.ev-lanes-layout { display: grid; grid-template-columns: 13em 1fr; gap: 16px; align-items: start; }
+.ev-lanes-layout > .card { margin-bottom: 0; min-width: 0; }
+.ev-picker h2 { font-size: .9rem; margin: 12px 0 4px; color: var(--muted); }
+.ev-picker h2:first-child { margin-top: 0; }
+.ev-picker ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ev-picker a { display: grid; padding: 4px 8px; border-radius: 8px; color: var(--text); text-decoration: none; line-height: 1.35; }
+.ev-picker a:hover { background: var(--bg); }
+.ev-picker a.is-current { background: color-mix(in srgb, var(--k-transfer) 12%, var(--surface)); outline: 1px solid var(--k-transfer); }
+@media (max-width: 860px) { .ev-lanes-layout { grid-template-columns: 1fr; } }
+
+/* タイムマシン */
+.tm-dashboard { display: grid; grid-template-columns: minmax(16em, 1fr) minmax(18em, 1.4fr); gap: 12px 24px; align-items: center; }
+.tm-balance p { margin: 0; }
+.tm-balance .balance { color: var(--text); display: inline-block; }
+.tm-balance .balance.up { animation: tm-up .45s ease-out; }
+.tm-balance .balance.down { animation: tm-down .45s ease-out; }
+@keyframes tm-up { 40% { color: var(--plus); transform: translateY(-3px) scale(1.04); } }
+@keyframes tm-down { 40% { color: var(--minus); transform: translateY(3px) scale(.97); } }
+.tm-controls { display: grid; gap: 8px; }
+.tm-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.tm-slider { display: grid; gap: 2px; }
+.tm-slider input { width: 100%; accent-color: var(--k-transfer); }
+.tm-formula { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin: 0; font-variant-numeric: tabular-nums; }
+.tm-chip { padding: 0 8px; border-radius: 999px; border: 1px solid var(--border); font-size: .85rem; transition: opacity .25s; }
+.tm-chip.plus { color: var(--plus); }
+.tm-chip.minus { color: var(--minus); }
+.tm-chip.is-future { opacity: .2; }
+.tm-result { font-weight: 700; border-color: var(--text); }
+.tm-passbook tr { transition: opacity .25s; }
+.tm-passbook tr.is-future { opacity: .25; }
+.tm-passbook tr.is-now td { background: color-mix(in srgb, var(--k-transfer) 10%, var(--surface)); }
+.tm-passbook tr.is-now td:first-child { box-shadow: inset 4px 0 var(--k-transfer); }
+.tm-backdated-mark { background: var(--warn-bg); padding: 0 4px; }
+@media (max-width: 720px) { .tm-dashboard { grid-template-columns: 1fr; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-row.is-arriving, .ev-live-dot.is-blink, .tm-balance .balance.up, .tm-balance .balance.down,
+  .ev-diagram.is-playing .ev-edge.is-now, .ev-diagram.is-playing .ev-dot.is-now .ev-dot-circle { animation: none; }
+  .ev-diagram.is-playing .ev-edge-cause.is-now, .ev-diagram.is-playing .ev-edge-same.is-now { stroke-dasharray: none; }
+  .ev-diagram [data-step], .tm-chip, .tm-passbook tr { transition: none; }
+}

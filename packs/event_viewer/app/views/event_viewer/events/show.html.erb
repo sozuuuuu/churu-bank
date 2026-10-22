@@ -1,0 +1,75 @@
+<% entry = event_entry(@event) %>
+<% content_for :title, "#{entry.label} | イベント | ちゅーる銀行" %>
+
+<section class="card ev-hero <%= kind_class(entry.kind) %>">
+  <span class="ev-hero-icon"><%= icon(entry.icon, size: 34) %></span>
+  <div>
+    <p class="ev-hero-kind"><%= entry.kind_label %></p>
+    <h1><%= entry.label %></h1>
+    <p class="muted"><%= entry.description %></p>
+  </div>
+  <dl class="ev-hero-facts">
+    <div><dt>いつ（記帳）</dt><dd><%= l_time(@event.timestamp) %></dd></div>
+    <% if @event.valid_at.to_i != @event.timestamp.to_i %>
+      <div class="backdated"><dt>本当はいつ（起算）</dt><dd><%= l_time(@event.valid_at) %></dd></div>
+    <% end %>
+    <div><dt>だれが</dt><dd><%= names.actor(@event.metadata[:actor]) %></dd></div>
+    <div><dt>番号</dt><dd><%= @flow.position(@event) %> 番目の出来事</dd></div>
+  </dl>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>中身（data）</h2>
+    <table class="table ev-fields">
+      <tbody>
+        <% @event.data.each do |key, value| %>
+          <tr><th><%= EventViewer::Catalog.field_label(key) %></th><td><%= field_value(key, value) %></td><td class="ev-key"><code><%= key %></code></td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>付帯情報（metadata）</h2>
+    <table class="table ev-fields">
+      <tbody>
+        <% @event.metadata.to_h.each do |key, value| %>
+          <tr><th><%= EventViewer::Catalog.field_label(key, metadata: true) %></th><td><%= field_value(key, value, metadata: true) %></td><td class="ev-key"><code><%= key %></code></td></tr>
+        <% end %>
+      </tbody>
+    </table>
+    <p class="muted small">「ひとつながりの番号」が同じ出来事は、同じきっかけから続いて起きたもの。「きっかけの出来事」は、この出来事を起こした1つ前の出来事です。</p>
+  </section>
+</div>
+
+<section class="card">
+  <h2>入っているストリーム</h2>
+  <p class="muted small">ストリームは出来事の「入れ物」。もともと書かれた入れ物のほか、あとから辿りやすいように別の入れ物にも並べて（リンクして）あります。</p>
+  <% home = EventViewer::Catalog.home_stream(@event) %>
+  <ul class="ev-streams">
+    <% @streams.each do |stream| %>
+      <li>
+        <% if stream.match?(EventViewer::EventIndex::BUSINESS) %>
+          <%= link_to names.stream(stream), event_viewer_lanes_path(stream:) %>
+        <% elsif stream.start_with?("Account$") %>
+          <%= link_to names.stream(stream), event_viewer_time_machine_path(account: stream.delete_prefix("Account$")) %>
+        <% else %>
+          <%= names.stream(stream) %>
+        <% end %>
+        <span class="badge"><%= stream == home ? "もともとの入れ物" : "リンク" %></span>
+        <code class="ev-key"><%= stream %></code>
+      </li>
+    <% end %>
+  </ul>
+</section>
+
+<section class="card" id="flow">
+  <div class="ev-section-head">
+    <h2>つながりの図</h2>
+    <% if (business = EventViewer::EventIndex.keys(@event).first) %>
+      <%= link_to "レーン図で見る", event_viewer_lanes_path(stream: business), class: "button small" %>
+    <% end %>
+  </div>
+  <p class="muted small">この出来事とひとつながりの出来事（<%= @flow.events.size %> 件）。上から下へ時間が進みます。「再生」を押すと、起きた順に1つずつ光ります。枠で囲んだ出来事をクリックすると、その出来事へ移ります。</p>
+  <%= render "event_viewer/shared/tree", flow: @flow %>
+</section>

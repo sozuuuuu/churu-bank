@@ -1,0 +1,86 @@
+<% content_for :title, "タイムマシン | イベント | ちゅーる銀行" %>
+
+<div class="ev-head">
+  <h1>タイムマシン</h1>
+  <p class="ev-lead"><strong>いまの残高 = はじめの出来事から順に足し合わせた結果。</strong>
+    つまみを動かすと、その出来事まで足し合わせた残高と通帳に戻れます。</p>
+</div>
+
+<%= form_with url: event_viewer_time_machine_path, method: :get, class: "card ev-filters", data: { controller: "autosubmit" } do |f| %>
+  <label>口座
+    <%= f.select :account, @accounts.map { [ "#{it.number}（#{it.holder_name}）", it.number ] }, { selected: @account&.number },
+                 data: { action: "change->autosubmit#submit" } %>
+  </label>
+  <% if @machine %>
+    <fieldset class="ev-basis">
+      <legend>並べ方</legend>
+      <% EventViewer::TimeMachine::BASES.each do |key, label| %>
+        <label><%= f.radio_button :basis, key, checked: @machine.basis == key, data: { action: "change->autosubmit#submit" } %> <%= label %></label>
+      <% end %>
+    </fieldset>
+  <% end %>
+  <noscript><%= f.submit "見る", class: "button", name: nil %></noscript>
+<% end %>
+
+<% if @machine.nil? %>
+  <p class="empty">口座がまだありません。</p>
+<% else %>
+  <% lines = @machine.lines %>
+  <section data-controller="event-viewer--time-machine" data-event-viewer--time-machine-position-value="<%= lines.size %>">
+    <div class="card tm-dashboard">
+      <div class="tm-balance">
+        <p class="muted small">この時点の残高</p>
+        <p class="balance" data-event-viewer--time-machine-target="balance"><%= churu(@machine.balance) %></p>
+        <p class="small">
+          状態 <strong data-event-viewer--time-machine-target="status"><%= lines.last&.status || "未開設" %></strong>
+          ・<span data-event-viewer--time-machine-target="count"><%= lines.size %></span> / <%= lines.size %> 件目まで
+          （<span data-event-viewer--time-machine-target="when"><%= lines.last && l_time(lines.last.at) %></span>）
+        </p>
+      </div>
+      <div class="tm-controls">
+        <div class="tm-buttons">
+          <button type="button" class="button small" data-action="event-viewer--time-machine#first" title="はじめに戻る">⏮ はじめ</button>
+          <button type="button" class="button small" data-action="event-viewer--time-machine#back" title="1件もどる">◀ 1件</button>
+          <button type="button" class="button small primary" data-action="event-viewer--time-machine#toggle" data-event-viewer--time-machine-target="play">▶ コマ送り</button>
+          <button type="button" class="button small" data-action="event-viewer--time-machine#forward" title="1件すすむ">1件 ▶</button>
+          <button type="button" class="button small" data-action="event-viewer--time-machine#last" title="いまに戻る">いま ⏭</button>
+        </div>
+        <label class="tm-slider">
+          <span class="muted small">何件目まで足すか（0 = まだ何もない）</span>
+          <input type="range" min="0" max="<%= lines.size %>" value="<%= lines.size %>" step="1"
+                 data-event-viewer--time-machine-target="slider" data-action="input->event-viewer--time-machine#scrub">
+        </label>
+      </div>
+      <p class="tm-formula" aria-label="足し算">
+        <span class="tm-chip tm-start">0</span>
+        <% lines.select(&:money?).each do |line| %>
+          <span class="tm-chip <%= line.delta.positive? ? "plus" : "minus" %>" data-position="<%= line.position %>"><%= line.delta.positive? ? "+" : "−" %><%= number_with_delimiter(line.delta.abs) %></span>
+        <% end %>
+        <span class="tm-chip tm-result">= <span data-event-viewer--time-machine-target="result"><%= number_with_delimiter(@machine.balance) %></span></span>
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>通帳（<%= EventViewer::TimeMachine::BASES.fetch(@machine.basis) %>）</h2>
+      <% if @machine.lines.any? { @machine.backdated?(it.event) } %>
+        <p class="muted small"><span class="tm-backdated-mark">黄色の行</span>は、起算日（本当はいつのことか）と記帳日（銀行が知った日）がちがう出来事。並べ方を切り替えると、置かれる場所が変わります。</p>
+      <% end %>
+      <div class="table-wrap"><table class="table tm-passbook">
+        <thead><tr><th class="num">#</th><th><%= @machine.basis == :as_at ? "記帳" : "起算" %></th><th>出来事</th><th class="num">増減</th><th class="num">残高</th><th>状態</th></tr></thead>
+        <tbody>
+          <% lines.each do |line| %>
+            <tr data-event-viewer--time-machine-target="row" data-position="<%= line.position %>" data-balance="<%= line.balance %>"
+                data-status="<%= line.status %>" data-when="<%= l_time(line.at) %>" class="<%= "backdated" if @machine.backdated?(line.event) %>">
+              <td class="num muted"><%= line.position %></td>
+              <td><%= event_time(line.at) %></td>
+              <td><%= event_badge(line.event) %> <span class="muted small"><%= event_summary(line.event) %></span></td>
+              <td class="num <%= line.delta.positive? ? "plus" : "minus" if line.money? %>"><%= churu(line.delta, signed: true) if line.money? %></td>
+              <td class="num"><%= churu(line.balance) %></td>
+              <td><%= line.status %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+<% end %>

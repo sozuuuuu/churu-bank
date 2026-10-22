@@ -1,0 +1,51 @@
+<% content_for :title, "イベント | ちゅーる銀行" %>
+
+<div class="ev-head">
+  <h1>イベント（出来事の記録）</h1>
+  <p class="muted">ちゅーる銀行で起きたことは、すべて「出来事」として順に書き足されていきます。消したり書き換えたりはしません。
+    残高も通帳も、この出来事を順に足し合わせて作っています。</p>
+</div>
+
+<%= form_with url: event_viewer_events_path, method: :get, class: "ev-filters card", data: { turbo_action: "advance" } do |f| %>
+  <label>種類
+    <%= f.select :kind, EventViewer::Catalog::KINDS.values.map { [ it.label, it.key ] }, { include_blank: "すべて", selected: @search.kind } %>
+  </label>
+  <label>口座
+    <%= f.select :account, @accounts.map { [ "#{it.number}（#{it.holder_name}）", it.number ] }, { include_blank: "すべて", selected: @search.account } %>
+  </label>
+  <label>日付
+    <%= f.date_field :date, value: @search.date&.to_date %>
+  </label>
+  <div class="ev-filters-actions">
+    <%= f.submit "絞り込む", class: "button primary", name: nil %>
+    <% if @search.filtered? %><%= link_to "すべて表示", event_viewer_events_path, class: "button" %><% end %>
+  </div>
+<% end %>
+
+<% if @search.filtered? || @search.before %>
+  <p class="muted small">絞り込み中・前のページを見ているあいだは、生中継を止めています。</p>
+  <ul class="ev-list" id="event_viewer_list">
+    <%= render partial: "event_viewer/events/event", collection: @search.events, as: :event, locals: { names: } %>
+  </ul>
+<% else %>
+  <%= staff_stream_from EventViewer::LiveJob::STREAM %>
+  <section class="ev-live" data-controller="event-viewer--live">
+    <div class="ev-live-bar">
+      <span class="ev-live-dot" data-event-viewer--live-target="dot" aria-hidden="true"></span>
+      <strong data-event-viewer--live-target="status">生中継中</strong>
+      <span class="muted small">新しい出来事が上から1件ずつ流れてきます</span>
+      <span class="ev-live-pending" data-event-viewer--live-target="pending" hidden></span>
+      <button type="button" class="button small" data-event-viewer--live-target="toggle" data-action="event-viewer--live#toggle">止める</button>
+    </div>
+    <ul class="ev-list" id="<%= EventViewer::LiveJob::TARGET %>" data-event-viewer--live-target="list" aria-live="polite">
+      <%= render partial: "event_viewer/events/event", collection: @search.events, as: :event, locals: { names: } %>
+    </ul>
+  </section>
+<% end %>
+
+<% if @search.events.empty? %>
+  <p class="empty">出来事はありません。</p>
+<% end %>
+<% if @search.next_before %>
+  <p><%= link_to "もっと前の出来事", event_viewer_events_path(request.query_parameters.merge(before: @search.next_before)), class: "button" %></p>
+<% end %>

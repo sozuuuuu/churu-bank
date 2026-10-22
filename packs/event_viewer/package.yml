@@ -1,0 +1,16 @@
+# イベントビューア（/admin/events、TODO の R）: イベントストアの中身を日本語で、目で見て楽しむ行員の画面。
+# 一覧と生中継・つながりの図（correlation / causation）・タイムマシン（出来事を足し合わせた残高）・レーン図。
+# 読むだけ（RES の event_store.read と、各パックの公開の読み取りモデル）。書き込みはしない。
+# イベントの日本語名は各パックの公開のイベント一覧（Banking::Events・Shop::Events・Approvals::Events）を定数で引くので、
+# どのパックのイベントを知っているかが packwerk の依存に出る。行員だけ（packs/staff_identity）
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/banking
+  - packs/shop
+  - packs/approvals
+  - packs/staff_identity
+  - packs/customer_registry
+  - packs/ui

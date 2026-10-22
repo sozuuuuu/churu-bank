@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   draw :shop_admin        # 商品と在庫の管理 /shop/admin
   draw :notices           # お知らせ /notices
   draw :notices_admin     # お知らせの管理 /admin/notices
+  draw :event_viewer      # イベントビューア /admin/events（イベントを日本語で・図で）
 
   # MCP（packs/mcp）。Streamable HTTP（stateless）。localhost からだけ受け付ける
   match "mcp" => "churu_mcp/server#handle", via: %i[get post delete], as: :mcp

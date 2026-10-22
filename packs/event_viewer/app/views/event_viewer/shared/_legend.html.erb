@@ -1,0 +1,8 @@
+<ul class="ev-legend small">
+  <li><svg width="34" height="10" aria-hidden="true"><path d="M2 5 H32" class="ev-edge ev-edge-cause"/></svg>きっかけ（この出来事を受けて、自動の処理が続きをした。causation_id）</li>
+  <li><svg width="34" height="10" aria-hidden="true"><path d="M2 5 H32" class="ev-edge ev-edge-then"/></svg>そのあと（きっかけの記録はないが、同じ振込・注文などの続き。人があとで操作したなど）</li>
+  <li><svg width="34" height="10" aria-hidden="true"><path d="M2 5 H32" class="ev-edge ev-edge-same"/></svg>同じ処理の中の続き</li>
+  <% if local_assigns[:steps] %>
+    <li><svg width="34" height="14" aria-hidden="true"><rect x="2" y="2" width="30" height="10" rx="4" class="ev-step-box"/></svg>1回の処理（同じ人が、同じきっかけで、ほぼ同時に書いた出来事。ふつうは1つのトランザクション）</li>
+  <% end %>
+</ul>

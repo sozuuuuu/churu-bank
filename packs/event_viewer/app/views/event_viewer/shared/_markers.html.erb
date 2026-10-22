@@ -1,0 +1,7 @@
+<defs>
+  <% %w[cause then same].each do |kind| %>
+    <marker id="<%= prefix %>-arrow-<%= kind %>" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9 z" class="ev-arrowhead ev-arrowhead-<%= kind %>"/>
+    </marker>
+  <% end %>
+</defs>

@@ -1,0 +1,26 @@
+<%# 1件の出来事の中身（data）と付帯情報（metadata）の表。metadata_keys を渡すと、その項目だけ出す（利用者の画面は行員の内部の情報を出さない） %>
+<% metadata = event.metadata.to_h %>
+<% metadata = metadata.slice(*local_assigns[:metadata_keys]) if local_assigns[:metadata_keys] %>
+<div class="grid">
+  <section class="card">
+    <h2><%= local_assigns[:data_title] || "中身（data）" %></h2>
+    <table class="table ev-fields">
+      <tbody>
+        <% event.data.each do |key, value| %>
+          <tr><th><%= EventLens::Catalog.field_label(key) %></th><td><%= field_value(key, value) %></td><td class="ev-key"><code><%= key %></code></td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2><%= local_assigns[:metadata_title] || "付帯情報（metadata）" %></h2>
+    <table class="table ev-fields">
+      <tbody>
+        <% metadata.each do |key, value| %>
+          <tr><th><%= EventLens::Catalog.field_label(key, metadata: true) %></th><td><%= field_value(key, value, metadata: true) %></td><td class="ev-key"><code><%= key %></code></td></tr>
+        <% end %>
+      </tbody>
+    </table>
+    <p class="muted small">「ひとつながりの番号」が同じ出来事は、同じきっかけから続いて起きたもの。「きっかけの出来事」は、この出来事を起こした1つ前の出来事です。</p>
+  </section>
+</div>

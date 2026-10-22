@@ -1,0 +1,74 @@
+/*
+ * 窓口の整理券と窓口チャット（packs/counter）の利用者の画面。body.cat-theme の下だけ
+ * （packs/ui の cat.css の変数と決まりごと: 主線・ぼかさない影・動きは出来事のときだけ）。
+ * 動きは「視差効果を減らす」で止める
+ */
+
+/* ---- 番号札 ---- */
+body.cat-theme .counter-ticket { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: center; }
+@media (max-width: 560px) { body.cat-theme .counter-ticket { grid-template-columns: 1fr; } }
+
+body.cat-theme .ticket-stub {
+  position: relative; display: grid; justify-items: center; gap: 2px; min-width: 150px; padding: 16px 22px;
+  background: var(--pink-soft); border: var(--line) solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--cel);
+}
+/* 札の切り取り線の丸い切り欠き */
+body.cat-theme .ticket-stub::before, body.cat-theme .ticket-stub::after {
+  content: ""; position: absolute; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  background: var(--panel); border: var(--line) solid var(--ink); border-radius: 50%;
+}
+body.cat-theme .ticket-stub::before { left: -10px; clip-path: inset(0 0 0 50%); }
+body.cat-theme .ticket-stub::after { right: -10px; clip-path: inset(0 50% 0 0); }
+body.cat-theme .ticket-label { font-weight: 900; font-size: .85rem; letter-spacing: .2em; }
+body.cat-theme .ticket-number { font-weight: 900; font-size: 1.1rem; }
+body.cat-theme .ticket-number strong { font-size: 3.4rem; line-height: 1; font-variant-numeric: tabular-nums; }
+body.cat-theme .ticket-date { font-size: .8rem; }
+
+body.cat-theme .ticket-ahead { margin: 0 0 6px; font-size: 1.6rem; font-weight: 900; }
+
+/* ---- 在席 ---- */
+body.cat-theme .presence { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; color: var(--sub); font-weight: 700; }
+body.cat-theme .presence-dot {
+  width: 12px; height: 12px; border-radius: 50%; border: var(--line-thin) solid var(--ink); background: var(--paper);
+}
+body.cat-theme .presence.is-present { color: var(--ink); }
+body.cat-theme .presence.is-present .presence-dot { background: var(--sky); }
+
+/* ---- チャット ---- */
+body.cat-theme .chat-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+body.cat-theme .chat-head h2 { margin: 0; }
+body.cat-theme .chat-log {
+  list-style: none; margin: 12px 0; padding: 14px; display: grid; gap: 12px; max-height: 50vh; overflow-y: auto;
+  background: var(--paper); border: var(--line-thin) solid var(--ink); border-radius: 16px;
+}
+body.cat-theme .chat-log.is-closed { max-height: none; }
+body.cat-theme .chat-note { justify-self: center; font-size: .85rem; color: var(--sub); }
+body.cat-theme .chat-message { display: grid; gap: 2px; max-width: min(80%, 34em); justify-self: start; }
+body.cat-theme .chat-message.is-mine { justify-self: end; text-align: right; }
+body.cat-theme .chat-name { font-size: .78rem; font-weight: 900; color: var(--sub); }
+body.cat-theme .chat-body {
+  margin: 0; padding: 8px 14px; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left;
+  background: var(--panel); border: var(--line-thin) solid var(--ink); border-radius: 16px 16px 16px 4px; box-shadow: 0 3px 0 var(--cel);
+}
+body.cat-theme .chat-message.is-mine .chat-body { background: var(--pink); color: var(--on-pink); border-radius: 16px 16px 4px 16px; }
+body.cat-theme .chat-message.is-staff:not(.is-mine) .chat-body { background: var(--sky-soft); }
+body.cat-theme .chat-time { font-size: .72rem; color: var(--sub); font-variant-numeric: tabular-nums; }
+body.cat-theme .chat-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+body.cat-theme .chat-message.is-fresh { animation: chat-pop .35s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes chat-pop { 0% { opacity: 0; transform: translateY(6px) scale(.92); } 100% { opacity: 1; transform: none; } }
+
+body.cat-theme .chat-typing { margin: 0 0 6px; font-size: .85rem; color: var(--sub); font-weight: 700; }
+body.cat-theme .chat-typing::after { content: ""; display: inline-block; width: 1.2em; animation: chat-dots 1.2s steps(4) infinite; }
+@keyframes chat-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+body.cat-theme .chat-status { margin: 0; color: var(--out); font-weight: 700; font-size: .85rem; }
+body.cat-theme .chat-status:empty { display: none; }
+
+body.cat-theme .chat-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+body.cat-theme .chat-form textarea { width: 100%; resize: vertical; min-height: 3.2em; }
+body.cat-theme .chat-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; }
+body.cat-theme .chat-foot .hint { margin: 0; flex: 1 1 18em; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.cat-theme .chat-message.is-fresh, body.cat-theme .chat-typing::after { animation: none; }
+  body.cat-theme .chat-typing::after { content: "…"; }
+}

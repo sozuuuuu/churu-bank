@@ -1,0 +1,22 @@
+<%# 札を持っていないとき: 「番号札を取る」と、いまの待ち人数。終わったばかりなら最後のやりとり %>
+<section class="card counter-take tone">
+  <h2><%= icon(:ticket, size: 22) %><span class="marker">番号札を取る</span></h2>
+  <% waiting = CounterTicket.waiting.count %>
+  <p><%= waiting.zero? ? "いまはだれも待っていません。" : "いま #{waiting} 人が待っています。" %></p>
+  <p class="hint">順番が来ると、このページでねこがお知らせします。そのまま窓口の行員とチャットでお話しできます（出金のご相談など）。</p>
+  <%= button_to counter_path, class: "button primary", form: { data: { turbo_frame: "_top" } } do %>
+    <%= icon(:ticket, size: 18) %> 番号札を取る
+  <% end %>
+</section>
+
+<% if last_ticket %>
+  <section class="card">
+    <h2><%= icon(:letter, size: 22) %><span class="marker"><%= last_ticket.number %> 番のやりとり</span></h2>
+    <p class="muted"><%= last_ticket.status_label %>（<%= jp_time(last_ticket.closed_at) %>）</p>
+    <% if last_ticket.messages.any? %>
+      <ol class="chat-log is-closed">
+        <%= render partial: "counter/tickets/message", collection: last_ticket.messages, locals: { me: "customer", accounts: [] } %>
+      </ol>
+    <% end %>
+  </section>
+<% end %>

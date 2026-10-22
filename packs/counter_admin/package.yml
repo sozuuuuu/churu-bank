@@ -1,0 +1,16 @@
+# 窓口の列とチャットの行員の画面（/admin/counter/queue、CounterAdmin::）。行員だけ（packs/staff_identity）。
+# 整理券とチャットのドメインとチャンネルは packs/counter。packs/counter は利用者の画面（/counter）も持っていて
+# 利用者のログインに依存するので、行員の画面を分けた（shop_admin・notices_admin と同じ）。
+# チャットの横に、その利用者の受付中の出金依頼（packs/banking の WithdrawalRequest。窓口取引 Q1）を出す。
+# 利用者の口座は顧客台帳（packs/customer_registry）から引く。
+# CSS は自分の counter_admin/counter_admin.css。Stimulus（counter--queue / counter--chat）は packs/counter のものを名前で使う
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/counter
+  - packs/banking
+  - packs/staff_identity
+  - packs/customer_registry
+  - packs/ui

@@ -1,0 +1,37 @@
+<% entry = event_entry(@event) %>
+<% content_for :title, "#{entry.label} | イベント | ちゅーる銀行" %>
+
+<%= render "event_lens/hero", event: @event, flow: @flow %>
+<%= render "event_lens/fields", event: @event %>
+
+<section class="card">
+  <h2>入っているストリーム</h2>
+  <p class="muted small">ストリームは出来事の「入れ物」。もともと書かれた入れ物のほか、あとから辿りやすいように別の入れ物にも並べて（リンクして）あります。</p>
+  <% home = EventLens::Catalog.home_stream(@event) %>
+  <ul class="ev-streams">
+    <% @streams.each do |stream| %>
+      <li>
+        <% if stream.match?(EventLens::EventIndex::BUSINESS) %>
+          <%= link_to names.stream(stream), event_viewer_lanes_path(stream:) %>
+        <% elsif stream.start_with?("Account$") %>
+          <%= link_to names.stream(stream), event_viewer_time_machine_path(account: stream.delete_prefix("Account$")) %>
+        <% else %>
+          <%= names.stream(stream) %>
+        <% end %>
+        <span class="badge"><%= stream == home ? "もともとの入れ物" : "リンク" %></span>
+        <code class="ev-key"><%= stream %></code>
+      </li>
+    <% end %>
+  </ul>
+</section>
+
+<section class="card" id="flow">
+  <div class="ev-section-head">
+    <h2>つながりの図</h2>
+    <% if (business = EventLens::EventIndex.keys(@event).first) %>
+      <%= link_to "レーン図で見る", event_viewer_lanes_path(stream: business), class: "button small" %>
+    <% end %>
+  </div>
+  <p class="muted small">この出来事とひとつながりの出来事（<%= @flow.events.size %> 件）。上から下へ時間が進みます。「再生」を押すと、起きた順に1つずつ光ります。枠で囲んだ出来事をクリックすると、その出来事へ移ります。</p>
+  <%= render "event_lens/tree", flow: @flow %>
+</section>

@@ -1,0 +1,43 @@
+<%# 呼ばれたあと: 呼んだ行員とのチャット。Stimulus の counter--chat が ChatChannel を購読する（role は customer）。
+    送る = perform("speak")、入力中 = perform("typing")。行員が「終わる」と closed が届いて、この Frame を読み直す %>
+<% accounts = current_customer.account_numbers %>
+<section class="card counter-chat"
+         data-controller="counter--chat"
+         data-counter--chat-ticket-id-value="<%= ticket.id %>"
+         data-counter--chat-role-value="customer"
+         data-counter--chat-present-text-value="<%= ticket.staff_name %>さん: 在席"
+         data-counter--chat-absent-text-value="<%= ticket.staff_name %>さんは席をはずしています">
+  <header class="chat-head">
+    <h2><%= icon(:chat, size: 22) %><span class="marker"><%= ticket.number %> 番 窓口チャット</span></h2>
+    <% present = ticket.present?("staff") %>
+    <p class="presence <%= "is-present" if present %>" data-counter--chat-target="presence">
+      <span class="presence-dot" aria-hidden="true"></span>
+      <span data-counter--chat-target="presenceText"><%= present ? "#{ticket.staff_name}さん: 在席" : "#{ticket.staff_name}さんは席をはずしています" %></span>
+    </p>
+  </header>
+
+  <ol class="chat-log" data-counter--chat-target="log" aria-live="polite">
+    <li class="chat-note"><%= ticket.staff_name %>さんにつながりました。ご用件をどうぞ。</li>
+    <%= render partial: "counter/tickets/message", collection: ticket.messages, locals: { me: "customer", accounts: } %>
+  </ol>
+  <p class="chat-typing" data-counter--chat-target="typing" hidden><%= ticket.staff_name %>さんが入力中…</p>
+  <p class="chat-status" data-counter--chat-target="status" role="status"></p>
+
+  <form class="chat-form" data-counter--chat-target="form" data-action="submit->counter--chat#send">
+    <label class="visually-hidden" for="chat-body">メッセージ</label>
+    <textarea id="chat-body" rows="2" maxlength="<%= Counter::Desk::MAX_MESSAGE_LENGTH %>" placeholder="メッセージ（Enter で送る・Shift+Enter で改行）"
+              data-counter--chat-target="input" data-action="input->counter--chat#typing keydown->counter--chat#submitOnEnter"></textarea>
+    <button type="submit" class="button primary"><%= icon(:send, size: 18) %> 送る</button>
+  </form>
+
+  <%# 行員が「出金依頼の画面へ」を案内したとき、その発言に付けるリンク（Stimulus が複製する） %>
+  <template data-counter--chat-target="guide"><%= render "counter/tickets/withdrawal_links", accounts: %></template>
+
+  <div class="chat-foot">
+    <% if accounts.any? %>
+      <p class="hint">出金のご相談は、口座ページの「出金の依頼」から依頼を出すと、窓口でそのまま処理できます。</p>
+    <% end %>
+    <%= button_to "窓口を離れる（札を返す）", counter_path, method: :delete, class: "button small",
+                  form: { data: { turbo_frame: "_top", turbo_confirm: "チャットを終えて札を返しますか？" } } %>
+  </div>
+</section>

@@ -1,0 +1,6 @@
+<%# チャットの1発言（行員の画面）。あとから届く発言は Stimulus（counter--chat）が同じ形で足す %>
+<li class="chat-message <%= message.author_role == "staff" ? "is-mine" : "is-theirs" %> is-<%= message.author_role %>" data-message-id="<%= message.id %>">
+  <span class="chat-name"><%= message.author_name %></span>
+  <p class="chat-body"><%= message.body %></p>
+  <time class="chat-time"><%= message.created_at.in_time_zone.strftime("%H:%M") %></time>
+</li>

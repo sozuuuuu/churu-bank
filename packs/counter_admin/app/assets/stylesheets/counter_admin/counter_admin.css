@@ -1,0 +1,40 @@
+/* 窓口の列とチャット（行員、packs/counter_admin）。管理画面の見た目（application.css の変数）に合わせる */
+
+.queue-call { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.queue-call p { margin: 0; }
+.queue-next { font-size: 1.15rem; padding: 10px 28px; }
+.queue-list { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+.queue-number { font-variant-numeric: tabular-nums; margin-right: 6px; }
+.small { font-size: .85rem; }
+
+.counter-admin { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.counter-admin .card { margin-bottom: 0; }
+@media (max-width: 760px) { .counter-admin { grid-template-columns: 1fr; } }
+
+.presence { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-size: .9rem; }
+.presence-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.presence.is-present { color: var(--text); }
+.presence.is-present .presence-dot { background: var(--plus); }
+
+.chat-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chat-head h2 { margin: 0; }
+.chat-log {
+  list-style: none; margin: 12px 0; padding: 12px; display: grid; gap: 10px; max-height: 55vh; overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+}
+.chat-note { justify-self: center; color: var(--muted); font-size: .85rem; }
+.chat-message { display: grid; gap: 2px; max-width: 80%; justify-self: start; }
+.chat-message.is-mine { justify-self: end; text-align: right; }
+.chat-name { font-size: .75rem; color: var(--muted); font-weight: 600; }
+.chat-body {
+  margin: 0; padding: 6px 12px; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.chat-message.is-mine .chat-body { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.chat-time { font-size: .7rem; color: var(--muted); }
+.chat-typing { margin: 0 0 6px; color: var(--muted); font-size: .85rem; }
+.chat-status { margin: 0; color: var(--minus); font-size: .85rem; }
+.chat-status:empty { display: none; }
+.chat-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.chat-form textarea { width: 100%; resize: vertical; font: inherit; padding: 6px 8px; }
+.counter-admin .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }

@@ -1,0 +1,29 @@
+<% content_for :title, "タイムマシン | イベント | ちゅーる銀行" %>
+
+<div class="ev-head">
+  <h1>タイムマシン</h1>
+  <p class="ev-lead"><strong>いまの残高 = はじめの出来事から順に足し合わせた結果。</strong>
+    つまみを動かすと、その出来事まで足し合わせた残高と通帳に戻れます。</p>
+</div>
+
+<%= form_with url: event_viewer_time_machine_path, method: :get, class: "card ev-filters", data: { controller: "autosubmit" } do |f| %>
+  <label>口座
+    <%= f.select :account, @accounts.map { [ "#{it.number}（#{it.holder_name}）", it.number ] }, { selected: @account&.number },
+                 data: { action: "change->autosubmit#submit" } %>
+  </label>
+  <% if @machine %>
+    <fieldset class="ev-basis">
+      <legend>並べ方</legend>
+      <% EventLens::TimeMachine::BASES.each do |key, label| %>
+        <label><%= f.radio_button :basis, key, checked: @machine.basis == key, data: { action: "change->autosubmit#submit" } %> <%= label %></label>
+      <% end %>
+    </fieldset>
+  <% end %>
+  <noscript><%= f.submit "見る", class: "button", name: nil %></noscript>
+<% end %>
+
+<% if @machine.nil? %>
+  <p class="empty">口座がまだありません。</p>
+<% else %>
+  <%= render "event_lens/time_machine", machine: @machine %>
+<% end %>

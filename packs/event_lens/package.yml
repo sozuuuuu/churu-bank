@@ -1,0 +1,16 @@
+# イベントを読み解く部品（TODO の R）。行員の画面（packs/event_viewer）と利用者の画面（packs/customer の /events）が共通で使う。
+#   - 日本語の名前・種類・アイコン（EventLens::Catalog）、ストリーム名と actor の日本語（Names）
+#   - ひとつながりの出来事を集める（EventIndex・Flow）、つながりの図とレーン図の座標（Diagram）、出来事を足し合わせる残高（TimeMachine）
+#   - 表示（EventsHelper と app/views/event_lens の部品）、Stimulus（生中継・再生・タイムマシン）、CSS
+# どちらのログインにも依存しない（画面のパックが片方のログインにだけ依存できるように、部品をここに分けた）。
+# だれが見ているか・どこへリンクするかは知らない: 画面のパックが Names に人の名前を渡し、lens_event_path などのヘルパーを用意する。
+# 読むだけ（RES の event_store.read と公開の読み取りモデル）。書き込みはしない
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/banking
+  - packs/shop
+  - packs/approvals
+  - packs/ui

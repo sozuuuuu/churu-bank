@@ -1,0 +1,16 @@
+# イベントビューア（/admin/events、TODO の R）: イベントストアの中身を日本語で、目で見て楽しむ行員の画面。
+# 一覧と生中継・つながりの図（correlation / causation）・タイムマシン（出来事を足し合わせた残高）・レーン図。
+# 読むだけ。表示の部品（日本語の名前・つながりの図・タイムマシン）は packs/event_lens で、利用者の画面（packs/customer の /events）と共通。
+# レーン図で選ぶ振込・注文・出金依頼・二人承認の一覧は、各パックの公開の読み取りモデルから。行員だけ（packs/staff_identity）
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/event_lens
+  - packs/banking
+  - packs/shop
+  - packs/approvals
+  - packs/staff_identity
+  - packs/customer_registry
+  - packs/ui

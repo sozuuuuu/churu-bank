@@ -34,7 +34,10 @@ module Ui
       lock: '<rect x="5" y="11" width="14" height="9.5" rx="2.5"/><path d="M8 11 V8 a4 4 0 0 1 8 0 v3"/>',
       back: '<path d="M10 6 l-6 6 l6 6 M4 12 h16"/>',
       logout: '<path d="M14 4 h4 a2 2 0 0 1 2 2 v12 a2 2 0 0 1 -2 2 h-4"/><path d="M10 8 l-4 4 l4 4 M6 12 h9"/>',
-      key: '<circle cx="8" cy="15" r="4"/><path d="M11 12 l8 -8 M16 7 l3 3"/>'
+      key: '<circle cx="8" cy="15" r="4"/><path d="M11 12 l8 -8 M16 7 l3 3"/>',
+      ticket: '<path d="M4 7 h16 v3 a2 2 0 0 0 0 4 v3 H4 v-3 a2 2 0 0 0 0 -4 z"/><path d="M14 7 v10" stroke-dasharray="2 2"/>',
+      chat: '<path d="M4 6 a2 2 0 0 1 2 -2 h12 a2 2 0 0 1 2 2 v8 a2 2 0 0 1 -2 2 h-7 l-4 4 v-4 H6 a2 2 0 0 1 -2 -2 z"/>' \
+            '<path d="M8 9 h8 M8 12 h5"/>'
     }.freeze
 
     # icon(:send) → <svg class="icon icon-send" ...>。飾りなので aria-hidden

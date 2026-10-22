@@ -1,0 +1,37 @@
+<%# レーン図（EventLens::Diagram::Lanes）。関係者を横に並べ、出来事を時間の順に1行ずつ。再生はつながりの図と同じ %>
+<% lanes = EventLens::Diagram::Lanes.new(flow) %>
+<% lw = EventLens::Diagram::Lanes::LANE_W %>
+<div class="ev-diagram" data-controller="event-lens--playback">
+  <%= render "event_lens/playback_bar", count: flow.events.size %>
+  <div class="ev-diagram-scroll">
+    <svg class="ev-svg ev-lanes" viewBox="0 0 <%= lanes.width %> <%= lanes.height %>" width="<%= lanes.width %>" height="<%= lanes.height %>"
+         role="img" aria-label="関係者 <%= lanes.lanes.size %> つのレーン図">
+      <%= render "event_lens/markers", prefix: "lanes" %>
+      <% lanes.lanes.each_with_index do |lane, i| %>
+        <% kind, name = names.stream_parts(lane.stream) %>
+        <g class="ev-lane<%= " is-odd" if i.odd? %>">
+          <rect x="<%= lane.x - lw / 2 + 4 %>" y="4" width="<%= lw - 8 %>" height="<%= lanes.height - 8 %>" rx="12" class="ev-lane-bg"/>
+          <text x="<%= lane.x %>" y="26" class="ev-lane-kind" text-anchor="middle"><%= kind %></text>
+          <text x="<%= lane.x %>" y="45" class="ev-lane-name" text-anchor="middle"><%= truncate(name.to_s, length: 11) %></text>
+          <line x1="<%= lane.x %>" y1="<%= EventLens::Diagram::Lanes::HEAD_H %>" x2="<%= lane.x %>" y2="<%= lanes.height - 10 %>" class="ev-lane-line"/>
+        </g>
+      <% end %>
+      <% lanes.edges.each do |edge| %>
+        <path d="<%= edge.d %>" class="ev-edge ev-edge-<%= edge.kind %>" marker-end="url(#lanes-arrow-<%= edge.kind %>)" data-step="<%= edge.order %>"/>
+      <% end %>
+      <% lanes.nodes.each do |node| %>
+        <% entry = event_entry(node.event) %>
+        <% where = names.stream(flow.lane_of(node.event)) %>
+        <a href="<%= lens_event_path(node.event.event_id) %>#flow" aria-label="<%= entry.label %>（<%= where %>）">
+          <g class="ev-dot <%= kind_class(entry.kind) %>" data-step="<%= node.order %>" data-label="<%= entry.label %> — <%= where %>">
+            <text x="10" y="<%= node.y + 4 %>" class="ev-dot-time"><%= node.event.timestamp.in_time_zone.strftime("%H:%M:%S") %></text>
+            <circle cx="<%= node.x %>" cy="<%= node.y %>" r="<%= EventLens::Diagram::Lanes::DOT_R %>" class="ev-dot-circle"/>
+            <text x="<%= node.x + 12 %>" y="<%= node.y - 2 %>" class="ev-dot-label"><%= entry.label %></text>
+            <text x="<%= node.x + 12 %>" y="<%= node.y + 12 %>" class="ev-dot-sub"><%= truncate(names.actor(node.event.metadata[:actor]), length: 12) %></text>
+          </g>
+        </a>
+      <% end %>
+    </svg>
+  </div>
+  <%= render "event_lens/legend" %>
+</div>

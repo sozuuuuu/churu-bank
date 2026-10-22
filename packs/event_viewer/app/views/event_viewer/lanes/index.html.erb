@@ -1,0 +1,39 @@
+<% content_for :title, "レーン図 | イベント | ちゅーる銀行" %>
+
+<div class="ev-head">
+  <h1>レーン図</h1>
+  <p class="muted">振込や注文を1つ選ぶと、かかわった口座・振込・商店などを横に並べて、出来事が起きた順に矢印でつなぎます。
+    1つの振込でも、いくつもの入れ物（ストリーム）に出来事が書かれていく様子が見えます。</p>
+</div>
+
+<div class="ev-lanes-layout">
+  <nav class="card ev-picker" aria-label="レーン図にするものを選ぶ">
+    <% picks = [
+         [ "振込", @transfers.map { [ "Transfer$#{it.transfer_id}", "#{it.source.holder_name} → #{it.destination.holder_name}", "#{churu(it.amount)}・#{it.status_label}" ] } ],
+         [ "注文", @orders.map { [ "Order$#{it.order_id}", "#{names.holder(it.buyer_account) || it.buyer_account} の注文", "#{churu(it.total)}・#{it.status_label}" ] } ],
+         [ "出金依頼", @withdrawal_requests.map { [ "WithdrawalRequest$#{it.request_id}", "#{names.holder(it.account_number) || it.account_number} の出金依頼", "#{churu(it.amount)}・#{it.status_label}" ] } ],
+         [ "二人承認", @approvals.map { [ "Approval$#{it.approval_id}", it.kind_label, it.status_label ] } ]
+       ] %>
+    <% picks.each do |title, items| %>
+      <% next if items.empty? %>
+      <h2><%= title %></h2>
+      <ul>
+        <% items.each do |stream, label, note| %>
+          <li><%= link_to event_viewer_lanes_path(stream:), class: ("is-current" if stream == @stream) do %>
+            <span><%= label %></span><span class="muted small"><%= note %></span>
+          <% end %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </nav>
+
+  <section class="card ev-lanes-frame">
+    <% if @flow %>
+      <h2><%= names.stream(@stream) %> のレーン図</h2>
+      <p class="muted small">左の時刻は記帳した時刻。点をクリックすると、その出来事の中身とつながりの図へ移ります。</p>
+      <%= render "event_lens/lanes", flow: @flow %>
+    <% else %>
+      <p class="empty">左から振込や注文を選んでください。</p>
+    <% end %>
+  </section>
+</div>

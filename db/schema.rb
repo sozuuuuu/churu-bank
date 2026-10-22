@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_400001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "customer_id", null: false
     t.string "account_number", null: false
@@ -52,6 +52,46 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_400001) do
     t.index ["approval_id"], name: "index_approval_requests_on_approval_id", unique: true
     t.index ["status"], name: "index_approval_requests_on_status"
     t.index ["target_key"], name: "index_approval_requests_pending_target", unique: true, where: "status = 'pending'"
+  end
+
+  create_table "counter_messages", force: :cascade do |t|
+    t.integer "counter_ticket_id", null: false
+    t.string "author_role", null: false
+    t.integer "author_id", null: false
+    t.string "author_name", null: false
+    t.string "kind", default: "text", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.index ["counter_ticket_id"], name: "index_counter_messages_on_counter_ticket_id"
+  end
+
+  create_table "counter_presences", force: :cascade do |t|
+    t.string "room", null: false
+    t.string "role", null: false
+    t.integer "person_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.index ["room", "role"], name: "index_counter_presences_on_room_and_role"
+  end
+
+  create_table "counter_tickets", force: :cascade do |t|
+    t.date "service_date", null: false
+    t.integer "number", null: false
+    t.integer "customer_id", null: false
+    t.string "status", default: "waiting", null: false
+    t.datetime "taken_at", null: false
+    t.datetime "called_at"
+    t.integer "staff_id"
+    t.string "staff_name"
+    t.datetime "closed_at"
+    t.string "closed_by"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_counter_tickets_on_customer_id"
+    t.index ["customer_id"], name: "index_counter_tickets_one_active_per_customer", unique: true, where: "status IN ('waiting', 'called')"
+    t.index ["service_date", "number"], name: "index_counter_tickets_on_service_date_and_number", unique: true
+    t.index ["staff_id"], name: "index_counter_tickets_on_staff_id"
+    t.index ["status"], name: "index_counter_tickets_on_status"
   end
 
   create_table "customer_sessions", force: :cascade do |t|
@@ -259,6 +299,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_400001) do
   end
 
   add_foreign_key "account_ownerships", "customers"
+  add_foreign_key "counter_messages", "counter_tickets"
+  add_foreign_key "counter_tickets", "customers"
+  add_foreign_key "counter_tickets", "staffs"
   add_foreign_key "customer_sessions", "customers", on_delete: :cascade
   add_foreign_key "event_store_events_in_streams", "event_store_events", column: "event_id", primary_key: "event_id"
   add_foreign_key "notice_receipts", "customers"

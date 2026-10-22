@@ -1,0 +1,10 @@
+<%# チャットの1発言。あとから届く発言は Stimulus（counter--chat）が同じ形で足す。
+    出金依頼の画面への案内（withdrawal_guide）には、自分の口座の「出金の依頼」へのリンクを付ける %>
+<li class="chat-message <%= message.author_role == me ? "is-mine" : "is-theirs" %> is-<%= message.author_role %>" data-message-id="<%= message.id %>">
+  <span class="chat-name"><%= message.author_name %></span>
+  <p class="chat-body"><%= message.body %></p>
+  <% if message.kind == "withdrawal_guide" && accounts.any? %>
+    <%= render "counter/tickets/withdrawal_links", accounts: %>
+  <% end %>
+  <time class="chat-time"><%= message.created_at.in_time_zone.strftime("%H:%M") %></time>
+</li>

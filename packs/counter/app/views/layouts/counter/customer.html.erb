@@ -1,0 +1,9 @@
+<%# 利用者の窓口（/counter）: 利用者画面と同じメニューで、ねこテーマ（packs/ui の layouts/cat）で描く %>
+<%= customer_header %>
+<% content_for :nav do %>
+  <%= link_to root_path do %><%= icon(:wallet, size: 18) %> わたしの口座<% end %>
+  <%= link_to counter_path, "aria-current": "page" do %><%= icon(:ticket, size: 18) %> 窓口<% end %>
+  <%= link_to shop_root_path do %><%= icon(:cart, size: 18) %> ちゅ〜る商店<% end %>
+<% end %>
+<% content_for :head, stylesheet_link_tag("counter/counter", "data-turbo-track": "dynamic") %>
+<%= render template: "layouts/cat" %>

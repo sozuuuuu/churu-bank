@@ -1,0 +1,19 @@
+<%# イベントビューア: 管理画面と同じ見た目（packs/ui の layouts/application）に、図のための CSS を足して描く %>
+<%= staff_header %>
+<% content_for :body_class, "event-viewer" %>
+<% content_for :head, stylesheet_link_tag("event_lens/event_lens", "event_viewer/event_viewer", "data-turbo-track": "dynamic") %>
+<% content_for :nav do %>
+  <span class="badge">管理画面</span>
+  <%= link_to "口座一覧", admin_accounts_path %>
+  <%= link_to "振込一覧", admin_transfers_path %>
+  <%= link_to "イベント", event_viewer_events_path %>
+<% end %>
+<% content_for :page_top do %>
+  <nav class="ev-tabs" aria-label="イベントビューアの中のメニュー">
+    <%= link_to event_viewer_events_path, class: ("is-current" if controller_name == "events") do %><%= icon(:bell, size: 16) %>一覧と生中継<% end %>
+    <%= link_to event_viewer_time_machine_path, class: ("is-current" if controller_name == "time_machines") do %><%= icon(:clock, size: 16) %>タイムマシン<% end %>
+    <%= link_to event_viewer_lanes_path, class: ("is-current" if controller_name == "lanes") do %><%= icon(:send, size: 16) %>レーン図<% end %>
+    <%= link_to "/res", class: "ev-tabs-res", data: { turbo: false } do %>詳しく見る（英語）<% end %>
+  </nav>
+<% end %>
+<%= render template: "layouts/application" %>

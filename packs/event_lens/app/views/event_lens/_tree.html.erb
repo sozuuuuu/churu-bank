@@ -1,0 +1,38 @@
+<%# つながりの図（EventLens::Diagram::Tree）。再生は Stimulus の event-lens--playback（data-step の順に .is-lit） %>
+<% tree = EventLens::Diagram::Tree.new(flow) %>
+<% w, h = EventLens::Diagram::Tree::NODE_W, EventLens::Diagram::Tree::NODE_H %>
+<% order = tree.nodes.to_h { [ it.event.event_id, it.order ] } %>
+<div class="ev-diagram" data-controller="event-lens--playback">
+  <%= render "event_lens/playback_bar", count: flow.events.size %>
+  <% if flow.truncated? %><p class="muted small">出来事が多いので、<%= EventLens::Flow::MAX_EVENTS %> 件までを描いています。</p><% end %>
+  <div class="ev-diagram-scroll">
+    <svg class="ev-svg ev-tree" viewBox="0 0 <%= tree.width %> <%= tree.height %>" width="<%= tree.width %>" height="<%= tree.height %>"
+         role="img" aria-label="ひとつながりの出来事 <%= flow.events.size %> 件の図">
+      <%= render "event_lens/markers", prefix: "tree" %>
+      <% tree.step_boxes.each do |box| %>
+        <g class="ev-step" data-step="<%= order.fetch(box.step.events.first.event_id) %>">
+          <rect x="<%= box.x %>" y="<%= box.y %>" width="<%= box.w %>" height="<%= box.h %>" rx="12" class="ev-step-box"/>
+          <text x="<%= box.x + 10 %>" y="<%= box.y + 15 %>" class="ev-step-label"><%= names.actor(box.step.actor) %></text>
+        </g>
+      <% end %>
+      <% tree.edges.each do |edge| %>
+        <path d="<%= edge.d %>" class="ev-edge ev-edge-<%= edge.kind %>" marker-end="url(#tree-arrow-<%= edge.kind %>)" data-step="<%= edge.order %>"/>
+      <% end %>
+      <% tree.nodes.each do |node| %>
+        <% entry = event_entry(node.event) %>
+        <% where = names.stream(flow.lane_of(node.event)) %>
+        <a href="<%= lens_event_path(node.event.event_id) %>#flow" aria-label="<%= entry.label %>（<%= where %>）">
+          <g class="ev-node <%= kind_class(entry.kind) %><%= " is-seed" if node.event.event_id == flow.seed.event_id %>"
+             transform="translate(<%= node.x %> <%= node.y %>)" data-step="<%= node.order %>" data-label="<%= entry.label %> — <%= where %>">
+            <rect width="<%= w %>" height="<%= h %>" rx="10" class="ev-node-box"/>
+            <rect width="6" height="<%= h %>" rx="3" class="ev-node-stripe"/>
+            <%= svg_icon(entry.icon, x: 14, y: 14, size: 20) %>
+            <text x="44" y="21" class="ev-node-label"><%= entry.label %></text>
+            <text x="44" y="38" class="ev-node-sub"><%= truncate(names.stream(flow.lane_of(node.event), short: true), length: 13) %>　<%= node.event.timestamp.in_time_zone.strftime("%H:%M:%S") %></text>
+          </g>
+        </a>
+      <% end %>
+    </svg>
+  </div>
+  <%= render "event_lens/legend", steps: true %>
+</div>

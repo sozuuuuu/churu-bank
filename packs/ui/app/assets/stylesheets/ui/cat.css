@@ -113,6 +113,8 @@ body.cat-theme .site-header nav > a, body.cat-theme .site-header nav .link {
 body.cat-theme .site-header nav > a:hover, body.cat-theme .site-header nav .link:hover { background: var(--pink-soft); color: var(--ink); }
 body.cat-theme .site-header nav > a[aria-current="page"] { background: var(--sky-soft); }
 body.cat-theme .site-header nav > .muted { font-weight: 700; color: var(--sub); font-size: .9rem; }
+/* もう片方の入り口（利用者の画面 → 行員の入り口）。ほかのメニューより控えめに、点線の枠 */
+body.cat-theme .site-header nav > a.entrance { border-style: dashed; background: transparent; color: var(--sub); font-size: .82rem; }
 
 /* ---- 本文。下はセリフ窓のぶん空ける ---- */
 body.cat-theme .container { padding: 20px 16px 220px; }

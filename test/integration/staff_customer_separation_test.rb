@@ -29,12 +29,29 @@ class StaffCustomerSeparationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "利用者の画面には行員の画面へのリンクを出さない" do
+  test "利用者の画面から行員の画面へのリンクは、ヘッダの「行員の入り口」だけ" do
     sign_in_as_customer @orca
 
     get root_path
     assert_response :success
-    assert_select "a[href^='/admin']", count: 0
+    assert_select "a[href^='/admin']", count: 1
+    assert_select ".site-header a.entrance[href='#{admin_root_path}']", text: "行員の入り口"
+  end
+
+  test "行員の画面のヘッダには「お客さまの入り口」" do
+    sign_in_as_staff @staff
+
+    get admin_root_path
+    assert_response :success
+    assert_select ".site-header a.entrance[href='#{root_path}']", text: "お客さまの入り口"
+  end
+
+  test "ログイン画面のヘッダにも、もう片方の入り口" do
+    get new_customer_session_path
+    assert_select ".site-header a.entrance[href='#{new_staff_session_path}']", text: "行員の入り口"
+
+    get new_staff_session_path
+    assert_select ".site-header a.entrance[href='#{new_customer_session_path}']", text: "お客さまの入り口"
   end
 
   test "同じブラウザで両方にログインでき、ログアウトは片方だけ" do

@@ -5,12 +5,12 @@ class CustomerSessionsControllerTest < ActionDispatch::IntegrationTest
     @customer = create_customer(name: "オルカ")
   end
 
-  test "利用者のログイン画面（/session/new）はねこテーマ。行員の画面へのリンクはない" do
+  test "利用者のログイン画面（/session/new）はねこテーマ。行員の画面へのリンクは「行員の入り口」（行員のログイン画面）だけ" do
     get new_customer_session_path
     assert_response :success
     assert_equal "/session/new", new_customer_session_path
     assert_match "ui/cat", response.body
-    assert_no_match "/admin", response.body
+    assert_equal [ new_staff_session_path ], response.body.scan(%r{href="(/admin[^"]*)"}).flatten
   end
 
   test "ログインすると利用者画面へ。Cookie は customer_session_id" do

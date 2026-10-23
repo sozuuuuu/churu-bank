@@ -4,6 +4,7 @@ module StaffHelper
   # 行員の画面のレイアウトで render template: "layouts/application" より前に1回呼ぶ
   def staff_header
     content_for :home_path, admin_root_path
+    content_for :entrance, link_to("お客さまの入り口", root_path, class: "entrance")
     return unless current_staff
 
     content_for :account do

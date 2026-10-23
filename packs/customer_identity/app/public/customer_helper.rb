@@ -4,6 +4,7 @@ module CustomerHelper
   # 利用者の画面のレイアウトで render template: "layouts/cat" より前に1回呼ぶ
   def customer_header
     content_for :home_path, root_path
+    content_for :entrance, link_to("行員の入り口", admin_root_path, class: "entrance")
     return unless current_customer
 
     content_for :account do

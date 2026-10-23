@@ -1,6 +1,7 @@
 <% content_for :title, "行員ログイン | ちゅーる銀行" %>
 <% content_for :home_path, new_staff_session_path %>
 <% content_for :nav do %><span class="badge">行員</span><% end %>
+<% content_for :entrance, link_to("お客さまの入り口", new_customer_session_path, class: "entrance") %>
 
 <h1>行員ログイン</h1>
 

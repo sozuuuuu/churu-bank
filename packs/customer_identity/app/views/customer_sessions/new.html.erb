@@ -1,5 +1,6 @@
 <% content_for :title, "ログイン | ちゅーる銀行" %>
 <% content_for :home_path, new_customer_session_path %>
+<% content_for :entrance, link_to("行員の入り口", new_staff_session_path, class: "entrance") %>
 <% if flash[:alert] %>
   <% cat_says "だれの口座を見るか、えらんでほしいにゃ。", face: :sad %>
 <% else %>

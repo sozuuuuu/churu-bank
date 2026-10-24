@@ -75,7 +75,10 @@ Rails.application.configure do
   # config.action_cable.disable_request_forgery_protection = true
   # localhost に加えて 127.0.0.1 からも Action Cable につなげる。Cookie はホストごとに別なので、
   # 同じブラウザで localhost と 127.0.0.1 を開けば、2人の利用者に同時にログインして窓口（整理券とチャット）を試せる
-  config.action_cable.allowed_request_origins = [ %r{\Ahttps?://(localhost|127\.0\.0\.1):\d+\z} ]
+  # Tailscale（tailscale serve。tailnet の中だけ）の https://<マシン名>.<tailnet>.ts.net からも開けるように
+  config.action_cable.allowed_request_origins = [ %r{\Ahttps?://(localhost|127\.0\.0\.1):\d+\z},
+                                                  %r{\Ahttps://[a-z0-9-]+\.[a-z0-9-]+\.ts\.net(:\d+)?\z} ]
+  config.hosts << /\A[a-z0-9-]+\.[a-z0-9-]+\.ts\.net\z/ # ".ts.net" の書き方は Rails が通さない
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true

@@ -5,11 +5,12 @@
 #
 #   しごと場 ──お給料──▶ 住民 ──ごはん・家賃・遊び──▶ 商店・大家さん・遊び場
 #      ▲                                                  │
-#      └──── 仕入れ代（商店）・お店で働く住民のお給料のもと（大家さん・遊び場）────┘
+#      └──── 仕入れ代（商店）・お店で働く住民のお給料のもと（商店・大家さん・遊び場）────┘
 #
 # - 仕入れ代: 商店は入荷のたびに、値段の WHOLESALE（6 割）をしごと場に払う（ちゅ〜るを作っているのは住民、という見立て）。
 #   払えるぶんしか入荷しない
-# - 大家さんと遊び場は、手元に KEEP（宝くじは賞金のぶん多め）を残して、こえたぶんをしごと場に払う
+# - 大家さんと遊び場は、手元に KEEP（宝くじは賞金のぶん多め）を残して、こえたぶんをしごと場に払う。
+#   商店も、仕入れ代のぶん（SHOP_KEEP）を残して、こえたぶん（売り値と仕入れ値の差）を店員のお給料としてしごと場に払う
 # 町から消えるのは、ちゅ〜るローンの手数料ぶんだけ（銀行の利益として町の外へ）
 module Simulation
   module Economy
@@ -17,6 +18,7 @@ module Simulation
     WHOLESALE = Rational(6, 10)
     KEEP = 300
     LOTTERY_KEEP = 3_000
+    SHOP_KEEP = 2_000
 
     module_function
 
@@ -43,7 +45,7 @@ module Simulation
       end
     end
 
-    # 大家さんと遊び場の、手元に残すぶんをこえたお金を、しごと場に払う。払った { 口座の名義 => 額 } を返す
+    # 商店・大家さん・遊び場の、手元に残すぶんをこえたお金を、しごと場に払う。払った { 口座の名義 => 額 } を返す
     def sweep!(control = Control.current)
       return {} unless control.employer_account
 
@@ -64,7 +66,8 @@ module Simulation
       places = (control.places || {}).except("fund").map do |key, number|
         [ number, key == Teller::LOTTERY ? LOTTERY_KEEP : KEEP ]
       end
-      [ ([ control.landlord_account, KEEP ] if control.landlord_account), *places ].compact
+      shop = Shop::Store.new(actor: ACTOR).account_number
+      [ ([ shop, SHOP_KEEP ] if shop), ([ control.landlord_account, KEEP ] if control.landlord_account), *places ].compact
     end
   end
 end

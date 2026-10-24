@@ -29,6 +29,17 @@ class Simulation::EconomyTest < ActiveSupport::TestCase
     assert_empty Simulation::Economy.sweep!(@control), "2回目は払うぶんがない"
   end
 
+  test "商店も、仕入れ代のぶんを残して、こえたぶんをしごと場へ払う" do
+    store = Shop::Store.new(actor: "test")
+    store.open_shop
+    @bank.deposit(store.account_number, 2_500)
+
+    paid = perform_enqueued_jobs { Simulation::Economy.sweep!(@control) }
+
+    assert_equal 500, paid.fetch(Shop::Store::SHOP_NAME)
+    assert_equal Simulation::Economy::SHOP_KEEP, balance(store.account_number)
+  end
+
   test "商店は仕入れ代（値段の 6 割）をしごと場に払って入荷する。払えるぶんだけ" do
     store = Shop::Store.new(actor: "test")
     store.open_shop

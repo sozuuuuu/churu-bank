@@ -118,9 +118,16 @@ module Simulation
     def tick(letter)
       @teller&.today = letter
       @board.clock(letter)
-      Roster.restock if letter.time == :morning
+      morning if letter.time == :morning
+    end
+
+    # 朝: お金を町の中にめぐらせる（Economy。大家さん・遊び場 → しごと場、商店は仕入れ代を払って入荷）
+    def morning
+      paid = Economy.sweep!
+      log "お金のめぐり: #{paid.map { |name, amount| "#{name} #{amount}" }.join('・')} ちゅ〜るをしごと場へ" if paid.any?
+      Economy.restock!
     rescue Shop::Error, Banking::Error => e
-      log "仕入れ係: 入荷できませんでした（#{e.message}）"
+      log "お金のめぐり: うまくいきませんでした（#{e.message}）"
     end
 
     def answer(letter)

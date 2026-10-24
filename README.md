@@ -3,6 +3,13 @@
 通貨「ちゅ〜る」の銀行ごっこ。Rails 8 + Rails Event Store（RES）で、イベントソーシングと
 Hotwire・Solid Queue・Solid Cable など Rails 標準の機能を一通り使ってみるためのアプリ。
 
+> [!WARNING]
+> 学習用のアプリです。ログインはドロップダウンで人を選ぶだけ（パスワードを聞かない）なので、
+> インターネットから見えるサーバーには置かないでください（行員としてだれでも入れてしまいます）。
+> 開発用の行員・利用者のパスワード（`db/seeds.rb` の `churu-dev-pass`）も、手元で試すためのテスト値です。
+
+ライセンスは [MIT](LICENSE)。
+
 ## 起動
 
 ```bash
@@ -924,7 +931,7 @@ bin/rails churu:simulate     # 町を動かす係（別のプロセス）。は�
 | ~~F~~ | ~~利息（Solid Queue の recurring で日次計算）~~（済。画面は O） | | `packs/banking` |
 | ~~G~~ | ~~取消（逆仕訳）~~（済。画面は O） | | `packs/banking` |
 | ~~H~~ | ~~読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`）~~（済） | | `packs/banking` |
-| I | GitHub（public）と CI | | `.github/` |
+| ~~I~~ | ~~GitHub（public）と CI~~（済。GitHub で public、GitHub Actions で `bin/ci`） | | `.github/` |
 | ~~J~~ | ~~Zingiber から銀行の MCP を使う~~（やらない。2026-10-21 決定） | E | Zingiber 側 |
 | ~~K~~ | ~~Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由~~（済。「ねこ町の住民の暮らし」。Haiku で考える頭は入り口だけ） | D | `packs/simulation` |
 | L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |

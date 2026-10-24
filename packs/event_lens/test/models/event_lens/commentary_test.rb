@@ -69,4 +69,13 @@ class EventLens::CommentaryTest < ActiveSupport::TestCase
     assert_equal "Happenedがあったにゃ", line.text
     assert_equal :normal, line.face
   end
+
+  test "ねこ町の住民（metadata の resident）がした出来事は、だれの仕業かを頭に付ける" do
+    event_store.with_metadata(resident: "こむぎ") { Banking::Bank.new(actor: "customer:9").deposit(@mike, 7) }
+    resident_line = for_staff.line(last(Banking::Events::MoneyDeposited))
+    assert resident_line.text.start_with?("［住民のこむぎ］"), resident_line.text
+
+    Banking::Bank.new(actor: @tama.actor).deposit(@mike, 8)
+    assert_not for_staff.line(last(Banking::Events::MoneyDeposited)).text.start_with?("［住民")
+  end
 end

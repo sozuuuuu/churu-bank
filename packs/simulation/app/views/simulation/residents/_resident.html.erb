@@ -1,0 +1,28 @@
+<%# 住民1匹のカード。町を動かす係が Board#resident で、このカードごと書き換える %>
+<article id="<%= dom_id(resident) %>" class="card town-resident face-<%= resident.face %>">
+  <header class="town-resident-head">
+    <%= cat(face: resident.face, size: 56) %>
+    <div>
+      <h2><%= resident.name %></h2>
+      <span class="badge"><%= resident.temperament_label %></span>
+    </div>
+  </header>
+  <dl class="town-resident-facts">
+    <dt>いま</dt><dd><%= resident.state || "（まだ起きていない）" %></dd>
+    <dt>気分</dt><dd><%= resident.mood ? "#{resident.mood} / 100" : "—" %></dd>
+    <dt>所持金の見込み</dt><dd><%= resident.money ? churu(resident.money) : "—" %></dd>
+    <dt>最後にしたこと</dt>
+    <dd>
+      <%= resident.last_action || "—" %>
+      <% if resident.last_action_at %><span class="muted small">（<%= jp_time(resident.last_action_at) %>）</span><% end %>
+    </dd>
+    <dt>起こし直した回数</dt>
+    <dd>
+      <span class="<%= "badge badge-frozen" if resident.restarts.positive? %>"><%= resident.restarts %> 回</span>
+      <% if resident.last_error %><span class="muted small"><%= resident.last_error %></span><% end %>
+    </dd>
+  </dl>
+  <p class="small">
+    <%= link_to "口座 #{resident.account_number} の出来事", event_viewer_events_path(account: resident.account_number) %>
+  </p>
+</article>

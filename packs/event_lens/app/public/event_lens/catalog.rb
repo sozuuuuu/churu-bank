@@ -125,7 +125,8 @@ module EventLens
     METADATA_LABELS = {
       actor: "だれが", timestamp: "記帳した時刻", valid_at: "起算日時（本当はいつのことか）",
       correlation_id: "ひとつながりの番号", causation_id: "きっかけの出来事", request_id: "画面のリクエスト",
-      remote_ip: "接続元", approval_id: "承認の申請", requested_by: "申請した人", approved_by: "承認した人"
+      remote_ip: "接続元", approval_id: "承認の申請", requested_by: "申請した人", approved_by: "承認した人",
+      resident: "住民（ねこ町の暮らし。packs/simulation の窓口役が付ける印）"
     }.freeze
 
     MONEY_FIELDS = %i[amount base_balance threshold price total].freeze

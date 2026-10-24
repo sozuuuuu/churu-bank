@@ -13,7 +13,7 @@ module EventLens
     MACHINE_ACTORS = {
       "seed" => "はじめのデータ", "transfer-settlement" => "振込の処理（自動）", "transfer-scheduler" => "予約振込の実行（自動）",
       "shop-payment" => "商店の支払いの処理（自動）", "interest" => "利息の計算（自動）", "mcp" => "MCP（AI のお手伝い）",
-      "web" => "画面"
+      "web" => "画面", "town-payroll" => "ねこ町の給料係（自動）"
     }.freeze
     PEOPLE = { "staff" => "行員", "customer" => "利用者" }.freeze
     UNNAMED_PEOPLE = { "staff" => "銀行の行員", "customer" => "ほかのお客さま" }.freeze

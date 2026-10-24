@@ -1,0 +1,46 @@
+<% content_for :title, "住民の様子 | ちゅーる銀行" %>
+<% content_for :head, stylesheet_link_tag("simulation/simulation", "data-turbo-track": "dynamic") %>
+
+<%# 町を動かす係（別のプロセス）が、住民1匹ずつと町の時計を Turbo Stream（replace）で書き換える %>
+<%= staff_stream_from Simulation::Board::STREAM %>
+
+<h1>住民の様子</h1>
+<p class="muted small">
+  ねこ町の住民は、1匹ずつが Ractor です。手紙を受け取って、自分の頭（いまは決まりで動く頭）で次にすることを決め、
+  銀行と商店には窓口役（メインの Ractor）を通して頼みます。住民がした出来事には「住民」の印が付きます。
+</p>
+
+<section class="card town-control">
+  <%= render "simulation/residents/status", control: @control %>
+  <div class="town-buttons">
+    <%= button_to "動かす", simulation_control_path, method: :patch, params: { control: { running: true } },
+                  class: "button", form: { class: "inline" } %>
+    <%= button_to "止める", simulation_control_path, method: :patch, params: { control: { running: false } },
+                  class: "button secondary", form: { class: "inline" } %>
+    <%= form_with model: @control, url: simulation_control_path, method: :patch, class: "inline town-speed" do |f| %>
+      <%= f.label :seconds_per_day, "速さ" %>
+      <%= f.select :seconds_per_day, Simulation::Control::SPEEDS.invert %>
+      <%= f.submit "変える", class: "button secondary" %>
+    <% end %>
+  </div>
+  <p class="muted small">
+    町を動かす係は Puma とは別のプロセスです: <code>bin/rails churu:simulate</code>（はじめての時は住民と口座も用意します）。
+    給料日は <%= Simulation::Clock::PAYDAY_EVERY %> 日ごとの朝（お給料 <%= churu(Simulation::Teller::SALARY) %>）。
+  </p>
+</section>
+
+<% if @residents.empty? %>
+  <p class="empty">住民がまだいません。<code>bin/rails churu:simulation:setup</code> か <code>bin/rails churu:simulate</code> で用意します。</p>
+<% else %>
+  <div class="town-residents">
+    <%= render partial: "simulation/residents/resident", collection: @residents %>
+  </div>
+<% end %>
+
+<p class="small town-links">
+  住民の出来事は
+  <%= link_to "ねこの実況", event_viewer_commentary_path %>・
+  <%= link_to "ふせんの壁", event_viewer_wall_path %>・
+  <%= link_to "イベントの一覧", event_viewer_events_path %>
+  にも流れます（「住民」の印）。
+</p>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_100000) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "customer_id", null: false
     t.string "account_number", null: false
@@ -236,6 +236,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
     t.index ["sku"], name: "index_shop_products_on_sku", unique: true
   end
 
+  create_table "simulation_controls", force: :cascade do |t|
+    t.boolean "running", default: false, null: false
+    t.integer "seconds_per_day", default: 24, null: false
+    t.boolean "town_running", default: false, null: false
+    t.integer "day", default: 0, null: false
+    t.string "time"
+    t.datetime "heartbeat_at"
+    t.string "employer_account"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "simulation_residents", force: :cascade do |t|
+    t.string "name", null: false
+    t.integer "customer_id", null: false
+    t.string "account_number", null: false
+    t.string "temperament", null: false
+    t.string "state"
+    t.integer "mood"
+    t.integer "money"
+    t.string "last_action"
+    t.datetime "last_action_at"
+    t.integer "restarts", default: 0, null: false
+    t.string "last_error"
+    t.integer "paid_day"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_simulation_residents_on_customer_id"
+    t.index ["name"], name: "index_simulation_residents_on_name", unique: true
+  end
+
   create_table "staff_sessions", force: :cascade do |t|
     t.integer "staff_id", null: false
     t.string "ip_address"
@@ -308,5 +339,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
   add_foreign_key "notice_receipts", "notices"
   add_foreign_key "notice_targets", "customers"
   add_foreign_key "notice_targets", "notices"
+  add_foreign_key "simulation_residents", "customers"
   add_foreign_key "staff_sessions", "staffs", on_delete: :cascade
 end

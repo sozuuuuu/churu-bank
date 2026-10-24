@@ -94,14 +94,19 @@ module EventLens
 
     def line(event)
       face, text = LINES[event.event_type]
-      return Line.new(text: "#{Catalog.entry(event.event_type).label}があったにゃ", face: :normal) unless face
-
-      Line.new(text: instance_exec(event.data, &text), face:)
+      text = face ? instance_exec(event.data, &text) : "#{Catalog.entry(event.event_type).label}があったにゃ"
+      Line.new(text: "#{resident_mark(event)}#{text}", face: face || :normal)
     end
 
     private
 
     def customer_view? = !@own.nil?
+
+    # ねこ町の住民（packs/simulation）がした出来事には、metadata に住民の名前の印がある
+    def resident_mark(event)
+      resident = event.metadata[:resident]
+      resident ? "［住民の#{resident}］" : ""
+    end
 
     # 口座の持ち主の呼び名
     def who(number)

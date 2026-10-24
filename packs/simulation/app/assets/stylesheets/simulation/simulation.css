@@ -1,0 +1,25 @@
+/* 住民の様子（/admin/town）。色は application.css の変数を使う */
+.town-control { display: grid; gap: 12px; }
+.town-status { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
+.town-status.is-running strong { color: var(--plus); }
+.town-buttons { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.town-buttons form.inline { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
+
+.town-residents {
+  display: grid; gap: 12px; margin: 16px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.town-resident { margin: 0; }
+.town-resident-head { display: flex; gap: 12px; align-items: center; }
+.town-resident-head h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.town-resident-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 12px 0 0; }
+.town-resident-facts dt { color: var(--muted); font-size: .85rem; }
+.town-resident-facts dd { margin: 0; overflow-wrap: anywhere; }
+.town-resident.face-sad { border-color: var(--minus); }
+.town-resident.face-surprised { box-shadow: 0 0 0 2px var(--warn-bg); }
+.town-links { margin-top: 8px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .town-resident { animation: town-pop .4s ease-out; }
+}
+@keyframes town-pop { from { transform: scale(.98); opacity: .6; } to { transform: none; opacity: 1; } }

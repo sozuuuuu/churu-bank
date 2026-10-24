@@ -1,0 +1,15 @@
+# ねこ町の住民の暮らし（TODO の K）: 住民 1 匹 = Ractor 1 つ。Erlang のように、住民は手紙（Ractor::Port へのメッセージ）だけで動く。
+# 住民の Ractor は「次に何をするか」を決めるだけで、銀行・商店には触らない。書き込みはメインの Ractor の窓口役
+# （Simulation::Teller）が、確かめてから Banking::Bank と Shop::Store の公開の入口で行う。
+# 住民は顧客台帳（packs/customer_registry）の利用者として口座を持つ。行員の画面 /admin/town（住民の様子）は行員だけ（packs/staff_identity）。
+# 銀行・商店の側はこのパックを知らない（だれもこのパックに依存しない。管理画面のメニューはルート名のリンク1つ）
+enforce_dependencies: true
+enforce_privacy: true
+
+dependencies:
+  - packs/platform
+  - packs/banking
+  - packs/shop
+  - packs/customer_registry
+  - packs/staff_identity
+  - packs/ui

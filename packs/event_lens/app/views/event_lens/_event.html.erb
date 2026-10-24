@@ -8,5 +8,5 @@
     <span class="ev-row-where"><%= names.stream(EventLens::Catalog.home_stream(event) || "") %></span>
   </span>
   <span class="ev-row-summary"><%= event_summary(event) %></span>
-  <span class="ev-row-actor muted"><%= names.actor(event.metadata[:actor]) %></span>
+  <span class="ev-row-actor muted"><%= names.actor(event.metadata[:actor]) %><% if event.metadata[:resident] %> <span class="badge ev-resident">住民</span><% end %></span>
 </li>

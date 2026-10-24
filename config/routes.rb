@@ -11,6 +11,7 @@ Rails.application.routes.draw do
 draw :event_viewer      # イベントビューア /admin/events（イベントを日本語で・図で）
 draw :counter           # 窓口の整理券とチャット /counter
 draw :counter_admin     # 窓口の列とチャット（行員） /admin/counter/queue
+  draw :simulation        # ねこ町の住民の暮らし（行員） /admin/town
 
   # MCP（packs/mcp）。Streamable HTTP（stateless）。localhost からだけ受け付ける
   match "mcp" => "churu_mcp/server#handle", via: %i[get post delete], as: :mcp

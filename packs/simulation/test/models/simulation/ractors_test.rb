@@ -58,10 +58,11 @@ class Simulation::RactorsTest < ActiveSupport::TestCase
     assert_equal [ 1, :night, false ], ticks[3].to_h.values_at(:day, :time, :payday)
     assert_equal [ 1, 4 ], ticks.select(&:payday).map(&:day)
     assert Simulation::Clock.tick_at(0, first_day: 7).payday
+    assert_equal [ 2 ], ticks.select(&:rent_day).map(&:day), "家賃の日は給料日の次の日の朝"
   end
 
   test "郵便屋: Broadcast は送り主のほかのみんなへ。倒れた住民の閉じた受け口は飛ばす" do
-    postman = Simulation::Postman.new
+    postman = Simulation::Postman.new(hall: @hall)
     komugi, azuki, closed = Ractor::Port.new, Ractor::Port.new, Ractor::Port.new
     closed.close
     { "こむぎ" => komugi, "あずき" => azuki, "ころん" => closed }.each { postman.handle(L::Register.new(name: _1, port: _2)) }
@@ -70,6 +71,19 @@ class Simulation::RactorsTest < ActiveSupport::TestCase
     assert_equal L::Trouble.new(from: "こむぎ", amount: 30), wait_for(azuki) { true }
     postman.handle(L::Broadcast.new(letter: :hello))
     assert_equal :hello, wait_for(komugi) { true }, "こむぎには Trouble は届かず、次の手紙が先頭"
+  end
+
+  test "郵便屋: Deliver は1匹へ。住民どうしの手紙は写し（Copy）を役場へ出し、時計の合図は写さない" do
+    postman = Simulation::Postman.new(hall: @hall)
+    azuki = Ractor::Port.new
+    postman.handle(L::Register.new(name: "あずき", port: azuki))
+
+    postman.handle(L::Broadcast.new(letter: L::Tick.new(day: 1, time: :noon, payday: false)))
+    postman.handle(L::Deliver.new(to: "あずき", letter: L::Lent.new(from: "こむぎ", amount: 30)))
+    assert_equal L::Lent.new(from: "こむぎ", amount: 30), wait_for(azuki) { it.is_a?(L::Lent) }
+    copy = wait_for(@hall) { true }
+    assert_equal L::Copy.new(from: "こむぎ", to: "あずき", letter: L::Lent.new(from: "こむぎ", amount: 30)), copy,
+                 "時計の合図の写しはない（最初に届いた写しが Lent）"
   end
 
   test "町: 動かすと住民が起きて残高を聞き、時計が鳴り、止めるとみんな町を出る" do

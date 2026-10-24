@@ -1,5 +1,11 @@
 <% content_for :title, "住民の様子 | ちゅーる銀行" %>
-<% content_for :head, stylesheet_link_tag("simulation/simulation", "data-turbo-track": "dynamic") %>
+<% content_for :head do %>
+  <%= stylesheet_link_tag("simulation/simulation", "data-turbo-track": "dynamic") %>
+  <%# 液晶の文字（ドットの日本語フォント） %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet" data-turbo-track="dynamic">
+<% end %>
 
 <%# 町を動かす係（別のプロセス）が、住民1匹ずつと町の時計を Turbo Stream（replace）で書き換える %>
 <%= staff_stream_from Simulation::Board::STREAM %>
@@ -25,7 +31,10 @@
   </div>
   <p class="muted small">
     町を動かす係は Puma とは別のプロセスです: <code>bin/rails churu:simulate</code>（はじめての時は住民と口座も用意します）。
-    給料日は <%= Simulation::Clock::PAYDAY_EVERY %> 日ごとの朝（お給料 <%= churu(Simulation::Teller::SALARY) %>）。
+    給料日は <%= Simulation::Clock::PAYDAY_EVERY %> 日ごとの朝（お給料は性格で <%= Simulation::Temperament::ALL.values.map(&:salary).minmax.join("〜") %> ちゅ〜る）、
+    その次の日の朝は家賃（<%= churu(Simulation::Teller::RENT) %>）。毎日のお昼はごはん。
+    夕方は遊び場（<%= Simulation::Roster::PLACES.map { "#{it.name} #{it.price}" }.join("・") %> ちゅ〜る）へ行くこともあります。
+    足りなければ銀行のちゅ〜るローン（手数料 10%）で借りるか、みんなに「足りないにゃ」と手紙を出します。
   </p>
 </section>
 
@@ -36,6 +45,24 @@
     <%= render partial: "simulation/residents/resident", collection: @residents %>
   </div>
 <% end %>
+
+<div class="town-panels">
+  <section class="card">
+    <h2>借金の関係図</h2>
+    <p class="muted small">矢印は「借りた住民 → 貸した相手」。数はまだ返していない額です。</p>
+    <%= render "simulation/residents/debts", **@debts %>
+  </section>
+  <section class="card">
+    <h2>手紙の流れ</h2>
+    <p class="muted small">
+      住民・窓口役・郵便屋・見張り役のあいだの手紙です（時計の合図は数が多いので出しません）。
+      Ractor の受け口には「何通たまっているか」を聞けないので、カードの手紙の数は住民が自分で数えたものです。
+    </p>
+    <ol id="<%= Simulation::Board::LETTERS_TARGET %>" class="town-letters">
+      <%= render partial: "simulation/residents/letter", collection: @letters %>
+    </ol>
+  </section>
+</div>
 
 <p class="small town-links">
   住民の出来事は

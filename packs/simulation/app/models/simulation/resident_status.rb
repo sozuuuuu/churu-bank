@@ -8,6 +8,15 @@ module Simulation
 
     def temperament_label = Temperament.fetch(temperament).label
 
+    # 借金の合計（住民どうしの借用書 + 銀行のちゅ〜るローン）
+    def debt_total = Debt.owed_by(name).values.sum + ::Loan.owed_by(account_number)
+
+    # 気分をハート4つで（液晶に出す）
+    def hearts
+      filled = mood ? (mood / 25.0).ceil.clamp(0, 4) : 0
+      ("♥" * filled) + ("♡" * (4 - filled))
+    end
+
     # 気分 → ねこの顔（Ui::ThemeHelper#cat）
     def face
       return :surprised if restarts.positive? && last_action.to_s.start_with?("見張り役")

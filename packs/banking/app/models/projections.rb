@@ -5,7 +5,8 @@ module Projections
     {
       AccountProjection.new => Banking::Events::ACCOUNT,
       TransferProjection.new => Banking::Events::TRANSFER,
-      WithdrawalRequestProjection.new => Banking::Events::WITHDRAWAL_REQUEST
+      WithdrawalRequestProjection.new => Banking::Events::WITHDRAWAL_REQUEST,
+      LoanProjection.new => Banking::Events::LOAN
     }
   end
 end

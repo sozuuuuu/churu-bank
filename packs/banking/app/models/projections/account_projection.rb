@@ -14,7 +14,9 @@ module Projections
       Banking::Events::TransferCreditReversed => "transfer_reversal",
       Banking::Events::DepositReversed => "deposit_reversal",
       Banking::Events::WithdrawalReversed => "withdrawal_reversal",
-      Banking::Events::InterestPaid => "interest"
+      Banking::Events::InterestPaid => "interest",
+      Banking::Events::LoanDisbursed => "loan",
+      Banking::Events::LoanRepaymentDebited => "loan_repayment"
     }.freeze
 
     def call(event)
@@ -70,6 +72,10 @@ module Projections
       case event
       when Banking::Events::InterestPaid
         "#{event.data.fetch(:interest_date).to_date.strftime('%-m/%-d')} 分の利息"
+      when Banking::Events::LoanDisbursed
+        event.data[:memo].presence || "ちゅ〜るローン"
+      when Banking::Events::LoanRepaymentDebited
+        "ちゅ〜るローンの返済"
       else
         event.data[:memo] || event.data[:reason]
       end

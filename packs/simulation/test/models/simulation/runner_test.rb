@@ -25,7 +25,7 @@ class Simulation::RunnerTest < ActiveSupport::TestCase
     assert @control.heartbeat_at.present?
 
     @control.update!(running: true)
-    assert_broadcasts(Simulation::Board::STREAM, 3) { @runner.handle(:check) } # 住民2匹の回数を 0 に・町の様子
+    assert_broadcasts(Simulation::Board::STREAM, 4) { @runner.handle(:check) } # 住民2匹の回数を 0 に・借金の関係図・町の様子
     assert @control.reload.town_running
     assert_equal "動いています（時計の合図を待っています）", @control.status_label
 
@@ -51,6 +51,36 @@ class Simulation::RunnerTest < ActiveSupport::TestCase
     assert_equal [ "ぶらぶら", 77, 50, "振り込んだ", 2, "ころんだ（Stumbled）" ],
                  @komugi.attributes.values_at("state", "mood", "money", "last_action", "restarts", "last_error")
     assert @komugi.last_action_at.present?
+  end
+
+  test "手紙（頼みと返事・郵便屋の写し・起こし直し）を「手紙の流れ」に書き残し、時計の合図は残さない" do
+    @control.update!(running: true)
+    @runner.handle(:check)
+    port = Ractor::Port.new
+
+    @runner.handle(L::Tick.new(day: 3, time: :noon, payday: false))
+    @runner.handle(L::WantTransfer.new(from: "こむぎ", to: "あずき", amount: 500, memo: "おすそわけ", reply_to: port))
+    wait_for(port) { true }
+    @runner.handle(L::Copy.new(from: "あずき", to: "みんな", letter: L::Trouble.new(from: "あずき", amount: 30)))
+    @runner.handle(L::Restarted.new(name: "あずき", count: 1, reason: "ころんだ"))
+
+    letters = Simulation::Letter.order(:id).map { [ it.sender, it.recipient, it.kind, it.day ] }
+    assert_equal [ [ "こむぎ", "窓口役", "ask", 3 ], [ "窓口役", "こむぎ", "refuse", 3 ], [ "あずき", "みんな", "trouble", 3 ],
+                   [ "見張り役", "あずき", "restart", 3 ] ], letters
+    assert_includes Simulation::Letter.first.text, "あずきさんへ 500 ちゅ〜る振り込みたい"
+  end
+
+  test "住民どうしで貸せたら、借りた住民へ「貸してもらえたよ」を郵便屋に届けてもらう" do
+    @control.update!(running: true)
+    @runner.handle(:check)
+    town = @runner.instance_variable_get(:@town)
+    delivered = []
+    town.define_singleton_method(:deliver) { |name, letter| delivered << [ name, letter ] }
+    port = Ractor::Port.new
+
+    @runner.handle(L::WantLend.new(from: "こむぎ", to: "あずき", amount: 30, reply_to: port))
+    assert wait_for(port) { true }.ok
+    assert_equal [ [ "あずき", L::Lent.new(from: "こむぎ", amount: 30) ] ], delivered
   end
 
   test "閉じた受け口（返事を待たずに倒れた住民）には返事を出さずに続ける" do

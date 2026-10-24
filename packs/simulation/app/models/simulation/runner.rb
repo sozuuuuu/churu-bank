@@ -2,9 +2,11 @@
 #
 #   役場の受け口（hall）に届く手紙を、1通ずつ順に片づける（ActiveRecord を使うのはこの糸だけ）
 #     :check（1秒ごと）… 表 simulation_controls を読む。画面で「動かす」なら町を起こし、「止める」なら止め、速さが変わったら時計役へ
-#     Tick … 窓口役にいまの日を教え、画面の時計を書き直す
-#     Ask… / Want… … 窓口役に確かめさせて書き、住民の受け口へ返事を出す
-#     Report / Restarted … 画面の係（Board）へ
+#     Tick … 窓口役にいまの日を教え、画面の時計を書き直す。朝なら商店の仕入れ（足りない商品を入荷）
+#     Ask… / Want… / PayRent … 窓口役に確かめさせて書き、住民の受け口へ返事を出す。住民どうしの貸し借りが通ったら、
+#                               借りた住民へ「貸してもらえたよ」（Lent）を郵便屋に届けてもらう
+#     Report / Restarted / Copy … 画面の係（Board）へ（Copy は郵便屋が出す、住民どうしの手紙の写し）
+#   手紙（時計の合図のほか）は、画面の「手紙の流れ」にも書き残す
 #
 # 窓口役が手紙を1通ずつ順に書くので、住民どうしが同時に同じ口座へ書くことはない（それでも銀行の expected_version が守る）
 module Simulation
@@ -37,6 +39,7 @@ module Simulation
       when Letters::Tick then tick(letter)
       when *Letters::REQUESTS then answer(letter)
       when Letters::Report then @board.report(letter)
+      when Letters::Copy then @board.letter(letter.from, letter.to, letter.letter)
       when Letters::Restarted
         log "見張り役: #{letter.name}を起こし直しました（#{letter.count} 回目。#{letter.reason}）"
         @board.restarted(letter)
@@ -63,7 +66,8 @@ module Simulation
 
     def start_town(control)
       statuses = ResidentStatus.order(:id).includes(:customer).to_a
-      @teller = Teller.new(residents: statuses.index_by(&:name), employer_account: control.employer_account)
+      @teller = Teller.new(residents: statuses.index_by(&:name), employer_account: control.employer_account,
+                           landlord_account: control.landlord_account, places: control.places || {})
       @seconds_per_day = control.seconds_per_day
       @board.reset
       @town = Town.new(specs: Roster.specs(statuses), hall: @hall, seconds_per_day: @seconds_per_day,
@@ -95,12 +99,25 @@ module Simulation
     def tick(letter)
       @teller&.today = letter
       @board.clock(letter)
+      Roster.restock if letter.time == :morning
+    rescue Shop::Error, Banking::Error => e
+      log "仕入れ係: 入荷できませんでした（#{e.message}）"
     end
 
     def answer(letter)
-      letter.reply_to << reply_for(letter)
+      @board.letter(letter.from, Board::TELLER, letter)
+      reply = reply_for(letter)
+      @board.letter(Board::TELLER, letter.from, reply)
+      deliver_lent(letter) if reply.ok && letter.is_a?(Letters::WantLend)
+      @board.debts if reply.ok && Board::MONEY_LETTERS.include?(letter.class)
+      letter.reply_to << reply
     rescue Ractor::ClosedError
       nil # 返事を待たずに倒れた住民。起こし直された住民は残高を聞き直す
+    end
+
+    # 住民どうしで貸したら、借りた住民へ「貸してもらえたよ」（郵便屋が届け、写しが手紙の流れに出る）
+    def deliver_lent(letter)
+      @town&.deliver(letter.to, Letters::Lent.new(from: letter.from, amount: letter.amount))
     end
 
     def reply_for(letter)

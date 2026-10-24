@@ -41,6 +41,8 @@ module EventLens
       B::DepositReversed => [ :surprised, ->(d) { "まちがえた入金 #{churu(d[:amount])} を取り消したにゃ" } ],
       B::WithdrawalReversed => [ :surprised, ->(d) { "まちがえた出金 #{churu(d[:amount])} を取り消して、口座に戻したにゃ" } ],
       B::InterestPaid => [ :happy, ->(d) { "#{who(d[:account_number])}の口座に、利息が #{churu(d[:amount])} ついたにゃ。ちりつもにゃ〜" } ],
+      B::LoanDisbursed => [ :surprised, ->(d) { "#{who(d[:account_number])}が、ちゅ〜るローンで #{churu(d[:amount])} 借りたにゃ！ 返すのを忘れないでにゃ" } ],
+      B::LoanRepaymentDebited => [ :normal, ->(d) { "#{who(d[:account_number])}が、ちゅ〜るローンを #{churu(d[:amount])} 返したにゃ" } ],
       # ---- 振込 ----
       B::TransferRequested => [ :happy, ->(d) { "いま#{who(d[:from_account])}から#{who(d[:to_account])}へ #{churu(d[:amount])}！" } ],
       B::TransferCompleted => [ :happy, ->(d) { "#{transfer_route(d[:transfer_id])}振込、ぶじに終わったにゃ！" } ],
@@ -55,6 +57,12 @@ module EventLens
       B::TransferReleased => [ :happy, ->(_d) { "確かめ終わったにゃ。保留していた振込を進めるにゃ！" } ],
       B::TransferCancelled => [ :normal, ->(d) { "#{transfer_route(d[:transfer_id])}振込を取り消したにゃ" } ],
       B::TransferStopped => [ :surprised, ->(d) { "#{transfer_route(d[:transfer_id])}振込が、差し止められたにゃ！" } ],
+      # ---- ちゅ〜るローン ----
+      B::LoanGranted => [ :normal, lambda { |d|
+        "#{who(d[:account_number])}に #{churu(d[:principal])} 貸したにゃ。返すのは手数料こみで #{churu(d[:total])} にゃ"
+      } ],
+      B::LoanRepaid => [ :happy, ->(d) { "ちゅ〜るローン、のこりは #{churu(d[:outstanding])} にゃ。がんばれにゃ〜" } ],
+      B::LoanSettled => [ :happy, ->(d) { "#{who(d[:account_number])}が、ちゅ〜るローンを全部返し終わったにゃ！ えらいにゃ〜" } ],
       # ---- 出金依頼 ----
       B::WithdrawalRequested => [ :normal, lambda { |d|
         "#{who(d[:account_number])}から、#{churu(d[:amount])} の出金の依頼が来たにゃ。窓口で待っててにゃ"

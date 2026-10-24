@@ -49,6 +49,12 @@ module Banking
     # data: account_number, interest_date, base_balance, annual_rate, amount, carry
     class InterestPaid < RubyEventStore::Event; end
 
+    # ちゅ〜るローンの貸付で、口座にお金が入った。data: account_number, loan_id, amount, memo
+    class LoanDisbursed < RubyEventStore::Event; end
+
+    # ちゅ〜るローンの返済で、口座から引いた。data: account_number, loan_id, amount
+    class LoanRepaymentDebited < RubyEventStore::Event; end
+
     # ---- 振込（ストリーム Transfer$<振込ID>） ----
 
     # data: transfer_id, from_account, to_account, amount, memo
@@ -104,10 +110,23 @@ module Banking
     # 利用者が依頼を取り消した（行員が処理する前だけ）。data: request_id, account_number
     class WithdrawalRequestCancelled < RubyEventStore::Event; end
 
+    # ---- ちゅ〜るローン（貸付、ストリーム Loan$<貸付ID>） ----
+    # お金の動きは口座側の LoanDisbursed / LoanRepaymentDebited（Loan$<貸付ID> にもリンクする）。こちらは「いくら借りていて、いくら残っているか」
+
+    # 貸した。返す額は principal + fee（手数料 = 利息。借りたときに決まる）。
+    # data: loan_id, account_number, principal, fee, total, memo
+    class LoanGranted < RubyEventStore::Event; end
+
+    # 返してもらった。data: loan_id, account_number, amount, outstanding（返したあとの残り）
+    class LoanRepaid < RubyEventStore::Event; end
+
+    # 全部返し終わった。data: loan_id, account_number
+    class LoanSettled < RubyEventStore::Event; end
+
     ACCOUNT = [
       AccountOpened, MoneyDeposited, MoneyWithdrawn, AccountFrozen, AccountUnfrozen, AccountClosed,
       TransferDebited, TransferCredited, TransferRefunded, TransferCreditReversed,
-      DepositReversed, WithdrawalReversed, InterestPaid
+      DepositReversed, WithdrawalReversed, InterestPaid, LoanDisbursed, LoanRepaymentDebited
     ].freeze
     TRANSFER = [
       TransferRequested, TransferCompleted, TransferFailed, TransferReversed,
@@ -118,6 +137,11 @@ module Banking
       WithdrawalRequested, WithdrawalRequestProcessed, WithdrawalRequestRejected, WithdrawalRequestCancelled
     ].freeze
 
+    LOAN = [ LoanGranted, LoanRepaid, LoanSettled ].freeze
+
+    # 口座側のイベントのうち、Loan$<貸付ID> にもリンクされるもの
+    LOAN_MONEY = [ LoanDisbursed, LoanRepaymentDebited ].freeze
+
     # 口座側のイベントのうち、Transfer$<振込ID> にもリンクされるもの
     TRANSFER_MONEY = [ TransferDebited, TransferCredited, TransferRefunded, TransferCreditReversed ].freeze
 
@@ -127,9 +151,9 @@ module Banking
     # 口座の残高を動かすイベントなら、その増減を返す（それ以外は nil）
     def self.balance_delta(event)
       case event
-      when MoneyDeposited, TransferCredited, TransferRefunded, WithdrawalReversed, InterestPaid
+      when MoneyDeposited, TransferCredited, TransferRefunded, WithdrawalReversed, InterestPaid, LoanDisbursed
         event.data.fetch(:amount)
-      when MoneyWithdrawn, TransferDebited, TransferCreditReversed, DepositReversed
+      when MoneyWithdrawn, TransferDebited, TransferCreditReversed, DepositReversed, LoanRepaymentDebited
         -event.data.fetch(:amount)
       end
     end

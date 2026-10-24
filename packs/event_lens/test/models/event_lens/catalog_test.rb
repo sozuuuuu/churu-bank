@@ -29,8 +29,8 @@ class EventLens::CatalogTest < ActiveSupport::TestCase
 
   test "すべてのイベントに、もともと書かれるストリームが決まっている（レーン図の関係者）" do
     all_event_classes.each do |klass|
-      event = klass.new(data: { account_number: "0000001", transfer_id: "t", request_id: "r", approval_id: "a", sku: "s", order_id: "o" })
-      assert_match(/\A(Account|Transfer|WithdrawalRequest|Approval|Shop|Product|Order)\$./, EventLens::Catalog.home_stream(event).to_s,
+      event = klass.new(data: { account_number: "0000001", transfer_id: "t", request_id: "r", approval_id: "a", sku: "s", order_id: "o", loan_id: "l" })
+      assert_match(/\A(Account|Transfer|WithdrawalRequest|Loan|Approval|Shop|Product|Order)\$./, EventLens::Catalog.home_stream(event).to_s,
                    "#{klass.name} のストリーム")
     end
   end

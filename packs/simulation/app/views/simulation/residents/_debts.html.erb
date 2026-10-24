@@ -1,0 +1,45 @@
+<%# 借金の関係図: 住民を輪に並べ、銀行をまんなかに置いて、借りた住民 → 貸した相手 に矢印。町を動かす係が Board#debts で書き換える %>
+<% cx, cy, r = 180, 140, 105 %>
+<% points = names.each_with_index.to_h { |name, i| a = (2 * Math::PI * i / names.size) - (Math::PI / 2); [ name, [ cx + r * Math.cos(a), cy + r * Math.sin(a) ] ] } %>
+<% points[Simulation::Letters::BANK] = [ cx, cy ] %>
+<div id="<%= Simulation::Board::DEBTS_TARGET %>" class="town-debts">
+  <svg viewBox="0 0 360 280" role="img" aria-label="借金の関係図（矢印は 借りた住民 → 貸した相手）">
+    <defs>
+      <marker id="debt-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 1 L9 5 L0 9 z" class="debt-arrowhead"/>
+      </marker>
+    </defs>
+    <% edges.each do |edge| %>
+      <% (x1, y1), (x2, y2) = points[edge.borrower], points[edge.lender] %>
+      <% next unless x1 && x2 %>
+      <% len = Math.hypot(x2 - x1, y2 - y1) %>
+      <% ux, uy = (x2 - x1) / len, (y2 - y1) / len %>
+      <% sx, sy, ex, ey = x1 + ux * 26, y1 + uy * 26, x2 - ux * 30, y2 - uy * 30 %>
+      <% bank = edge.lender == Simulation::Letters::BANK %>
+      <line x1="<%= sx.round(1) %>" y1="<%= sy.round(1) %>" x2="<%= ex.round(1) %>" y2="<%= ey.round(1) %>"
+            class="debt-line <%= "is-bank" if bank %>" marker-end="url(#debt-arrow)"/>
+      <text x="<%= ((sx + ex) / 2 - uy * 10).round(1) %>" y="<%= ((sy + ey) / 2 + ux * 10).round(1) %>" class="debt-amount"
+            text-anchor="middle"><%= edge.amount %></text>
+    <% end %>
+    <g class="debt-node is-bank">
+      <rect x="<%= cx - 28 %>" y="<%= cy - 16 %>" width="56" height="32" rx="6"/>
+      <text x="<%= cx %>" y="<%= cy + 5 %>" text-anchor="middle">銀行</text>
+    </g>
+    <% names.each do |name| %>
+      <% x, y = points[name] %>
+      <g class="debt-node">
+        <circle cx="<%= x.round(1) %>" cy="<%= y.round(1) %>" r="24"/>
+        <text x="<%= x.round(1) %>" y="<%= (y + 5).round(1) %>" text-anchor="middle"><%= name %></text>
+      </g>
+    <% end %>
+  </svg>
+  <% if edges.empty? %>
+    <p class="muted small">いまは、だれも借金していません。</p>
+  <% else %>
+    <ul class="small town-debt-list">
+      <% edges.sort_by { -it.amount }.each do |edge| %>
+        <li><%= edge.borrower %> → <%= edge.lender %>: <%= churu(edge.amount) %><%= "（ちゅ〜るローン）" if edge.lender == Simulation::Letters::BANK %></li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

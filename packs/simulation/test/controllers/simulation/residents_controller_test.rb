@@ -28,8 +28,9 @@ class Simulation::ResidentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "turbo-cable-stream-source[channel=StaffStreamsChannel]"
     assert_select "##{ActionView::RecordIdentifier.dom_id(@komugi)}" do
-      assert_select "h2", "こむぎ"
-      assert_select ".badge", text: "倹約家"
+      assert_select ".pet-name", text: /こむぎ/
+      assert_select ".pet-name", text: /倹約家/
+      assert_select "svg.pixel-pet[aria-label]"
       assert_select "dd", text: /ぶらぶら/
       assert_select "dd", text: /「ちゅ〜る」を買いたいと頼んだ/
       assert_select "dd", text: /2 回/
@@ -38,6 +39,8 @@ class Simulation::ResidentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#simulation_status", text: /町を動かす係が止まっています/
     assert_select "a[href=?]", simulation_residents_path, text: "住民の様子" # 管理画面のメニュー
     assert_select "form[action=?] select[name=?]", simulation_control_path, "control[seconds_per_day]"
+    assert_select "##{Simulation::Board::DEBTS_TARGET}", text: /だれも借金していません/
+    assert_select "##{Simulation::Board::LETTERS_TARGET}"
   end
 
   test "動かす・止める・速さは、表に書くだけ（町を動かす係が読む）" do

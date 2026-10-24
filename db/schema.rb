@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_000000) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "customer_id", null: false
     t.string "account_number", null: false
@@ -160,6 +160,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_100000) do
     t.index ["transfer_id"], name: "index_ledger_entries_on_transfer_id"
   end
 
+  create_table "loans", force: :cascade do |t|
+    t.string "loan_id", null: false
+    t.string "account_number", null: false
+    t.integer "principal", null: false
+    t.integer "fee", null: false
+    t.integer "outstanding", null: false
+    t.string "status", null: false
+    t.string "memo"
+    t.datetime "granted_at", null: false
+    t.datetime "settled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_number", "status"], name: "index_loans_on_account_number_and_status"
+    t.index ["loan_id"], name: "index_loans_on_loan_id", unique: true
+  end
+
   create_table "notice_receipts", force: :cascade do |t|
     t.integer "notice_id", null: false
     t.integer "customer_id", null: false
@@ -246,6 +262,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_100000) do
     t.string "employer_account"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "landlord_account"
+    t.json "places"
+  end
+
+  create_table "simulation_debts", force: :cascade do |t|
+    t.string "lender", null: false
+    t.string "borrower", null: false
+    t.integer "amount", null: false
+    t.integer "repaid", default: 0, null: false
+    t.integer "day"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["borrower", "lender"], name: "index_simulation_debts_on_borrower_and_lender"
+  end
+
+  create_table "simulation_letters", force: :cascade do |t|
+    t.string "sender", null: false
+    t.string "recipient", null: false
+    t.string "kind", null: false
+    t.string "text", null: false
+    t.integer "day"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "simulation_residents", force: :cascade do |t|
@@ -263,6 +302,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_100000) do
     t.integer "paid_day"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "letters_received", default: 0, null: false
+    t.integer "letters_sent", default: 0, null: false
+    t.integer "rent_paid_day"
     t.index ["customer_id"], name: "index_simulation_residents_on_customer_id"
     t.index ["name"], name: "index_simulation_residents_on_name", unique: true
   end

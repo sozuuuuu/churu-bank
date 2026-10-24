@@ -168,6 +168,23 @@ module Banking
 
     def interest_paid_on?(date) = @interest_dates.include?(date)
 
+    # ちゅ〜るローンの貸付で入金する（Bank#lend から）
+    def disburse_loan(loan_id:, amount:, memo: nil)
+      ensure_active!
+      ensure_positive!(amount)
+
+      apply Events::LoanDisbursed.new(data: { account_number: number, loan_id:, amount:, memo: })
+    end
+
+    # ちゅ〜るローンの返済で引き落とす（Bank#repay_loan から）。足りなければ InsufficientFunds
+    def debit_loan_repayment(loan_id:, amount:)
+      ensure_active!
+      ensure_positive!(amount)
+      raise InsufficientFunds, "残高不足です（残高 #{balance} / 返済 #{amount}）" if amount > balance
+
+      apply Events::LoanRepaymentDebited.new(data: { account_number: number, loan_id:, amount: })
+    end
+
     on Events::AccountOpened do |event|
       @holder_name = event.data.fetch(:holder_name)
       @status = :active
@@ -185,7 +202,7 @@ module Banking
     end
 
     on Events::TransferDebited, Events::TransferCredited, Events::TransferRefunded,
-       Events::TransferCreditReversed do |event|
+       Events::TransferCreditReversed, Events::LoanDisbursed, Events::LoanRepaymentDebited do |event|
       @balance += Events.balance_delta(event)
     end
 

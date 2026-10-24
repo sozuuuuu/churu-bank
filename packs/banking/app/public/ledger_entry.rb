@@ -9,7 +9,9 @@ class LedgerEntry < ApplicationRecord
     "transfer_reversal" => "組戻し（引き戻し）",
     "deposit_reversal" => "取消（入金）",
     "withdrawal_reversal" => "取消（出金）",
-    "interest" => "利息"
+    "interest" => "利息",
+    "loan" => "借入（ちゅ〜るローン）",
+    "loan_repayment" => "返済（ちゅ〜るローン）"
   }.freeze
 
   # Banking::Bank#reverse で取り消せる種類

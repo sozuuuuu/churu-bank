@@ -11,7 +11,8 @@ module EventLens
       Kind.new(:guard, "止める・通す", :lock),
       Kind.new(:request, "依頼と承認", :letter),
       Kind.new(:shop, "商店", :bag),
-      Kind.new(:account, "口座", :passbook)
+      Kind.new(:account, "口座", :passbook),
+      Kind.new(:loan, "ちゅ〜るローン", :key)
     ].index_by(&:key).freeze
     OTHER = Kind.new(:other, "そのほか", :alert)
 
@@ -40,6 +41,8 @@ module EventLens
       [ B::DepositReversed, "入金の取消", :money_out, :undo, "まちがえた入金を、逆向きの出来事で打ち消した（二人承認）" ],
       [ B::WithdrawalReversed, "出金の取消", :money_in, :undo, "まちがえた出金を、逆向きの出来事で打ち消した（二人承認）" ],
       [ B::InterestPaid, "利息", :money_in, :sprout, "前の日の残高に、1日分の利息がついた" ],
+      [ B::LoanDisbursed, "借入の入金", :money_in, :key, "ちゅ〜るローンで借りたお金が口座に入った" ],
+      [ B::LoanRepaymentDebited, "返済の引き落とし", :money_out, :key, "ちゅ〜るローンの返済で、口座からお金を引いた" ],
       # ---- 振込（Transfer$<振込ID>） ----
       [ B::TransferRequested, "振込の受付", :transfer, nil, "振込を受け付けた（このあと振込先へ入金する）" ],
       [ B::TransferCompleted, "振込の完了", :transfer, :check, "振込先への入金まで終わった" ],
@@ -52,6 +55,10 @@ module EventLens
       [ B::TransferReleased, "保留を通す", :guard, :check, "行員が確かめて、保留を外した" ],
       [ B::TransferCancelled, "振込の取消", :transfer, :close, "実行前の振込を、利用者が取り消した" ],
       [ B::TransferStopped, "振込の差し止め", :guard, :close, "実行前の振込を、行員が差し止めた" ],
+      # ---- ちゅ〜るローン（Loan$<貸付ID>） ----
+      [ B::LoanGranted, "ちゅ〜るローンの貸付", :loan, nil, "お金を貸した。返す額は借りた額に手数料（利息）を足した額" ],
+      [ B::LoanRepaid, "ちゅ〜るローンの返済", :loan, :undo, "借りたお金の一部を返してもらった" ],
+      [ B::LoanSettled, "ちゅ〜るローンの完済", :loan, :check, "借りたお金を全部返し終わった" ],
       # ---- 出金依頼（WithdrawalRequest$<依頼ID>） ----
       [ B::WithdrawalRequested, "出金の依頼", :request, nil, "利用者が窓口での出金を頼んだ（お金はまだ動かない）" ],
       [ B::WithdrawalRequestProcessed, "出金依頼の処理", :request, :check, "行員が依頼どおりに出金した" ],
@@ -102,6 +109,7 @@ module EventLens
       when *B::ACCOUNT then "Account$#{data[:account_number]}"
       when *B::TRANSFER then "Transfer$#{data[:transfer_id]}"
       when *B::WITHDRAWAL_REQUEST then "WithdrawalRequest$#{data[:request_id]}"
+      when *B::LOAN then "Loan$#{data[:loan_id]}"
       when *A::ALL then "Approval$#{data[:approval_id]}"
       when S::ShopOpened then "Shop$main"
       when *S::PRODUCT then "Product$#{data[:sku]}"
@@ -119,7 +127,8 @@ module EventLens
       withdrawal_event_id: "出金の出来事", approval_id: "承認の申請", kind: "申請の種類", ledger_event_id: "取り消す通帳の行",
       summary: "説明", requested_by: "申請した人", approved_by: "承認した人", rejected_by: "却下した人",
       event_ids: "実行した出来事", sku: "商品", name: "商品名", emoji: "絵文字", price: "値段", quantity: "数",
-      order_id: "注文", buyer_account: "買った人の口座", lines: "品物", total: "合計"
+      order_id: "注文", buyer_account: "買った人の口座", lines: "品物", total: "合計",
+      loan_id: "ちゅ〜るローン", principal: "借りた額", fee: "手数料（利息）", outstanding: "返す額の残り"
     }.freeze
     # metadata（RES と各パックが付ける付帯情報）。request_id は data の「出金依頼」とは別物（Rails のリクエスト）
     METADATA_LABELS = {
@@ -129,13 +138,14 @@ module EventLens
       resident: "住民（ねこ町の暮らし。packs/simulation の窓口役が付ける印）"
     }.freeze
 
-    MONEY_FIELDS = %i[amount base_balance threshold price total].freeze
+    MONEY_FIELDS = %i[amount base_balance threshold price total principal fee outstanding].freeze
     ACCOUNT_FIELDS = %i[account_number counterparty from_account to_account buyer_account].freeze
     ACTOR_FIELDS = %i[actor requested_by approved_by rejected_by].freeze
     EVENT_FIELDS = %i[reversed_event_id withdrawal_event_id ledger_event_id causation_id event_ids].freeze
     # 値がほかのストリームの ID になっている項目（つながりの図で、そのストリームもたどる）
     STREAM_FIELDS = {
-      transfer_id: "Transfer$", order_id: "Order$", request_id: "WithdrawalRequest$", approval_id: "Approval$", sku: "Product$"
+      transfer_id: "Transfer$", order_id: "Order$", request_id: "WithdrawalRequest$", approval_id: "Approval$", sku: "Product$",
+      loan_id: "Loan$"
     }.freeze
     APPROVAL_KINDS = { "reversal" => "入出金の取消", "transfer_reversal" => "振込の組戻し", "unfreeze" => "凍結の解除" }.freeze
 

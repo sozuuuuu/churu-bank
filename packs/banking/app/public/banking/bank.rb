@@ -12,6 +12,8 @@
 #   bank.reverse("0000001", event_id, reason: "金額まちがい", approval:)  # 入金・出金の取消（二人承認）
 #   bank.reverse_transfer(transfer_id, reason: "振込先まちがい", approval:) # 完了した振込の組戻し（二人承認）
 #   bank.pay_interest(date: Date.yesterday)      # 日次の利息（ふだんは Interest::PayJob が呼ぶ）
+#   bank.lend("0000001", 100, memo: "生活費")     # ちゅ〜るローン（手数料 10% を足した額を返す）
+#   bank.repay_loan(loan_id, 50)                 # ローンの返済（口座から引き落とす）
 #
 # 書き込みは「集約を読み込む → ルールを確かめて apply → まとめて publish」。
 # publish と同期プロジェクションは1つのトランザクションに入れるので、
@@ -20,8 +22,8 @@ module Banking
   class Bank
     # ドライランでも本番でも同じ形で返す
     Outcome = Data.define(:account_number, :events, :balance_before, :balance_after, :dry_run,
-                          :transfer_id, :warnings, :request_id) do
-      def initialize(transfer_id: nil, warnings: [], request_id: nil, **) = super
+                          :transfer_id, :warnings, :request_id, :loan_id) do
+      def initialize(transfer_id: nil, warnings: [], request_id: nil, loan_id: nil, **) = super
 
       def dry_run? = dry_run
     end
@@ -309,6 +311,69 @@ module Banking
       outcome unless outcome.events.empty?
     end
 
+    # ---- ちゅ〜るローン（貸付）----
+    # 借りるときに手数料（利息）を決めて、返す額 = 借りた額 + 手数料。日ごとには増えない。
+    # 1口座で借りていられるのは、返す額の合計で LOAN_LIMIT まで（読み取りモデル loans で数える。同時に2つ借りると
+    # ほんの少し超えることがある。口座と貸付は別のストリームなので、ここは読み取りモデルでよしとする）
+    LOAN_MAX = 300           # 1回に借りられる額
+    LOAN_LIMIT = 600         # 1口座で返す額の合計の上限
+    LOAN_FEE_RATE = Rational(1, 10)
+
+    def self.loan_fee(principal) = (principal * LOAN_FEE_RATE).ceil
+
+    # 貸す: 貸付（Loan$）と口座への入金（Account$ の LoanDisbursed、Loan$ にもリンク）を1つのトランザクションで
+    def lend(number, amount, memo: nil, dry_run: false)
+      unless amount.is_a?(Integer) && amount.between?(1, LOAN_MAX)
+        raise ArgumentError, "1回に借りられるのは 1〜#{LOAN_MAX} ちゅ〜るです"
+      end
+
+      fee = self.class.loan_fee(amount)
+      owed = ::Loan.owed_by(number)
+      if owed + amount + fee > LOAN_LIMIT
+        raise InvalidState, "借りられるのは返す額の合計で #{LOAN_LIMIT} ちゅ〜るまでです（いま返す額 #{owed} ちゅ〜る）"
+      end
+
+      loan_id = SecureRandom.uuid
+      account = load_account(number)
+      before = account.balance
+      account.disburse_loan(loan_id:, amount:, memo:)
+      loan = Loan.new(loan_id)
+      loan.grant(account_number: number, principal: amount, fee:, memo:)
+
+      money = account.unpublished_events.first
+      events = account.unpublished_events.to_a + loan.unpublished_events.to_a
+      unless dry_run
+        store_all(account => Account.stream_name(number), loan => Loan.stream_name(loan_id)) do
+          @event_store.link(money.event_id, stream_name: Loan.stream_name(loan_id))
+        end
+      end
+      Outcome.new(account_number: number, events:, balance_before: before, balance_after: account.balance, dry_run:,
+                  loan_id:, warnings: [ "返す額は #{amount + fee} ちゅ〜るです（手数料 #{fee} ちゅ〜るをふくむ）" ])
+    end
+
+    # 返す: 口座から引き落とし（LoanRepaymentDebited）、貸付の残りを減らす（LoanRepaid、0 になったら LoanSettled）。
+    # from を渡すと、その口座の貸付でなければ NotFound
+    def repay_loan(loan_id, amount, from: nil, dry_run: false)
+      loan = load_loan(loan_id)
+      raise NotFound, "貸付 #{loan_id} はありません" if loan.status == :new || (from && loan.account_number != from)
+
+      loan.repay(amount)
+      number = loan.account_number
+      account = load_account(number)
+      before = account.balance
+      account.debit_loan_repayment(loan_id:, amount:)
+
+      money = account.unpublished_events.first
+      events = account.unpublished_events.to_a + loan.unpublished_events.to_a
+      unless dry_run
+        store_all(account => Account.stream_name(number), loan => Loan.stream_name(loan_id)) do
+          @event_store.link(money.event_id, stream_name: Loan.stream_name(loan_id))
+        end
+      end
+      Outcome.new(account_number: number, events:, balance_before: before, balance_after: account.balance, dry_run:,
+                  loan_id:)
+    end
+
     # 年利（文字列の小数。例: "0.365"）。packs/banking/config/initializers/banking_interest.rb で設定
     def self.annual_interest_rate = Rails.configuration.x.banking.annual_interest_rate
 
@@ -327,6 +392,8 @@ module Banking
     private
 
     def load_transfer(transfer_id) = @repository.load(Transfer.new(transfer_id), Transfer.stream_name(transfer_id))
+
+    def load_loan(loan_id) = @repository.load(Loan.new(loan_id), Loan.stream_name(loan_id))
 
     def load_existing_transfer(transfer_id)
       load_transfer(transfer_id).tap do |transfer|

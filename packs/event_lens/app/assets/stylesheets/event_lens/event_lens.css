@@ -9,6 +9,7 @@
   --k-request: #7b4fb5;
   --k-shop: #c2457a;
   --k-account: #55657f;
+  --k-loan: #0f7c86;
   --k-other: #7a6f66;
   --ev-glow: rgba(47, 109, 181, .35);
 }
@@ -21,6 +22,7 @@
     --k-request: #c4a2f2;
     --k-shop: #f59ac0;
     --k-account: #a9b6cc;
+    --k-loan: #6fd6dc;
     --k-other: #a99d92;
     --ev-glow: rgba(130, 180, 245, .35);
   }
@@ -32,6 +34,7 @@
 .kind-request { --kind: var(--k-request); }
 .kind-shop { --kind: var(--k-shop); }
 .kind-account { --kind: var(--k-account); }
+.kind-loan { --kind: var(--k-loan); }
 .kind-other { --kind: var(--k-other); }
 
 .ev-head p { margin: 0 0 12px; }

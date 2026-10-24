@@ -5,6 +5,7 @@ module Simulation
     include StaffAuthentication
     helper Ui::FormatHelper
     helper Ui::ThemeHelper # ねこの顔（cat）
+    helper PixelPetHelper # 住民のドット絵
 
     layout "admin"
   end

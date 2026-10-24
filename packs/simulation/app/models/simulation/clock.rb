@@ -1,5 +1,5 @@
 # 時計役（Ractor 1 つ）: 「朝・昼・夕方・夜」の合図（Letters::Tick）を、郵便屋を通して住民みんなへ、役場にも配る。
-# 1日を seconds_per_day 秒に縮める（ふだんは 24 秒 = 合図は 6 秒ごと）。給料日は PAYDAY_EVERY 日ごとの朝。
+# 1日を seconds_per_day 秒に縮める（ふだんは 24 秒 = 合図は 6 秒ごと）。給料日は PAYDAY_EVERY 日ごとの朝、家賃の日はその次の日の朝。
 #
 # Ractor の中に糸（Thread）を2本: 1本は手紙（Letters::Speed で速さを変える・:stop で止まる）を待ち、
 # もう1本（Ractor のはじめの糸）が合図を出す。待っているあいだも 0.05 秒ごとに速さを見直すので、速さの変更はすぐ効く
@@ -19,7 +19,8 @@ module Simulation
     def self.tick_at(step, first_day: 1)
       day = first_day + (step / TIMES.size)
       time = TIMES[step % TIMES.size]
-      Letters::Tick.new(day:, time:, payday: time == :morning && ((day - 1) % PAYDAY_EVERY).zero?)
+      cycle = (day - 1) % PAYDAY_EVERY
+      Letters::Tick.new(day:, time:, payday: time == :morning && cycle.zero?, rent_day: time == :morning && cycle == 1)
     end
 
     def initialize(postman:, hall:, seconds_per_day:, day:)

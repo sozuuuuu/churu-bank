@@ -28,6 +28,8 @@ module EventViewer
       [ B::TransferCredited, "振込先へ入金する" ],
       [ B::TransferRefunded, "振込元へ戻す" ],
       [ B::TransferRequested, "振り込む" ],
+      [ B::LoanGranted, "お金を借りる" ],
+      [ B::LoanRepaid, "借りたお金を返す" ],
       [ B::WithdrawalRequested, "出金を頼む" ],
       [ B::WithdrawalRequestProcessed, "依頼どおりに出金する" ],
       [ B::WithdrawalRequestRejected, "出金の依頼を断る" ],

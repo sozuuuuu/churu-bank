@@ -8,8 +8,11 @@
 module Simulation
   class Resident
     # 住民の設定。見張り役はこれを持っていて、倒れるたびにここから作り直す。
-    # temperament は Temperament の名前、brain は Brains の名前、seed は乱数の種（起こし直すたびに回数を足してずらす）
-    Spec = Data.define(:name, :temperament, :brain, :seed, :friends, :menu)
+    # temperament は Temperament の名前、brain は Brains の名前、seed は乱数の種（起こし直すたびに回数を足してずらす）、
+    # menu は商店の品書き、places は遊び場（Memory::Place）
+    Spec = Data.define(:name, :temperament, :brain, :seed, :friends, :menu, :places) do
+      def initialize(places: [], **) = super
+    end
 
     class Stumbled < StandardError; end
 
@@ -32,7 +35,9 @@ module Simulation
       @random = Random.new(spec.seed + restarts)
       @brain = Brains.fetch(spec.brain).new(random: Random.new(@random.rand(2**31)))
       @memory = Memory.wake(name: spec.name, temperament: Temperament.fetch(spec.temperament), friends: spec.friends,
-                            menu: spec.menu)
+                            menu: spec.menu, places: spec.places)
+      @received = 0 # 受け取った手紙の数（起きてから）
+      @sent = 0     # 出した手紙の数
     end
 
     def name = @spec.name
@@ -58,9 +63,11 @@ module Simulation
     def hear(letter)
       raise Stumbled, "#{name}が手紙につまずいてころんだ" if letter == :crash
 
+      @received += 1
       @memory = @memory.heard(letter)
       stumble!(letter)
       note = answered(letter) if letter.is_a?(Letters::Reply)
+      note = "#{letter.from}さんが #{letter.amount} ちゅ〜る貸してくれた（借用書）" if letter.is_a?(Letters::Lent)
       note = act(@brain.decide(@memory, letter)) || note
       report(note) if note || letter.is_a?(Letters::Tick)
     end
@@ -69,7 +76,10 @@ module Simulation
 
     def inbox = Ractor.current.default_port
 
-    def ask(letter) = @hall << letter
+    def ask(letter)
+      @sent += 1
+      @hall << letter
+    end
 
     def stumble!(letter)
       return unless letter.is_a?(Letters::Tick) && @random.rand < @memory.temperament.stumble
@@ -84,6 +94,28 @@ module Simulation
         @memory = @memory.doing("しごと場で働いている")
         ask(Letters::AskSalary.new(from: name, day: @memory.day, reply_to: inbox))
         "働いた。窓口に給料を頼んだ"
+      when Intent::PayRent
+        ask(Letters::PayRent.new(from: name, day: @memory.day, reply_to: inbox))
+        "大家さんに家賃を払いに行った"
+      when Intent::Eat
+        @memory = @memory.doing("ごはんを買いに行った")
+        ask(Letters::WantPurchase.new(from: name, sku: intent.sku, quantity: 1, reply_to: inbox))
+        "ごはん（#{@memory.item(intent.sku)&.name || intent.sku}）を買いに行った"
+      when Intent::Splurge
+        place = @memory.place(intent.place)
+        @memory = @memory.doing("#{place&.name || intent.place}にいる")
+        ask(Letters::WantFun.new(from: name, place: intent.place, reply_to: inbox))
+        "#{place&.name || intent.place}へ遊びに行った"
+      when Intent::Borrow
+        @memory = @memory.doing("銀行の窓口にいる")
+        ask(Letters::WantLoan.new(from: name, amount: intent.amount, reply_to: inbox))
+        "銀行に #{intent.amount} ちゅ〜る借りたいと頼んだ"
+      when Intent::Lend
+        ask(Letters::WantLend.new(from: name, to: intent.to, amount: intent.amount, reply_to: inbox))
+        "#{intent.to}さんに #{intent.amount} ちゅ〜る貸すことにした"
+      when Intent::Repay
+        ask(Letters::WantRepay.new(from: name, to: intent.to, amount: intent.amount, reply_to: inbox))
+        "#{intent.to == Letters::BANK ? "銀行" : "#{intent.to}さん"}に #{intent.amount} ちゅ〜る返しに行った"
       when Intent::Buy
         @memory = @memory.doing("ちゅ〜る商店にいる")
         ask(Letters::WantPurchase.new(from: name, sku: intent.sku, quantity: intent.quantity, reply_to: inbox))
@@ -95,6 +127,7 @@ module Simulation
         @memory = @memory.doing("ねている")
         "ねむった"
       when Intent::AskHelp
+        @sent += 1
         @postman << Letters::Broadcast.new(letter: Letters::Trouble.new(from: name, amount: intent.amount), except: name)
         "みんなに「#{intent.amount} ちゅ〜る足りないにゃ」と手紙を出した"
       end
@@ -107,7 +140,7 @@ module Simulation
     def report(note)
       @last_action = note if note
       @hall << Letters::Report.new(name:, state: @memory.state, mood: @memory.mood, money: @memory.money,
-                                   last_action: @last_action)
+                                   last_action: @last_action, received: @received, sent: @sent)
     end
   end
 end

@@ -326,6 +326,8 @@ bin/rails churu:rebuild_projections
 | 保留を通す（行員） | `bank.release_transfer(transfer.transfer_id, dry_run:)` | `Transfer#releasable?`（保留中）に「通す」。Outcome は振込先（`balance_after` は入金後の額） |
 | 保留のしきい値 | `Banking::Bank.hold_threshold`（整数） | 商店などの支払いは `transfer(…, holdable: false)` で対象外 |
 | 予約の実行 | `bank.execute_due_transfers(date:)` / 1件なら `bank.execute_transfer(id, date:)` | ふだんはジョブに任せる。何度呼んでも1回分 |
+| ちゅ〜るローン（借りる） | `bank.lend(number, amount, memo:, dry_run:)` | 1回 `LOAN_MAX`（300）まで、返す額の合計は口座ごとに `LOAN_LIMIT`（600）まで。手数料 10%（`Bank.loan_fee`）を借りたときに決める。Outcome の `loan_id` |
+| ちゅ〜るローン（返す） | `bank.repay_loan(loan_id, amount, from: 口座番号, dry_run:)` | 残りより多くは返せない。0 になると完済（`Loan#status` が settled）。読み取りモデルは `Loan`（`Loan.owed_by(口座番号)` で返す額の合計） |
 
 通帳の種類（`LedgerEntry::KIND_LABELS`）に `interest`（利息）・`deposit_reversal` / `withdrawal_reversal`（取消）・
 `transfer_reversal`（組戻しの引き戻し）が増えた。振込の状態（`Transfer::STATUS_LABELS`）に `reversed` が増え、
@@ -767,6 +769,34 @@ bin/rails churu:simulate     # 町を動かす係（別のプロセス）。は�
 住民がした出来事は、ねこの実況（頭に「［住民のこむぎ］」）・ふせんの壁・イベントの一覧（「住民」の印）にそのまま流れる。
 住民は利用者でもあるので、`/session` で住民としてログインすると、その住民の通帳や「わたしの出来事」も見られる。
 住民と口座の用意だけなら `bin/rails churu:simulation:setup`（何度流しても増えない。給料を払う口座「ねこ町のしごと場」も開く）。
+
+### 暮らしの釣り合い・借金・遊び場
+
+はじめの町は、お給料が入るのに商店の在庫が切れて買えず、みんなお金がたまる一方だった（200 日で 1 匹 9,000 ちゅ〜る）。そこで:
+
+- **毎日かかるお金**: お昼はごはん（ちゅ〜る。食べないと夕方におなかがすいて気分が下がる）、給料日の次の日の朝は家賃（`Teller::RENT`、ねこ町の大家さんへ）。
+  お給料は性格で 160〜200（`Temperament#salary`）
+- **仕入れ**: 町の朝ごとに、足りない商品を入荷する（`Roster.restock`、actor は `town-supplier`）
+- **遊び場**（浪費する所。在庫はいらない）: またたびバー 40・ねこカフェ 60・ひなたぼっこ温泉 120・ちゅ〜る宝くじ 20（8% で 200 当たる。賞金は宝くじ屋の口座から）。
+  それぞれ口座を持ち、住民からの振込で払う。行きやすさは性格（`splurge`）。衝動買いは額を気にせず温泉に行こうとする
+- **ちゅ〜るローン**（銀行の新しい業務）: 足りなくて断られたら、性格の確率（`borrow`。家賃・ごはんなら借りやすい）で銀行から借りる。
+  お給料が入ったら返す（`repay`。衝動買いはあまり返さない）。出来事は `LoanGranted` / `LoanRepaid` / `LoanSettled`（`Loan$<貸付ID>`）と、
+  口座側の `LoanDisbursed` / `LoanRepaymentDebited`（通帳には「借入」「返済」）。ねこの実況・ふせんの壁・わたしの出来事にもそのまま出る
+- **住民どうしの貸し借り**: 「足りないにゃ」の手紙に、世話焼きはたいてい貸す（`lend`）。お金は振込、借用書は町の記録（表 `simulation_debts`。銀行は知らない）。
+  貸せたら役場が郵便屋に「貸してもらえたよ」（`Letters::Lent`）を届けてもらう。返すのは古い借用書から
+- 窓口役の返事（`Letters::Reply`）には、いつもその住民の借金の帳面（`debts`）が付く。見張り役に起こし直されて記憶が消えても、最初の返事で借金を思い出す
+
+長く動かしてお金がたまりすぎたら `bin/rails churu:simulation:trim_wallets`（`KEEP=200` を超える分を「ねこ町の基金」へ振り込む。振込なので記録に残る）。
+
+### 住民の様子の画面（たまごっち・手紙の流れ・借金の関係図）
+
+- **住民のカード**: たまご型の機械に緑の液晶、16×16 のドット絵のねこ（`Simulation::PixelPetHelper`。SVG の四角で描き、CSS の `steps()` でカクカク動かす）。
+  いまの様子でポーズが変わる: おやすみ（Zz）・もぐもぐ・あそび中（♪）・借金でひやひや（汗）・しょんぼり・ごきげん（ハート）・おかねもち（コイン）・ころんだ（目が ×）。
+  機械の色は性格で、液晶の下にハートで気分。文字は Google Fonts の DotGothic16
+- **手紙の流れ**: 住民 → 窓口役の頼み、窓口役 → 住民の返事・お断り、郵便屋の写し（「足りないにゃ」・借用書）、見張り役の起こし直しを、
+  1通ずつ頭に足す（Turbo Stream の prepend。表 `simulation_letters` に新しい 300 通）。時計の合図は数が多いので残さない。
+  Ractor の受け口には「何通たまっているか」を聞けないので、カードの手紙の数は住民が自分で数えて Report に入れる
+- **借金の関係図**: 住民を輪に、銀行をまんなかに置き、借りた住民 → 貸した相手 に矢印と残りの額（`DebtWeb`。ローンは点線）
 
 ### 作り（だれが、どの Ractor にいるか）
 

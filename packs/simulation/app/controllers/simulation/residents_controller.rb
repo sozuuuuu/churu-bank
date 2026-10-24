@@ -5,6 +5,8 @@ module Simulation
     def index
       @control = Control.current
       @residents = ResidentStatus.order(:id)
+      @letters = Letter.recent
+      @debts = DebtWeb.locals
     end
   end
 end

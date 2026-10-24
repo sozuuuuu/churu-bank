@@ -4,6 +4,7 @@ require_relative "../../simulation_test_helper"
 # 窓口役: 住民の手紙を確かめてから、銀行と商店の公開の入口で書く。断ったら返事でわけを伝える
 class Simulation::TellerTest < ActiveSupport::TestCase
   include SimulationTestHelper
+  include ActiveJob::TestHelper
 
   L = Simulation::Letters
 
@@ -65,7 +66,7 @@ class Simulation::TellerTest < ActiveSupport::TestCase
     @teller.today = L::Tick.new(day: 1, time: :morning, payday: true)
     reply = @teller.handle(salary)
     assert reply.ok, reply.message
-    assert_equal 50 + Simulation::Teller::SALARY, reply.balance
+    assert_equal 50 + Simulation::Temperament.fetch(:frugal).salary, reply.balance, "お給料は性格で決まる"
     debited = @event_store.read.of_type(Banking::Events::TransferDebited).last
     assert_equal @employer, debited.data[:account_number]
     assert_equal Simulation::Teller::PAYROLL_ACTOR, debited.metadata[:actor]
@@ -99,7 +100,81 @@ class Simulation::TellerTest < ActiveSupport::TestCase
     assert_equal 1, @event_store.read.of_type(Shop::Events::OrderPlaced).count
   end
 
+  test "家賃は家賃の日に1回だけ、大家さんの口座へ。足りなければ断る" do
+    landlord = Banking::Bank.new(actor: "test").open_account(holder_name: "大家さん").account_number
+    teller = teller_with(landlord_account: landlord)
+    rent = L::PayRent.new(from: "こむぎ", day: 2, reply_to: nil)
+    assert_equal :not_payday, teller.handle(rent).reason
+
+    teller.today = L::Tick.new(day: 2, time: :morning, payday: false, rent_day: true)
+    reply = teller.handle(rent)
+    assert reply.ok, reply.message
+    assert_equal 100 - Simulation::Teller::RENT, reply.balance
+    assert_equal :not_payday, teller.handle(rent).reason, "同じ日の2回目"
+    @azuki.update!(account_number: create_resident("くるみ", deposit: 10).account_number)
+    assert_equal :insufficient, teller.handle(L::PayRent.new(from: "あずき", day: 2, reply_to: nil)).reason
+  end
+
+  test "遊び場は遊び場の口座へ振り込む。宝くじはときどき当たって、宝くじ屋から賞金" do
+    bank = Banking::Bank.new(actor: "test")
+    places = %w[cat_cafe lottery].to_h { [ it, bank.open_account(holder_name: it).account_number ] }
+    bank.deposit(places["lottery"], 1000)
+    lucky = Object.new.tap { it.define_singleton_method(:rand) { 0.0 } }
+    teller = teller_with(places:, random: lucky)
+
+    cafe = teller.handle(L::WantFun.new(from: "こむぎ", place: "cat_cafe", reply_to: nil))
+    assert cafe.ok, cafe.message
+    assert_equal 40, cafe.balance
+    lottery = teller.handle(L::WantFun.new(from: "こむぎ", place: "lottery", reply_to: nil))
+    assert_includes lottery.message, "当たって"
+    assert_equal 40 - 20 + Simulation::Teller::LOTTERY_PRIZE, lottery.balance
+    prize = @event_store.read.of_type(Banking::Events::TransferDebited).last
+    assert_equal [ places["lottery"], Simulation::Teller::LOTTERY_ACTOR, "こむぎ" ],
+                 [ prize.data[:account_number], prize.metadata[:actor], prize.metadata[:resident] ]
+    assert_equal :refused, teller.handle(L::WantFun.new(from: "こむぎ", place: "nowhere", reply_to: nil)).reason
+  end
+
+  test "ちゅ〜るローン: 借りて、返す。返事にはいつも借金の帳面が付く。上限を超えたら :loan_limit" do
+    reply = @teller.handle(L::WantLoan.new(from: "あずき", amount: 100, reply_to: nil))
+    assert reply.ok, reply.message
+    assert_equal 150, reply.balance
+    assert_equal({ L::BANK => 110 }, reply.debts)
+    granted = @event_store.read.of_type(Banking::Events::LoanGranted).last
+    assert_equal [ "あずき", @azuki.customer.actor ], [ granted.metadata[:resident], granted.metadata[:actor] ]
+
+    @teller.handle(L::WantLoan.new(from: "あずき", amount: 300, reply_to: nil)) # 返す額 330 → 合計 440
+    assert_equal :loan_limit, @teller.handle(L::WantLoan.new(from: "あずき", amount: 200, reply_to: nil)).reason
+
+    repaid = @teller.handle(L::WantRepay.new(from: "あずき", to: L::BANK, amount: 500, reply_to: nil))
+    assert repaid.ok, repaid.message
+    assert_includes repaid.message, "110", "古い貸付から、残りの額まで"
+    assert_equal({ L::BANK => 330 }, repaid.debts)
+    assert_equal :refused, @teller.handle(L::WantRepay.new(from: "こむぎ", to: L::BANK, amount: 10, reply_to: nil)).reason
+  end
+
+  test "住民どうしの貸し借り: 振込と借用書。返すと借用書が減り、借りていない相手には返せない" do
+    lent = @teller.handle(L::WantLend.new(from: "こむぎ", to: "あずき", amount: 40, reply_to: nil))
+    assert lent.ok, lent.message
+    assert_equal 60, lent.balance
+    assert_equal({ "こむぎ" => 40 }, Simulation::Debt.owed_by("あずき"))
+    assert_equal({ "こむぎ" => 40 }, @teller.handle(L::AskBalance.new(from: "あずき", reply_to: nil)).debts)
+
+    assert_equal :refused, @teller.handle(L::WantLend.new(from: "こむぎ", to: "こむぎ", amount: 10, reply_to: nil)).reason
+    assert_equal :refused, @teller.handle(L::WantRepay.new(from: "こむぎ", to: "あずき", amount: 10, reply_to: nil)).reason
+
+    perform_enqueued_jobs # 振込の入金（Solid Queue の係）
+    back = @teller.handle(L::WantRepay.new(from: "あずき", to: "こむぎ", amount: 25, reply_to: nil))
+    assert back.ok, back.message
+    assert_equal({ "こむぎ" => 15 }, back.debts)
+    @teller.handle(L::WantRepay.new(from: "あずき", to: "こむぎ", amount: 99, reply_to: nil))
+    assert_empty Simulation::Debt.owed_by("あずき"), "残りの額だけ返す"
+  end
+
   private
+
+  def teller_with(**options)
+    Simulation::Teller.new(residents: { "こむぎ" => @komugi, "あずき" => @azuki }, employer_account: @employer, **options)
+  end
 
   def balance(status) = Banking::Bank.new(actor: "test").load_account(status.account_number).balance
 end

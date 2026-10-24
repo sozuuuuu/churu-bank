@@ -33,14 +33,22 @@ module Simulation
         <<~PROMPT
           あなたは、ねこ町に住むねこの「#{memory.name}」です。性格は「#{memory.temperament.label}」。
           いまは #{memory.day || "?"} 日目の#{TIMES[memory.time] || "?"}。気分は #{memory.mood}/100、所持金の見込みは #{memory.money || "わからない"} ちゅ〜る。
+          きょうのごはん: #{memory.ate_today? ? "食べた" : "まだ"}。借金: #{debts(memory)}
           知り合い: #{memory.friends.join("、")}
-          商店の品書き: #{memory.menu.map { "#{it.sku}（#{it.name}、#{it.price} ちゅ〜る）" }.join("、")}
+          商店の品書き: #{memory.menu.map { "#{it.sku}（#{it.name}、#{it.price} ちゅ〜る#{"、ごはん" if it.food}）" }.join("、")}
+          遊び場: #{memory.places.map { "#{it.key}（#{it.name}、#{it.price} ちゅ〜る）" }.join("、")}
           届いた手紙: #{describe(letter)}
 
           次にすることを、JSON 1つだけで答えてください（ほかの文は書かない）:
             {"do":"work"} 働いて給料をもらう（給料日の朝だけ）
+            {"do":"rent"} 家賃を払う（家賃の日の朝だけ）
+            {"do":"eat","sku":"…"} ごはんを買う（食べないと夕方におなかがすく）
             {"do":"buy","sku":"…","quantity":1} 商店で買う
+            {"do":"fun","place":"…"} 遊び場でお金を使う
             {"do":"gift","to":"知り合いの名前","amount":数,"memo":"…"} 振り込む
+            {"do":"lend","to":"知り合いの名前","amount":数} 貸す（借用書が残る）
+            {"do":"borrow","amount":数} 銀行のちゅ〜るローンで借りる（手数料 10%）
+            {"do":"repay","to":"貸してくれた名前 か 銀行","amount":数} 借りたお金を返す
             {"do":"rest"} ねむる
             {"do":"ask_help","amount":数} みんなに助けを求める
             {"do":"nothing"} 何もしない
@@ -52,7 +60,15 @@ module Simulation
         data = JSON.parse(answer.to_s[/\{.*\}/m] || "{}")
         case data["do"]
         when "work" then Intent::Work.new
+        when "rent" then Intent::PayRent.new
         when "rest" then Intent::Rest.new
+        when "eat" then Intent::Eat.new(sku: data["sku"]) if memory.item(data["sku"])&.food
+        when "fun" then Intent::Splurge.new(place: data["place"]) if memory.place(data["place"])
+        when "borrow" then Intent::Borrow.new(amount: Integer(data["amount"]))
+        when "lend"
+          Intent::Lend.new(to: data["to"], amount: Integer(data["amount"])) if memory.friends.include?(data["to"])
+        when "repay"
+          Intent::Repay.new(to: data["to"], amount: Integer(data["amount"])) if memory.debts.key?(data["to"])
         when "buy"
           Intent::Buy.new(sku: data["sku"], quantity: Integer(data.fetch("quantity", 1))) if memory.item(data["sku"])
         when "gift"
@@ -72,8 +88,15 @@ module Simulation
         when Letters::Tick then "時計の合図（#{TIMES[letter.time]}#{"・給料日" if letter.payday}）"
         when Letters::Reply then "窓口の返事「#{letter.message}」"
         when Letters::Trouble then "#{letter.from}さんから「#{letter.amount} ちゅ〜る足りないにゃ」"
+        when Letters::Lent then "#{letter.from}さんが #{letter.amount} ちゅ〜る貸してくれた"
         else letter.to_s
         end
+      end
+
+      def debts(memory)
+        return "なし" if memory.debts.empty?
+
+        memory.debts.map { |name, amount| "#{name}に #{amount} ちゅ〜る" }.join("、")
       end
     end
   end

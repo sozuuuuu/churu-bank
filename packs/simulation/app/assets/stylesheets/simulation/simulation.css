@@ -1,4 +1,5 @@
-/* 住民の様子（/admin/town）。色は application.css の変数を使う */
+/* 住民の様子（/admin/town）。色は application.css の変数を使う。
+   住民のカードは、たまごっちのような「たまご型の機械 + 緑の液晶 + ドット絵のねこ」。液晶の色は明るい画面でも暗い画面でも同じ */
 .town-control { display: grid; gap: 12px; }
 .town-status { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
 .town-status.is-running strong { color: var(--plus); }
@@ -6,20 +7,105 @@
 .town-buttons form.inline { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
 
 .town-residents {
-  display: grid; gap: 12px; margin: 16px 0;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  display: grid; gap: 16px; margin: 16px 0;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
-.town-resident { margin: 0; }
-.town-resident-head { display: flex; gap: 12px; align-items: center; }
-.town-resident-head h2 { margin: 0 0 4px; font-size: 1.15rem; }
 .town-resident-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 12px 0 0; }
 .town-resident-facts dt { color: var(--muted); font-size: .85rem; }
 .town-resident-facts dd { margin: 0; overflow-wrap: anywhere; }
-.town-resident.face-sad { border-color: var(--minus); }
-.town-resident.face-surprised { box-shadow: 0 0 0 2px var(--warn-bg); }
 .town-links { margin-top: 8px; }
 
-@media (prefers-reduced-motion: no-preference) {
-  .town-resident { animation: town-pop .4s ease-out; }
+/* ---- たまご型の機械 ---- */
+.town-pet {
+  --shell: #ffd1dc; --shell-dark: #e58fa6;
+  --lcd: #b7c79a; --lcd-dark: #2c3a22; --lcd-light: #7d8f5f;
+  display: grid; gap: 4px; align-content: start;
 }
-@keyframes town-pop { from { transform: scale(.98); opacity: .6; } to { transform: none; opacity: 1; } }
+.town-pet.shell-frugal { --shell: #c9ecd9; --shell-dark: #6fb592; }
+.town-pet.shell-impulsive { --shell: #ffc9d6; --shell-dark: #e2789a; }
+.town-pet.shell-caring { --shell: #ffe8a6; --shell-dark: #d8aa3a; }
+.town-pet.shell-clumsy { --shell: #ddd3ff; --shell-dark: #9580dc; }
+
+.pet-shell {
+  position: relative; width: 210px; max-width: 100%; margin: 0 auto; padding: 22px 22px 18px;
+  background: radial-gradient(circle at 30% 22%, rgba(255, 255, 255, .7) 0 12%, transparent 13%), var(--shell);
+  border: 3px solid var(--shell-dark);
+  border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+  box-shadow: inset -8px -10px 0 rgba(0, 0, 0, .08), 0 4px 0 var(--shell-dark);
+  display: grid; justify-items: center; gap: 8px;
+}
+.pet-name {
+  margin: 0; font-family: "DotGothic16", ui-monospace, monospace; font-size: 1.05rem; color: #3a2a2a; text-align: center;
+}
+.pet-name span { display: block; font-size: .72rem; opacity: .75; }
+.pet-screen {
+  width: 150px; padding: 8px 8px 4px; border-radius: 10px;
+  background:
+    linear-gradient(rgba(0, 0, 0, .05) 1px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(90deg, rgba(0, 0, 0, .05) 1px, transparent 1px) 0 0 / 4px 4px,
+    var(--lcd);
+  border: 4px solid #4b4b4b; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .25);
+  display: grid; justify-items: center; overflow: hidden;
+}
+.pet-lcd {
+  display: flex; justify-content: space-between; width: 100%; margin: 2px 0 0;
+  font-family: "DotGothic16", ui-monospace, monospace; font-size: .72rem; color: var(--lcd-dark);
+}
+.pet-hearts { letter-spacing: .05em; }
+.pet-buttons { display: flex; gap: 14px; }
+.pet-buttons i {
+  width: 14px; height: 14px; border-radius: 50%; background: var(--shell-dark);
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .2);
+}
+.pet-buttons i:nth-child(2) { transform: translateY(5px); }
+
+/* ---- ドット絵 ---- */
+.pixel-pet { display: block; max-width: 100%; height: auto; }
+.pixel-pet .px-dark { fill: var(--lcd-dark); }
+.pixel-pet .px-light { fill: var(--lcd-light); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ぴょこぴょこ（2コマ）。寝ているときはゆっくり、遊んでいるときは速く */
+  .pixel-pet .pixel-body { animation: pet-hop 1s steps(1) infinite; }
+  .pixel-pet.pose-sleep .pixel-body { animation-duration: 2.4s; }
+  .pixel-pet.pose-play .pixel-body, .pixel-pet.pose-happy .pixel-body { animation-duration: .5s; }
+  .pixel-pet.pose-dizzy .pixel-body { animation: pet-shake .3s steps(1) infinite; }
+  .pixel-pet .pixel-mark { animation: pet-blink 1.2s steps(1) infinite; }
+  .pixel-pet.pose-sleep .pixel-mark { animation: pet-float 2.4s steps(4) infinite; }
+}
+@keyframes pet-hop { 0% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+@keyframes pet-shake { 0% { transform: translateX(0); } 50% { transform: translateX(1px); } }
+@keyframes pet-blink { 0% { opacity: 1; } 70% { opacity: 0; } }
+@keyframes pet-float { 0% { transform: translateY(2px); } 100% { transform: translateY(-2px); } }
+
+/* ---- 借金の関係図と手紙の流れ ---- */
+.town-panels {
+  display: grid; gap: 16px; margin: 16px 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+}
+.town-panels .card { margin: 0; min-width: 0; }
+.town-debts svg { width: 100%; height: auto; max-width: 420px; display: block; margin: 0 auto; }
+.debt-line { stroke: var(--muted); stroke-width: 2; }
+.debt-line.is-bank { stroke: var(--minus); stroke-dasharray: 5 3; }
+.debt-arrowhead { fill: var(--muted); }
+.debt-amount { font-size: 12px; font-weight: 700; fill: var(--text); paint-order: stroke; stroke: var(--surface, #fff); stroke-width: 3px; }
+.debt-node circle { fill: var(--surface, #fff); stroke: var(--text); stroke-width: 2; }
+.debt-node.is-bank rect { fill: var(--warn-bg, #fdf0d5); stroke: var(--text); stroke-width: 2; }
+.debt-node text { font-size: 12px; fill: var(--text); }
+.town-debt-list { margin: 8px 0 0; padding-left: 1.2em; }
+
+.town-letters {
+  list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto;
+  display: grid; gap: 6px; font-size: .88rem;
+}
+.town-letter { padding: 6px 8px; border-left: 4px solid var(--border); background: var(--bg); border-radius: 4px; overflow-wrap: anywhere; }
+.town-letter.kind-ask { border-left-color: #2f6db5; }
+.town-letter.kind-reply { border-left-color: var(--plus); }
+.town-letter.kind-refuse { border-left-color: var(--minus); }
+.town-letter.kind-trouble { border-left-color: #a86a12; }
+.town-letter.kind-lent { border-left-color: #0f7c86; }
+.town-letter.kind-restart { border-left-color: #7b4fb5; }
+@media (prefers-reduced-motion: no-preference) {
+  .town-letter:first-child { animation: town-letter-in .35s ease-out; }
+}
+@keyframes town-letter-in { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }

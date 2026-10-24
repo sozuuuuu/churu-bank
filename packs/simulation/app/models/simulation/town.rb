@@ -32,7 +32,7 @@ module Simulation
 
     def start
       self.class.preload
-      @postman = Postman.spawn
+      @postman = Postman.spawn(hall: @hall)
       @supervisor = Supervisor.spawn(specs: @specs, hall: @hall, postman: @postman)
       @clock = Clock.spawn(postman: @postman, hall: @hall, seconds_per_day: @seconds_per_day, day: @day)
       self
@@ -47,6 +47,11 @@ module Simulation
     # 名前の住民に手紙を渡す（見張り役を通す。試験で :crash を渡して倒すとき）
     def poke(name, letter)
       @supervisor << Letters::Poke.new(name:, letter:)
+    end
+
+    # 名前の住民1匹へ手紙を届ける（郵便屋を通す。役場が「貸してもらえたよ」を届けるとき）
+    def deliver(name, letter)
+      @postman << Letters::Deliver.new(to: name, letter:)
     end
 
     # 時計 → 見張り役（住民みんなが町を出るのを待つ）→ 郵便屋 の順に止める

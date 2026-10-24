@@ -1,0 +1,8 @@
+<%# 次の 50 件を読む枠。画面に入ったら読みに行く（無限スクロール）。読めないとき用にリンクも置く %>
+<% if next_cursor %>
+  <%= turbo_frame_tag "my_events_page_#{next_cursor}", src: next_page_path(next_cursor), loading: :lazy, class: "ev-more" do %>
+    <p class="muted small"><%= link_to "もっと前の出来事を見る", next_page_path(next_cursor), data: { turbo_frame: "_self" } %>（読みこみ中…）</p>
+  <% end %>
+<% else %>
+  <p class="muted small ev-end">ここがいちばん古い出来事です。</p>
+<% end %>

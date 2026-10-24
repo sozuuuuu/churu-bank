@@ -1,0 +1,9 @@
+<%# 一覧の続き（50 件）。下までスクロールすると、この枠（loading: lazy）が自分で読みに行き、中身と次の枠に入れ替わる %>
+<%= turbo_frame_tag "my_events_page_#{params[:before] || "first"}" do %>
+  <% if events.any? %>
+    <ul class="ev-list ev-list-more">
+      <%= render partial: "event_lens/event", collection: events, as: :event, locals: { names: } %>
+    </ul>
+  <% end %>
+  <%= render "my_events/events/more", next_cursor: %>
+<% end %>

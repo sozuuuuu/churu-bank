@@ -44,6 +44,7 @@
 
 <% if @events.empty? %>
   <p class="empty">まだ出来事はありません。</p>
-<% elsif @events.size >= MyEvents::EventsController::LIMIT %>
-  <p class="muted small">新しいほうから <%= MyEvents::EventsController::LIMIT %> 件を出しています。</p>
+<% else %>
+  <%# 下までスクロールすると、続きの 50 件を読む（_more の Turbo Frame） %>
+  <%= render "my_events/events/more", next_cursor: @next_cursor %>
 <% end %>

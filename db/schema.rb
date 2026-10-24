@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_010000) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "customer_id", null: false
     t.string "account_number", null: false
@@ -174,6 +174,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_000000) do
     t.datetime "updated_at", null: false
     t.index ["account_number", "status"], name: "index_loans_on_account_number_and_status"
     t.index ["loan_id"], name: "index_loans_on_loan_id", unique: true
+  end
+
+  create_table "my_event_entries", force: :cascade do |t|
+    t.string "account_number", null: false
+    t.string "event_id", null: false
+    t.string "event_type", null: false
+    t.datetime "recorded_at", null: false
+    t.index ["account_number", "event_id"], name: "index_my_event_entries_on_account_number_and_event_id", unique: true
+    t.index ["account_number", "recorded_at", "id"], name: "idx_on_account_number_recorded_at_id_35c13ea5df"
+    t.index ["event_id"], name: "index_my_event_entries_on_event_id"
   end
 
   create_table "notice_receipts", force: :cascade do |t|

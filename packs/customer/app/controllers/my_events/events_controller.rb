@@ -1,5 +1,6 @@
 # 利用者の「わたしの出来事」（/events）: 自分の口座にかかわる出来事だけを、日本語で・図で見る（TODO の R の利用者版）。
 # 一覧と生中継（index）、1件の中身とつながりの図（show）、タイムマシン（time_machine）。表示の部品は行員の画面と同じ packs/event_lens。
+# 一覧は索引（FeedEntry。出来事を全部読まない）から新しい順に 50 件ずつ。下までスクロールすると、Turbo Frame（loading: lazy）が続きを読む。
 # 他人の口座・他人の出来事は「ない」ものとして 404。読むだけ。
 # 利用者画面の土台（Netbank::ApplicationController。ログイン・ねこテーマ・お知らせ）をそのまま使う。
 # 名前空間を Netbank:: にしないのは、メニューの「わたしの口座」の印（netbank の画面にいるか）と分けるため
@@ -7,7 +8,6 @@ module MyEvents
   class EventsController < Netbank::ApplicationController
     helper EventLens::EventsHelper
 
-    LIMIT = 100
     # 付帯情報のうち利用者に見せるもの（二人承認の申請者・承認者、リクエストや接続元は行員の内部の情報）
     METADATA_KEYS = %i[actor timestamp valid_at correlation_id causation_id].freeze
 
@@ -20,11 +20,12 @@ module MyEvents
       @accounts = my_accounts.order(:number)
       @account = find_my_account(params[:account]) if params[:account].present?
       @kind = EventLens::Catalog::KINDS.key?(params[:kind]&.to_sym) ? params[:kind].to_sym : nil
-      scope = @account ? EventScope.new([ @account.number ]) : event_scope
       types = EventLens::Catalog.types_of(@kind).map(&:name) if @kind
-      @events = EventLens::EventIndex.new.events.reverse_each.lazy
-                                     .select { scope.visible?(it) && (types.nil? || types.include?(it.event_type)) }
-                                     .first(LIMIT)
+      numbers = @account ? [ @account.number ] : current_customer.account_numbers
+      rows, @next_cursor = FeedEntry.page(numbers, types:, before: params[:before])
+      @events = read_events(rows.map(&:event_id))
+      # 続きのページ（Turbo Frame の中から）なら、その分の行と、さらに次の枠だけを返す
+      render partial: "my_events/events/page", locals: { events: @events, next_cursor: @next_cursor } if params[:before]
     end
 
     def show
@@ -41,6 +42,18 @@ module MyEvents
     end
 
     private
+
+    # 索引の順のまま、出来事を読む（RES の read.events は順をそろえないので並べ直す）
+    def read_events(ids)
+      return [] if ids.empty?
+
+      found = Rails.configuration.event_store.read.events(ids).index_by(&:event_id)
+      ids.filter_map { found[it] }
+    end
+
+    # 続きのページの URL（絞り込みをそのまま引き継ぐ）
+    def next_page_path(cursor) = events_path(kind: @kind, account: @account&.number, before: cursor)
+    helper_method :next_page_path
 
     # 生中継のジョブ（EventsLiveJob）が描くときはログイン中の人がいないので、見えるかどうかの確かめはしない（ジョブが確かめてから描く）
     def event_scope = (@event_scope ||= EventScope.new(current_customer.account_numbers) if current_customer)

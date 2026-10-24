@@ -25,6 +25,7 @@ class MyEvents::EventsControllerTest < ActionDispatch::IntegrationTest
     mistake = staff.deposit(@mine, 100, memo: "まちがい").events.last
     submitted = desk.(@tama).request_reversal(@mine, mistake.event_id, reason: "金額まちがい")
     desk.(@kuro).approve(submitted.approval_id)
+    perform_enqueued_jobs # 一覧の索引（FeedJob）は、出来事のコミットのあとに Solid Queue で書く
   end
 
   def event_store = Rails.configuration.event_store
@@ -67,6 +68,41 @@ class MyEvents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{MyEvents::EventsLiveJob::TARGET}"
     assert_select "#serif[data-controller=serif]" # ねこのセリフ窓
     assert_match "足していくだけ", response.body
+  end
+
+  test "一覧は 50 件ずつ。下の枠（loading: lazy）が続きを読み、いちばん古いところで終わる" do
+    bank = Banking::Bank.new(actor: @tama.actor)
+    perform_enqueued_jobs { 60.times { bank.deposit(@mine, 1, memo: "こつこつ #{it}") } }
+    sign_in_as_customer @orca
+
+    get events_path
+    assert_select "##{MyEvents::EventsLiveJob::TARGET} > li", MyEvents::FeedEntry::PAGE
+    assert_select ".ev-row-summary", text: /こつこつ 59/
+    assert_no_match "こつこつ 9<", response.body
+    frame = css_select("turbo-frame.ev-more").first
+    assert_equal "lazy", frame["loading"]
+
+    get frame["src"]
+    assert_response :success
+    assert_select "turbo-frame##{frame["id"]}" do
+      assert_select ".ev-row-summary", text: /こつこつ 9/
+      assert_select ".ev-row-summary", text: /オルカのおこづかい/
+    end
+    assert_select ".ev-end", text: /いちばん古い/
+    assert_no_match "ジンジベルのおこづかい", response.body
+  end
+
+  test "絞り込み（種類・口座）も索引から読み、続きの枠に絞り込みを引き継ぐ" do
+    bank = Banking::Bank.new(actor: @tama.actor)
+    perform_enqueued_jobs { 55.times { bank.deposit(@mine, 1) } }
+    sign_in_as_customer @orca
+
+    get events_path(kind: "money_in", account: @mine)
+    assert_select ".ev-list > li", MyEvents::FeedEntry::PAGE
+    assert_select ".ev-row-label", text: "振込の受付", count: 0
+    src = css_select("turbo-frame.ev-more").first["src"]
+    assert_includes src, "kind=money_in"
+    assert_includes src, "account=#{@mine}"
   end
 
   test "他人の口座・他人の出来事・行員だけの出来事は 404" do

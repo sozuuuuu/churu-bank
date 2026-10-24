@@ -25,7 +25,12 @@ module Simulation
       trap_signals
       log "ねこ町の係が起きました。行員の画面 /admin/town から動かせます（止めるのは Ctrl-C）"
       ticker = Thread.new { loop { sleep CHECK_EVERY; @hall << :check } }
-      loop { break if handle(@hall.receive) == :shutdown }
+      loop do
+        break if handle(@hall.receive) == :shutdown
+      rescue ActiveRecord::StatementTimeout, ActiveRecord::Deadlocked => e
+        # ほかのプロセスが長く書いていて SQLite がロックしていた。この手紙はあきらめて、町は動かし続ける
+        log "役場: データベースが混んでいたので、手紙を1通あきらめました（#{e.class.name.demodulize}）"
+      end
     ensure
       ticker&.kill
       stop_town

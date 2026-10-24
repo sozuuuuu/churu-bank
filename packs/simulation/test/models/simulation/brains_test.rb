@@ -121,6 +121,23 @@ class Simulation::BrainsTest < ActiveSupport::TestCase
     assert_empty decisions(rules, memory(:frugal, money: 400), salary).compact, "借金がなければ何もしない"
   end
 
+  test "督促状が来たら気分が下がり、夕方は銀行へ返せるだけ返す。返したら督促は消える。審査で断られたら助けを求める" do
+    dunned = memory(:impulsive, money: 80, debts: { L::BANK => 110 }).heard(L::Dun.new(from: "係長のくろ", amount: 110))
+    assert dunned.dunned
+    assert_equal 50, dunned.mood
+    assert_equal [ I::Repay.new(to: L::BANK, amount: 80) ], decisions(rules, dunned, tick(:evening), times: 20).uniq
+
+    repay = L::WantRepay.new(from: "こむぎ", to: L::BANK, amount: 80, reply_to: nil)
+    paid = dunned.heard(L::Reply.new(request: repay, ok: true, message: "返しました", balance: 0, debts: { L::BANK => 30 }))
+    assert_not paid.dunned
+
+    loan = L::WantLoan.new(from: "こむぎ", amount: 60, reply_to: nil)
+    rejected = L::Reply.new(request: loan, ok: false, message: "審査で断られました", balance: 0, reason: :loan_rejected)
+    asks = decisions(rules, memory(:impulsive, money: 0), rejected).compact
+    assert_operator asks.size, :>, 300
+    assert_equal [ I::AskHelp.new(amount: 60) ], asks.uniq
+  end
+
   test "同じ種なら同じように決める" do
     assert_equal decisions(rules(42), memory(:impulsive), tick(:evening), times: 50),
                  decisions(rules(42), memory(:impulsive), tick(:evening), times: 50)

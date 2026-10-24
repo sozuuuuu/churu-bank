@@ -1,7 +1,7 @@
 # 画面の係（メインの Ractor）: 住民の Report・見張り役の Restarted・時計の Tick・手紙を表に書き、行員の画面「住民の様子」へ
 # Turbo Stream で配る。町を動かす係は Puma とは別のプロセスだが、Solid Cable（表 solid_cable_messages）を通すので届く
 #
-#   パーティーの窓（住民1匹）・町の時計と空・借金の関係図 … replace
+#   パーティーの窓（住民1匹）・ぎんこういんの窓（行員1人）・町の時計と空・借金の関係図 … replace
 #   地図の上の住民 … replace を morph で（置きかえずに直すので、居場所が変わると CSS の transition で歩いて移る）
 #   手紙の流れ … 1通ずつ頭に prepend（画面には新しい 40 通、表には KEEP 通まで）
 module Simulation
@@ -25,10 +25,18 @@ module Simulation
       resident(status)
     end
 
+    # 行員の ClerkReport
+    def clerk(letter)
+      status = ClerkStatus.find_by(name: letter.name) or return
+      status.last_action_at = Time.current if status.last_action != letter.last_action
+      status.update!(letter.to_h.slice(:state, :last_action, :handled, :approved, :rejected, :forwarded, :dunned))
+      clerk_status(status)
+    end
+
     def restarted(letter)
-      status = ResidentStatus.find_by(name: letter.name) or return
+      status = ResidentStatus.find_by(name: letter.name) || ClerkStatus.find_by(name: letter.name) or return
       status.update!(restarts: letter.count, last_error: letter.reason)
-      resident(status)
+      status.is_a?(ClerkStatus) ? clerk_status(status) : resident(status)
       record(SUPERVISOR, letter.name, "restart", "#{letter.count} 回目の起こし直し（#{letter.reason}）")
     end
 
@@ -47,6 +55,8 @@ module Simulation
     def reset
       ResidentStatus.update_all(restarts: 0, last_error: nil)
       ResidentStatus.find_each { resident(it) }
+      ClerkStatus.update_all(restarts: 0, last_error: nil)
+      ClerkStatus.find_each { clerk_status(it) }
       debts
     end
 
@@ -56,6 +66,14 @@ module Simulation
       index = ResidentStatus.order(:id).ids.index(status.id)
       broadcast(:replace, target: "walker_#{dom_id}", partial: "simulation/residents/walker",
                           locals: { resident: status, index: }, attributes: { method: "morph" })
+    end
+
+    def clerk_status(status)
+      dom_id = ActionView::RecordIdentifier.dom_id(status)
+      broadcast(:replace, target: dom_id, partial: "simulation/residents/clerk", locals: { clerk: status })
+      index = ClerkStatus.order(:id).ids.index(status.id)
+      broadcast(:replace, target: "walker_#{dom_id}", partial: "simulation/residents/clerk_walker",
+                          locals: { clerk: status, index: }, attributes: { method: "morph" })
     end
 
     def status

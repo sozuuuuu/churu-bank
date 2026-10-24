@@ -12,6 +12,9 @@ module Simulation
     # menu は商店の品書き、places は遊び場（Memory::Place）
     Spec = Data.define(:name, :temperament, :brain, :seed, :friends, :menu, :places) do
       def initialize(places: [], **) = super
+
+      # 見張り役が、この設定から作る Ractor の種類（行員は Clerk::Spec）
+      def agent_class = Resident
     end
 
     class Stumbled < StandardError; end
@@ -68,6 +71,7 @@ module Simulation
       stumble!(letter)
       note = answered(letter) if letter.is_a?(Letters::Reply)
       note = "#{letter.from}さんが #{letter.amount} ちゅ〜る貸してくれた（借用書）" if letter.is_a?(Letters::Lent)
+      note = "#{letter.from}から督促状が届いた（#{letter.amount} ちゅ〜る）" if letter.is_a?(Letters::Dun)
       note = act(@brain.decide(@memory, letter)) || note
       report(note) if note || letter.is_a?(Letters::Tick)
     end

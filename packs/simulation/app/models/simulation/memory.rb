@@ -7,9 +7,10 @@
 #   friends … 知り合いの住民の名前、menu … 商店の品書き（Memory::MenuItem）、places … 遊び場（Memory::Place）
 #   debts … 借金の帳面（{ 貸した住民の名前 か Letters::BANK => まだ返していない額 }。窓口役の返事で書きなおす）
 #   ate_day … 最後にごはんを食べた日（夕方までに食べていないと、おなかがすいて気分が下がる）
+#   dunned … 銀行から督促状が来ている（銀行への借金を返すまで）
 module Simulation
   Memory = Data.define(:name, :temperament, :friends, :menu, :places, :money, :mood, :day, :time, :state, :debts,
-                       :ate_day)
+                       :ate_day, :dunned)
 
   class Memory
     # food: ごはんになる物（ちゅ〜る）
@@ -23,7 +24,7 @@ module Simulation
 
     def self.wake(name:, temperament:, friends:, menu:, places: [], mood: 60)
       new(name:, temperament:, friends:, menu:, places:, money: nil, mood:, day: nil, time: nil, state: "起きた",
-          debts: {}, ate_day: nil)
+          debts: {}, ate_day: nil, dunned: false)
     end
 
     # 手紙を聞いて覚えなおす（気分・所持金の見込み・時間・借金・ごはん）
@@ -35,6 +36,7 @@ module Simulation
         with(day: letter.day, time: letter.time, state: STATES.fetch(letter.time), mood: clamp(mood + mood_change))
       when Letters::Reply then heard_reply(letter)
       when Letters::Lent then with(mood: clamp(mood + 6)) # 貸してもらえた
+      when Letters::Dun then with(dunned: true, mood: clamp(mood - 10)) # 督促状が来た
       else
         self
       end
@@ -72,10 +74,13 @@ module Simulation
       changed = reply.balance.nil? ? self : with(money: reply.balance)
       changed = changed.with(debts: reply.debts) unless reply.debts.nil?
       changed = changed.with(ate_day: day) if reply.ok && meal?(reply.request)
+      changed = changed.with(dunned: false) if changed.bank_debt.zero? || (reply.ok && bank_repay?(reply.request))
       changed.with(mood: clamp(mood + (reply.ok ? happiness(reply.request) : -12)))
     end
 
     def meal?(request) = request.is_a?(Letters::WantPurchase) && item(request.sku)&.food
+
+    def bank_repay?(request) = request.is_a?(Letters::WantRepay) && request.to == Letters::BANK
 
     def happiness(request)
       case request

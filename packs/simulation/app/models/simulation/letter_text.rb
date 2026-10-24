@@ -8,6 +8,12 @@ module Simulation
       when Letters::Reply then [ letter.ok ? "reply" : "refuse", letter.message ]
       when Letters::Trouble then [ "trouble", "#{letter.amount} ちゅ〜る足りないにゃ…" ]
       when Letters::Lent then [ "lent", "#{letter.amount} ちゅ〜る貸したよ（借用書）" ]
+      when Letters::Case then [ "case", "#{letter.resident}さんのローンの申込（#{letter.amount} ちゅ〜る）を見てください" ]
+      when Letters::Decision then [ letter.approve ? "reply" : "refuse", "申込を#{letter.approve ? "承認" : "却下"}します（#{letter.reason}）" ]
+      when Letters::AskOverdue then [ "ask", "延滞しているローンを教えてください" ]
+      when Letters::Overdue
+        [ "reply", letter.items.empty? ? "延滞はありません" : "延滞: #{letter.items.map { "#{it.resident}さん #{it.owed} ちゅ〜る" }.join("・")}" ]
+      when Letters::Dun then [ "dun", "#{letter.amount} ちゅ〜る、返してください（督促状）" ]
       when *Letters::REQUESTS then [ "ask", request(letter) ]
       end
     end

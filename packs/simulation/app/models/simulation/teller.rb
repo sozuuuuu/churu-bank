@@ -64,6 +64,34 @@ module Simulation
       @resident = nil
     end
 
+    # 行員エージェントが承認したローンを貸す（actor はその行員。住民の印も付ける）。[返事, 貸付ID] を返す
+    def lend_for(letter, actor:)
+      resident = @residents[letter.from]
+      return [ refuse(letter, "町の住民ではありません"), nil ] unless resident
+
+      @resident = resident
+      outcome = mark(resident) { bank(actor).lend(resident.account_number, letter.amount, memo: "ねこ町の暮らしのため") }
+      total = letter.amount + Banking::Bank.loan_fee(letter.amount)
+      [ answer(letter, "ちゅ〜るローンで #{letter.amount} ちゅ〜る借りました（返すのは #{total} ちゅ〜る）", outcome.balance_after),
+        outcome.loan_id ]
+    rescue Banking::InvalidState => e
+      [ refuse(letter, e.message, reason: :loan_limit, balance: balance(resident)), nil ]
+    rescue Banking::Error, ArgumentError => e
+      [ refuse(letter, e.message, balance: balance(resident)), nil ]
+    ensure
+      @resident = nil
+    end
+
+    # 行員エージェントが断ったローンの申込への返事
+    def reject_loan(letter, reason)
+      resident = @residents[letter.from]
+      @resident = resident
+      refuse(letter, "ちゅ〜るローンは審査で断られました（#{reason}）", reason: :loan_rejected,
+                     balance: resident && balance(resident))
+    ensure
+      @resident = nil
+    end
+
     # 住民の借金の帳面: { 貸した住民の名前 か Letters::BANK => まだ返していない額 }
     def debts_of(resident)
       debts = Debt.owed_by(resident.name)
@@ -213,6 +241,7 @@ module Simulation
       bank = bank(resident.customer.actor)
       bank.repay_loan(loan.loan_id, amount, from: resident.account_number, dry_run: true)
       outcome = mark(resident) { bank.repay_loan(loan.loan_id, amount, from: resident.account_number) }
+      LoanCase.where(loan_id: loan.loan_id).update_all(last_repaid_day: today.day) if today # 延滞の数えなおし
       answer(letter, "ちゅ〜るローンを #{amount} ちゅ〜る返しました", outcome.balance_after)
     end
 

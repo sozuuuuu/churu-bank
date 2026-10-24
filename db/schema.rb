@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_070000) do
   create_table "account_ownerships", force: :cascade do |t|
     t.integer "customer_id", null: false
     t.string "account_number", null: false
@@ -262,6 +262,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_010000) do
     t.index ["sku"], name: "index_shop_products_on_sku", unique: true
   end
 
+  create_table "simulation_clerks", force: :cascade do |t|
+    t.string "name", null: false
+    t.integer "staff_id", null: false
+    t.string "role", null: false
+    t.string "state"
+    t.string "last_action"
+    t.datetime "last_action_at"
+    t.integer "handled", default: 0, null: false
+    t.integer "approved", default: 0, null: false
+    t.integer "rejected", default: 0, null: false
+    t.integer "forwarded", default: 0, null: false
+    t.integer "dunned", default: 0, null: false
+    t.integer "restarts", default: 0, null: false
+    t.string "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_simulation_clerks_on_name", unique: true
+    t.index ["staff_id"], name: "index_simulation_clerks_on_staff_id"
+  end
+
   create_table "simulation_controls", force: :cascade do |t|
     t.boolean "running", default: false, null: false
     t.integer "seconds_per_day", default: 24, null: false
@@ -295,6 +315,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_010000) do
     t.integer "day"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "simulation_loan_cases", force: :cascade do |t|
+    t.string "resident", null: false
+    t.integer "amount", null: false
+    t.string "status", null: false
+    t.string "handled_by"
+    t.string "decided_by"
+    t.string "reason"
+    t.string "loan_id"
+    t.integer "day"
+    t.integer "decided_day"
+    t.integer "last_repaid_day"
+    t.integer "last_dunned_day"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["resident", "status"], name: "index_simulation_loan_cases_on_resident_and_status"
   end
 
   create_table "simulation_residents", force: :cascade do |t|
@@ -391,6 +428,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_010000) do
   add_foreign_key "notice_receipts", "notices"
   add_foreign_key "notice_targets", "customers"
   add_foreign_key "notice_targets", "notices"
+  add_foreign_key "simulation_clerks", "staffs"
   add_foreign_key "simulation_residents", "customers"
   add_foreign_key "staff_sessions", "staffs", on_delete: :cascade
 end

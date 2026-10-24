@@ -1,0 +1,8 @@
+<%# 地図の上の行員1人（ふだんは銀行の前、督促のときは住民の家の前）。Board#clerk_status が morph で直すので、歩いて移る %>
+<% x, y = Simulation::TownMap.clerk_spot(clerk, index, Simulation::ResidentStatus.order(:id).pluck(:name)) %>
+<div id="walker_<%= dom_id(clerk) %>" class="rpg-walker is-clerk"
+     style="left: <%= (x * 100.0 / Simulation::TownMap::COLS).round(2) %>%; top: <%= (y * 100.0 / Simulation::TownMap::ROWS).round(2) %>%;"
+     title="<%= clerk.name %>: <%= Simulation::TownMap.clerk_place_name(clerk) %>">
+  <%= pixel_pet(clerk_pose(clerk), size: 32, clerk: true, label: "#{clerk.name}（#{Simulation::TownMap.clerk_place_name(clerk)}）") %>
+  <span class="rpg-walker-name"><%= clerk.name.delete_prefix("窓口の").delete_prefix("係長の") %></span>
+</div>

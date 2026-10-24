@@ -22,6 +22,9 @@
         <% @residents.each_with_index do |resident, index| %>
           <%= render "simulation/residents/walker", resident:, index: %>
         <% end %>
+        <% @clerks.each_with_index do |clerk, index| %>
+          <%= render "simulation/residents/clerk_walker", clerk:, index: %>
+        <% end %>
       </div>
     </section>
 
@@ -52,6 +55,15 @@
     </div>
   <% end %>
 
+  <% if @clerks.any? %>
+    <section class="rpg-bank" aria-label="ぎんこういん">
+      <h2 class="rpg-section-title">ぎんこういん</h2>
+      <div class="rpg-party">
+        <%= render partial: "simulation/residents/clerk", collection: @clerks %>
+      </div>
+    </section>
+  <% end %>
+
   <div class="rpg-bottom">
     <section class="rpg-window rpg-messages" aria-label="手紙の流れ">
       <h2>てがみ</h2>
@@ -77,6 +89,11 @@
       その次の日の朝は家賃（<%= churu(Simulation::Teller::RENT) %>）。毎日のお昼はごはん。
       夕方は遊び場（<%= Simulation::Roster::PLACES.map { "#{it.name} #{it.price}" }.join("・") %> ちゅ〜る）へ行くこともあります。
       足りなければ銀行のちゅ〜るローン（手数料 10%）で借りるか、みんなに「足りないにゃ」と手紙を出します。
+    </p>
+    <p>
+      ぎんこういん（窓口のたま・係長のくろ）も1人ずつが Ractor です。ローンの申込は窓口のたまが審査し、
+      <%= Simulation::ClerkRules::FORWARD_AT %> ちゅ〜る以上は係長のくろへ回します。決まるまで住民は返事を待ちます。
+      係長のくろは毎朝、<%= Simulation::LoanCase::OVERDUE_DAYS %> 日以上返していないローンを調べて、住民の家へ督促状を届けます。
     </p>
     <p>
       町を動かす係は Puma とは別のプロセスです: <code>bin/rails churu:simulate</code>（はじめての時は住民と口座も用意します）。

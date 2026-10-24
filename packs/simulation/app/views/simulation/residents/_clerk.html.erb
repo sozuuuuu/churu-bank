@@ -1,0 +1,31 @@
+<%# ぎんこういんの窓（行員エージェント1人）。町を動かす係が Board#clerk_status で、この窓ごと書き換える %>
+<% pose = clerk_pose(clerk) %>
+<article id="<%= dom_id(clerk) %>" class="rpg-window rpg-member rpg-clerk pose-<%= pose %>">
+  <header class="rpg-member-head">
+    <%= pixel_pet(pose, size: 48, clerk: true, label: "#{clerk.name}: #{Simulation::PixelPetHelper::POSE_LABELS.fetch(pose)}") %>
+    <div>
+      <h2 class="pet-name"><%= clerk.name %></h2>
+      <p class="rpg-job">ぎんこういん（<%= clerk.role_label %>）</p>
+    </div>
+  </header>
+  <dl class="rpg-stats">
+    <dt>しんさ</dt><dd><%= clerk.handled %> 件</dd>
+    <dt>しょうにん</dt><dd><%= clerk.approved %> 件</dd>
+    <dt>きゃっか</dt><dd class="<%= "is-debt" if clerk.rejected.positive? %>"><%= clerk.rejected %> 件</dd>
+    <% if clerk.chief? %>
+      <dt>とくそく</dt><dd><%= clerk.dunned %> 通</dd>
+    <% else %>
+      <dt>かかりちょうへ</dt><dd><%= clerk.forwarded %> 件</dd>
+    <% end %>
+    <dt>ころんだ</dt><dd class="<%= "is-debt" if clerk.restarts.positive? %>"><%= clerk.restarts %> 回</dd>
+  </dl>
+  <dl class="rpg-doing">
+    <dt>いま</dt><dd><%= Simulation::PixelPetHelper::POSE_LABELS.fetch(pose) %>・<%= clerk.state || "（まだ出勤していない）" %></dd>
+    <dt>さいご</dt>
+    <dd>
+      <%= clerk.last_action || "—" %>
+      <% if clerk.last_action_at %><span class="rpg-dim">（<%= jp_time(clerk.last_action_at) %>）</span><% end %>
+    </dd>
+    <% if clerk.last_error %><dt>ころんだわけ</dt><dd class="rpg-dim"><%= clerk.last_error %></dd><% end %>
+  </dl>
+</article>

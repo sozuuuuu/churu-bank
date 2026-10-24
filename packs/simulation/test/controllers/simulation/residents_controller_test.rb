@@ -45,6 +45,22 @@ class Simulation::ResidentsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".rpg-map svg.rpg-map-svg text", text: "ちゅ〜る商店"
     assert_select "#walker_#{ActionView::RecordIdentifier.dom_id(@komugi)}[style*=?]", "left"
     assert_select "##{Simulation::Board::SKY_TARGET}"
+    assert_select ".rpg-bank", count: 0, message: "行員エージェントがいなければ、ぎんこういんの窓は出ない"
+  end
+
+  test "行員エージェントがいれば、ぎんこういんの窓と、地図の上の行員（眼鏡）を出す" do
+    tama, = create_clerks
+    tama.update!(state: "銀行の窓口にいる", last_action: "あずきさんの申込（100 ちゅ〜る）を承認した", handled: 3, approved: 2)
+    sign_in_as_staff @tama
+    get simulation_residents_path
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(tama)}" do
+      assert_select ".pet-name", text: "窓口のたま"
+      assert_select ".rpg-job", text: /窓口/
+      assert_select "dd", text: "3 件"
+      assert_select "svg.pixel-pet.is-clerk"
+    end
+    assert_select "#walker_#{ActionView::RecordIdentifier.dom_id(tama)}[title*=?]", "銀行"
   end
 
   test "動かす・止める・速さは、表に書くだけ（町を動かす係が読む）" do

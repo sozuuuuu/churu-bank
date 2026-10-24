@@ -27,6 +27,14 @@ module SimulationTestHelper
     Ractor.make_shareable(Simulation::Resident::Spec.new(name:, temperament:, brain: :rules, seed:, friends:, menu:))
   end
 
+  # 行員エージェント（窓口のたま・係長のくろ）の様子の行を作る
+  def create_clerks
+    tama = create_staff(name: "窓口のたま")
+    kuro = create_staff(name: "係長のくろ")
+    [ Simulation::ClerkStatus.create!(name: "窓口のたま", staff: tama, role: "teller"),
+      Simulation::ClerkStatus.create!(name: "係長のくろ", staff: kuro, role: "chief") ]
+  end
+
   # 住民の利用者・口座・様子の行を作る
   def create_resident(name, deposit: 100, temperament: :frugal)
     customer = create_customer(name:)

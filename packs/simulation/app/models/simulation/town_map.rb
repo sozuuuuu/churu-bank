@@ -63,6 +63,20 @@ module Simulation
       [ x + (((index % 5) - 2) * 0.8), y - 0.2 + (index.odd? ? 0.7 : 0) ]
     end
 
+    # 行員の立つマス: ふだんは銀行の前（住民と重ならないよう少し右）、督促に出ていればその住民の家の前
+    def clerk_spot(clerk, index, resident_names)
+      visiting = resident_names.index(clerk.visiting) if clerk.visiting
+      if visiting
+        hx, hy = home(visiting)
+        [ hx + 1.5, hy + 2 - 0.2 ]
+      else
+        bx, by = building(:bank).front
+        [ bx + 1.2 + (index * 0.8), by - 0.2 ]
+      end
+    end
+
+    def clerk_place_name(clerk) = clerk.visiting ? "#{clerk.visiting}の家（督促）" : "銀行"
+
     def place_name(resident)
       key = destination(resident)
       case key

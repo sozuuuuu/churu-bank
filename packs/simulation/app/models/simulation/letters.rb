@@ -8,6 +8,8 @@
 #   住民 ──Broadcast(Trouble)──▶ 郵便屋 ──▶ ほかの住民
 #   役場 ──Deliver(Lent)──▶ 郵便屋 ──▶ 借りた住民      （貸した住民の振込が通ったとき）
 #   郵便屋 ──Copy──▶ 役場（住民どうしの手紙の写し。画面の「手紙の流れ」へ）
+#   役場 ──Case──▶ 窓口のたま（ローンの申込）──Case──▶ 係長のくろ（150 以上）── Decision ──▶ 役場 ──Reply──▶ 住民
+#   係長のくろ ──AskOverdue──▶ 役場 ──Overdue──▶ くろ ──Dun（郵便屋）──▶ 延滞している住民
 #   住民 ──Report──▶ 役場（画面へ）、見張り役 ──Restarted──▶ 役場
 module Simulation
   module Letters
@@ -33,7 +35,7 @@ module Simulation
     REQUESTS = [ AskBalance, AskSalary, WantTransfer, WantPurchase, PayRent, WantFun, WantLoan, WantLend, WantRepay ].freeze
 
     # 窓口役 → 住民。reason は断ったわけ（:insufficient 残高が足りない / :sold_out 売り切れ / :not_payday 給料日・家賃の日ではない /
-    # :loan_limit もう借りられない / :refused そのほか）。
+    # :loan_limit もう借りられない / :loan_rejected 行員の審査で断られた / :refused そのほか）。
     # debts はその住民の借金の帳面（{ 貸した住民の名前 か BANK => まだ返していない額 }）。起こし直された住民も、これで思い出す
     Reply = Data.define(:request, :ok, :message, :balance, :reason, :debts) do
       def initialize(reason: nil, balance: nil, debts: nil, **) = super
@@ -43,6 +45,21 @@ module Simulation
     Trouble = Data.define(:from, :amount)
     # 役場 → 借りた住民（郵便屋が配る）。「from さんが amount ちゅ〜る貸してくれた」
     Lent = Data.define(:from, :amount)
+
+    # ---- 行員（窓口のたま・係長のくろ） ----
+    # ローンの申込（役場 → たま、たま → くろ）。from は出した人（役場か、回したたま）。
+    # owed は銀行に返す額の合計、salary はお給料、overdue は延滞している貸付の数（審査の材料）
+    Case = Data.define(:id, :from, :resident, :amount, :owed, :salary, :overdue)
+    # 行員 → 役場: 申込を承認するか（approve）、断るか。reason はわけ
+    Decision = Data.define(:from, :case_id, :approve, :reason)
+    # くろ → 役場: 延滞している住民を教えて。返事は Overdue（items は OverdueItem の配列）
+    AskOverdue = Data.define(:from, :reply_to)
+    OverdueItem = Data.define(:resident, :owed, :days)
+    Overdue = Data.define(:items)
+    # くろ → 住民（郵便屋が配る）: 督促状。「amount ちゅ〜る返してください」
+    Dun = Data.define(:from, :amount)
+    # 行員 → 役場（画面の「ぎんこういん」へ）
+    ClerkReport = Data.define(:name, :state, :last_action, :handled, :approved, :rejected, :forwarded, :dunned)
 
     # ---- 郵便屋へ ----
     Register = Data.define(:name, :port)              # この名前の住民の受け口は port（起こし直すたびに新しくなる）

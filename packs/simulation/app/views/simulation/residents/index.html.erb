@@ -17,7 +17,7 @@
                   class: "button", form: { class: "inline" } %>
     <%= button_to "止める", simulation_control_path, method: :patch, params: { control: { running: false } },
                   class: "button secondary", form: { class: "inline" } %>
-    <%= form_with model: @control, url: simulation_control_path, method: :patch, class: "inline town-speed" do |f| %>
+    <%= form_with model: @control, scope: :control, url: simulation_control_path, method: :patch, class: "inline town-speed" do |f| %>
       <%= f.label :seconds_per_day, "速さ" %>
       <%= f.select :seconds_per_day, Simulation::Control::SPEEDS.invert %>
       <%= f.submit "変える", class: "button secondary" %>

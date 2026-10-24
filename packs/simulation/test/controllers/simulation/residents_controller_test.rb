@@ -37,6 +37,7 @@ class Simulation::ResidentsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_select "#simulation_status", text: /町を動かす係が止まっています/
     assert_select "a[href=?]", simulation_residents_path, text: "住民の様子" # 管理画面のメニュー
+    assert_select "form[action=?] select[name=?]", simulation_control_path, "control[seconds_per_day]"
   end
 
   test "動かす・止める・速さは、表に書くだけ（町を動かす係が読む）" do

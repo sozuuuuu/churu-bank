@@ -24,6 +24,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 - `/notices` … 銀行からのお知らせ（利用者）、`/admin/notices` … お知らせを出す・直す・掲載終了（行員）
 - `/shop` … ちゅ〜る商店（利用者の買い物）、`/shop/admin` … 商品と在庫の管理（行員）
 - `/counter` … 窓口の番号札とチャット（利用者）、`/admin/counter/queue` … 整理券の列と窓口チャット（行員）
+- `/admin/town` … 住民の様子（ねこ町の住民の暮らし。町は `bin/rails churu:simulate` で別のプロセスとして動かす。行員だけ）
 
 ## パッケージ（packwerk）
 
@@ -47,6 +48,7 @@ bin/ci             # rubocop / packwerk / brakeman / テスト を全部
 | `packs/mcp` | MCP サーバー（`/mcp`）。ツールは `app/mcp/churu_mcp/tools` | platform, banking |
 | `packs/event_viewer` | イベントビューア `/admin/events`（`EventViewer::`）。イベントを日本語で: 一覧と生中継・つながりの図・タイムマシン・レーン図。読むだけ。行員だけ | platform, event_lens, banking, shop, approvals, staff_identity, customer_registry, ui |
 | `packs/event_lens` | イベントを読み解く部品（`EventLens::`）: 日本語の名前・つながりの図・タイムマシン・表示の部品・Stimulus・CSS。行員の画面と利用者の画面が共通で使う。どちらのログインにも依存しない | platform, banking, shop, approvals, ui |
+| `packs/simulation` | **ねこ町の住民の暮らし**（`Simulation::`）。住民 1 匹 = Ractor 1 つ、見張り役・時計役・郵便屋も Ractor。書き込みはメインの Ractor の窓口役が銀行・商店の公開の入口で。行員の画面 `/admin/town` と `bin/rails churu:simulate` | platform, banking, shop, customer_registry, staff_identity, ui |
 | `packs/platform` | `ApplicationRecord` / `ApplicationJob` / `ApplicationController` などの土台 | なし |
 
 - `bin/packwerk check` で、依存（`enforce_dependencies`）と非公開の参照（`enforce_privacy`、packwerk-extensions）を検査する
@@ -750,6 +752,94 @@ bin/rails churu:demo_events   # 眺めるための出来事を一通り起こす
 - **絞り込み**: ひとつながりだけ（`?correlation=`。出来事の中身・レーン図の「ふせんの壁で見る」から）・期間（この日から / この日まで）・種類（合わない出来事のふせんは薄くする）
 - **いつもの流れ**（`?view=patterns`）: 流れを「だれが（行員 / 利用者 / 係）・何を頼み・どの出来事が起きたか」の並びにして数え、多い順に並べる。「振り込む → 振込先へ入金する」が何回、のように、ふだんの流れと珍しい流れが見分けられる
 
+## ねこ町の住民の暮らし（packs/simulation、TODO の K）
+
+ねこ町の住民（こむぎ・あずき・だいふく・くるみ・ころん）が、働いて給料をもらい、ちゅ〜る商店で買いものをし、知り合いにおすそわけする。
+**住民 1 匹 = Ractor 1 つ**。Erlang のプロセスのように、住民は自分の記憶だけを持ち、手紙（`Ractor::Port` へのメッセージ）だけで動く。
+
+```bash
+bin/dev -p 3000              # 画面と Solid Queue（振込の入金・商店の引き当ては、いつもどおりジョブがする）
+bin/rails churu:simulate     # 町を動かす係（別のプロセス）。はじめての時は住民と口座も用意する。START=1 ならすぐ動かす
+```
+
+`/admin/town`（管理画面のメニューの「住民の様子」）で「動かす」「止める」と速さ（1日 12〜96 秒）を選ぶ。
+住民ごとの、いましていること・気分・所持金の見込み・最後にしたこと・見張り役が起こし直した回数が、その場で書き換わる（Turbo Stream）。
+住民がした出来事は、ねこの実況（頭に「［住民のこむぎ］」）・ふせんの壁・イベントの一覧（「住民」の印）にそのまま流れる。
+住民は利用者でもあるので、`/session` で住民としてログインすると、その住民の通帳や「わたしの出来事」も見られる。
+住民と口座の用意だけなら `bin/rails churu:simulation:setup`（何度流しても増えない。給料を払う口座「ねこ町のしごと場」も開く）。
+
+### 作り（だれが、どの Ractor にいるか）
+
+```
+別のプロセス（bin/rails churu:simulate）
+  メインの Ractor = 役場: 受け口（hall）に届く手紙を1通ずつ片づける。ActiveRecord とイベントストアはここだけ
+    ├ 窓口役 Teller … 住民の頼み（残高・給料・振込・買いもの）を確かめて、Banking::Bank / Shop::Store の公開の入口で書く。断ったら返事でわけを伝える
+    ├ 画面の係 Board … 住民の様子を表に書き、/admin/town へ Turbo Stream（Solid Cable なので Puma に届く）
+    └ 1 秒ごとに表 simulation_controls を読む … 動かす・止める・速さ（画面はこの表に書くだけ）
+  郵便屋 Postman（Ractor）… 住民の名前 → 受け口の帳面。みんなへの手紙を配る
+  時計役 Clock（Ractor）… 朝・昼・夕方・夜の合図を郵便屋と役場へ。3 日ごとの朝は給料日
+  見張り役 Supervisor（Ractor）… 住民の Ractor を作り、monitor で見張り、倒れたら起こし直して回数を数える
+    └ 住民 Resident（Ractor × 5）… 手紙 → 記憶を覚えなおす → 頭に聞く → 答えを手紙にして出す → 役場へ様子を知らせる
+```
+
+| 手紙（`Simulation::Letters`） | だれから → だれへ |
+|---|---|
+| `Tick`（日・時間・給料日か） | 時計役 → 郵便屋 → 住民みんな、時計役 → 役場 |
+| `AskBalance` / `AskSalary` / `WantTransfer` / `WantPurchase`（`reply_to` に住民の受け口） | 住民 → 役場の窓口役 |
+| `Reply`（できたか・わけ・残高） | 窓口役 → 住民の受け口 |
+| `Trouble`（「30 ちゅ〜る足りないにゃ」） | 住民 → 郵便屋 → ほかの住民（世話焼きはたいてい助ける） |
+| `Report` / `Restarted` | 住民 / 見張り役 → 役場（画面へ） |
+
+- **住民の頭は差し替え式**（`Simulation::Brain`）: `decide(memory, letter)` → `Intent::Work / Buy / Gift / Rest / AskHelp` か nil。頭は決めるだけで、手紙を出さない・DB に触らない。
+  いまは決まりで動く頭（`Brains::Rules`）だけ。性格（`Temperament`: 倹約家・衝動買い・世話焼き・ころびやすい）の値で、買う・おすそわけ・助ける・助けを求める確率と、使ってよい額を変える
+- **窓口役の確かめ**: 町の住民か・相手も住民か（自分あては不可）・振込は 1〜100・給料は給料日に 1 回だけ・売り切れ・残高（銀行のドライランで。足りなければ「残高不足」で断り、お金は動かない）
+- **出来事の印**: 窓口役は書くときに RES の `with_metadata(resident: 住民の名前)` で包む。actor は住民の利用者（`customer:<id>`）、給料は `town-payroll`（ねこ町の給料係）。
+  銀行・商店は印のことを知らない。振込の入金や商店の引き当て（ジョブ）には印が付かないが、`correlation_id` でつながる
+- **パック**: 依存は platform・banking・shop・customer_registry・staff_identity・ui。だれも simulation に依存しない（管理画面のメニューはルート名のリンク1つ）。
+  event_lens には「metadata の resident を見せる」ことだけ足した（項目名・一覧の「住民」の印・実況の頭）
+
+### Erlang との対応
+
+| Erlang | ねこ町 |
+|---|---|
+| プロセス（`spawn`） | 住民の Ractor（`Ractor.new`）。中の記憶はほかから見えない |
+| メールボックスと `receive` | Ractor の受け口（`default_port`）と `Ractor.receive` |
+| `Pid ! Msg` | `port << letter`（凍った Data なら写しを作らずに渡る） |
+| `monitor` と `'DOWN'` | `Ractor#monitor(port)` で `:exited` / `:aborted` が届く。倒れたわけは `Ractor#value` の例外 |
+| supervisor（one_for_one） | 見張り役。倒れた住民だけを、設定（`Resident::Spec`）から作り直す。記憶ははじめから（所持金は窓口役に聞き直す） |
+| 名前の登録（`register`） | 郵便屋の帳面。起こし直すと受け口が新しくなるので、見張り役が書きなおす |
+| `receive` を複数のところから | `Ractor.select(自分の受け口, 見張りの受け口…)` |
+| let it crash | ころびやすい住民（ころん）はときどき例外で倒れる。見張り役が起こし直し、回数が画面に出る |
+
+### Ractor を Puma の外（別のプロセス）で動かすわけ
+
+- **Puma と寿命がちがう**: 町はずっと動き続ける。Puma は開発中にコードを読み直したり、作業ごとに増えたり止まったりする。町を Puma の中に置くと、読み直しのたびに住民の Ractor が古いクラスのまま残る
+- **Ractor の中ではクラスを読み込めない**: Zeitwerk の自動読み込みは `require` を使うので、Ractor の側のクラスはメインで先に読み込む（`Town::PRELOAD`）。コードの読み直しとは相性が悪い
+- **ActiveRecord は Ractor では使えない**ので、どのみち書き込みはメインの1本の糸に集める。Puma の糸（リクエスト）とは別のところでじっくり1通ずつ片づけたい
+- **画面とのやりとりは表と Solid Cable で足りる**: 画面は `simulation_controls` に「動かす・止める・速さ」を書くだけ、係は 1 秒ごとに読む。画面への更新は Solid Cable（表）を通すので、別のプロセスから配っても届く。係が止まっていれば、画面に「町を動かす係が止まっています」と出る（heartbeat）
+- ジョブ（Solid Queue）の中で動かす手もあるが、終わらないジョブはワーカーを1つ占めて、ほかのジョブ（振込の入金）を待たせる
+
+### Ractor で分かったこと
+
+- **うまくいった**: 手紙を `Data.define` にすると、凍っていて `Ractor.shareable?` なので、写しを作らずにそのまま送れる。`Ractor::Port`・`monitor`・`select`・`value` で Erlang の形がほぼそのまま書ける。
+  住民の頭と記憶は Ractor の外でもそのまま試験できる（`Resident#hear` を直接呼ぶ）
+- **困った**: Ractor の中から読む定数は、中身まで凍らせないと `Ractor::IsolationError`（`Ractor.make_shareable`）。
+  `Data.define(...) do ... end` のブロックの中に書いた定数はそのクラスではなく外の名前空間に入るので、定数は `class Memory` を開きなおして書く。
+  `Ractor::Port#receive` には待つ時間の上限がないので、時計役は Ractor の中に糸をもう1本立てて手紙を待ち、試験は糸で待って `join(秒)` で上限をつける。
+  受け口には「まだ残っているか」を聞けないので、止めたあとは自分あてに目印を出して、それが届くまで読む（`Runner#drain`）。
+  倒れた Ractor は糸の例外としてログに出るので、住民の Ractor では `report_on_exception = false` にして、わけは見張り役が知らせる。`Warning[:experimental] = false` で「試しの機能」の注意を止めている
+
+### Haiku（Claude）で考える頭を足すとき
+
+入り口は `Simulation::Brains::Haiku`。ことば（`prompt(memory, letter)`）と、答えの JSON → `Intent`（`parse`。品書きにない商品・知り合いでない相手は何もしない）はもう作ってあり、試験もある。
+いまは考える係（`think:`）を渡していないので、決まりで動く頭にまかせている。
+
+1. Anthropic の SDK と API キー（1Password から環境変数へ）を用意し、`think: ->(prompt) { Haiku の答えの文字列 }` を作る（モデルは `claude-haiku-5-5`）
+2. Ractor の中から HTTP（Net::HTTP・OpenSSL・SDK）を呼べるかを試す。だめなら、住民は役場の「考える係」に手紙（例 `Letters::Think`）で頼み、
+   返事の手紙で決める（窓口役と同じ形）。考えているあいだも住民は手紙を受け取れるようにする
+3. 住民の設定の `brain` を `:haiku` にする（`Roster.specs(brain: :haiku)`。1匹だけ Haiku にして、決まりの住民と比べてもよい）
+4. 呼ぶ回数とお金に気をつける（合図ごとに5匹 = 1日 20 回。速さを遅くするか、昼と夕方だけ考えるなど）
+
 ## TODO
 
 | # | やること | 先に必要 | 主な場所 |
@@ -764,7 +854,7 @@ bin/rails churu:demo_events   # 眺めるための出来事を一通り起こす
 | ~~H~~ | ~~読み取りモデルの作り直し（`bin/rails churu:rebuild_projections`）~~（済） | | `packs/banking` |
 | I | GitHub（public）と CI | | `.github/` |
 | ~~J~~ | ~~Zingiber から銀行の MCP を使う~~（やらない。2026-10-21 決定） | E | Zingiber 側 |
-| K | Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由 | D | `packs/simulation` |
+| ~~K~~ | ~~Ractor で住民の生活シミュレーション（働く・買う・振り込む）。Ractor は行動を決めるだけで、書き込みはメインから公開 API 経由~~（済。「ねこ町の住民の暮らし」。Haiku で考える頭は入り口だけ） | D | `packs/simulation` |
 | L | イベントからイベントが連鎖する処理（例: 振込完了 → ポイント付与 → ランクアップ → お祝い通知）。correlation / causation で連鎖を辿れるように | D あたり | 新しいパック |
 | ~~M~~ | ~~利用者画面はとにかくかわいく。アニメーション（残高のカウントアップ、入金でふわっと、振込完了のお祝い）。reduced-motion に配慮~~（済。アニメ kawaii に作り直し済み。「利用者画面の見た目」） | C | `packs/customer` |
 | ~~N~~ | ~~商店を認証につなぐ: 購入者はログイン中の利用者の口座、商品・在庫の管理は行員だけ。画面の共通部品（ヘルパー・レイアウト）を UI 用のパックへ~~（済） | B, D | `packs/shop`・`packs/ui` |

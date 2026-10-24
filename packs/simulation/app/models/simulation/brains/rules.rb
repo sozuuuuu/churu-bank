@@ -2,13 +2,15 @@
 #
 #   朝 … 給料日なら働きに行く（Work）、家賃の日なら家賃を払う（PayRent）
 #   昼 … ごはんを買う（Eat。食べないと夕方におなかがすく）
-#   夕方 … 督促状が来ていれば、銀行へ必ず返しに行く。でなければ、借金があれば返す（repay の確率の半分）→
+#   夕方 … 督促状が来ていれば、銀行へ必ず返しに行く（返せるお金がなければ、遊びにも行かずにがまん）。でなければ、借金があれば返す（repay の確率の半分）→
 #          遊び場（splurge）→ おすそわけ（gift）→ ほしい物（buy）のどれか
 #   夜 … ねむる（Rest）
 #   お給料が入った … 借金を返す（repay の確率。いちばん多い借金から、使ってよい額で）
 #   断られた（残高が足りない）… 銀行で借りる（borrow の確率。家賃・ごはんなら借りやすい）か、みんなに助けを求める（ask_help）
 #   行員の審査で断られた … みんなに助けを求める（ask_help）
 #   「足りないにゃ」が来た … 助ける（help の確率）。貸す（lend の確率）か、あげる
+#
+# 返すときは、暮らしに要る分（LIVING。3 日分のごはんと家賃）を手元に残す（全部返して、ごはんが買えなくなっていた）。
 #
 # 倹約家はいちばん安い物を、ほかの性格は使ってよい額の中から好きな物を選ぶ。
 # 衝動買いは、ときどき額を気にせず選ぶ（足りずに断られて、借りることになる）
@@ -20,6 +22,7 @@ module Simulation
       GIFTS = [ 10, 20, 30 ].freeze
       LOAN_LIMIT = Banking::Bank::LOAN_LIMIT # 銀行で借りていられる額（返す額の合計）
       LOAN_FEE = 1.1                         # 返す額 ≒ 借りた額 × 1.1
+      LIVING = 150                           # 返すときに残しておく、暮らしに要る分
 
       # random を渡すと、同じ種なら同じように決める（試験用）
       def initialize(random: Random.new)
@@ -58,15 +61,16 @@ module Simulation
       def evening(memory)
         return unless memory.known_money?
 
-        dunned_repay(memory) || repay(memory, chance: memory.temperament.repay / 2) ||
-          splurge(memory) || gift(memory) || shopping(memory)
+        return dunned_repay(memory) if memory.dunned && memory.bank_debt.positive?
+
+        repay(memory, chance: memory.temperament.repay / 2) || splurge(memory) || gift(memory) || shopping(memory)
       end
 
-      # 督促状が来ていたら、銀行へ返せるだけ返す（性格の確率によらない）
+      # 督促状が来ていたら、暮らしに要る分を残して、銀行へ返せるだけ返す（性格の確率によらない）
       def dunned_repay(memory)
         return unless memory.dunned && memory.bank_debt.positive?
 
-        amount = [ memory.bank_debt, memory.money.to_i ].min
+        amount = [ memory.bank_debt, spare(memory) ].min
         Intent::Repay.new(to: Letters::BANK, amount:) if amount.positive?
       end
 
@@ -108,9 +112,12 @@ module Simulation
         return if memory.debts.empty? || !chance?(chance)
 
         to, owed = memory.debts.max_by { |_name, amount| amount }
-        amount = [ owed, [ memory.budget, memory.money.to_i / 2 ].max ].min
+        amount = [ owed, [ memory.budget, memory.money.to_i / 2 ].max, spare(memory) ].min
         Intent::Repay.new(to:, amount:) if amount.positive?
       end
+
+      # 暮らしに要る分を残して、返しに回せるお金
+      def spare(memory) = memory.money.to_i - LIVING
 
       def on_reply(memory, reply)
         return repay(memory) if reply.ok && reply.request.is_a?(Letters::AskSalary)

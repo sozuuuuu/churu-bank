@@ -119,13 +119,17 @@ class Simulation::BrainsTest < ActiveSupport::TestCase
     assert_equal [ [ L::BANK, 110 ] ], frugal.map { [ it.to, it.amount ] }.uniq
     assert_operator impulsive.size, :<, 500
     assert_empty decisions(rules, memory(:frugal, money: 400), salary).compact, "借金がなければ何もしない"
+    poor = decisions(rules, memory(:frugal, money: 200, debts:), salary).grep(I::Repay)
+    assert_equal [ 50 ], poor.map(&:amount).uniq, "暮らしの分（150）は残す"
   end
 
-  test "督促状が来たら気分が下がり、夕方は銀行へ返せるだけ返す。返したら督促は消える。審査で断られたら助けを求める" do
-    dunned = memory(:impulsive, money: 80, debts: { L::BANK => 110 }).heard(L::Dun.new(from: "係長のくろ", amount: 110))
+  test "督促状が来たら気分が下がり、夕方は暮らしの分を残して銀行へ返す（返せなければ遊ばずにがまん）。返したら督促は消える。審査で断られたら助けを求める" do
+    dunned = memory(:impulsive, money: 230, debts: { L::BANK => 110 }).heard(L::Dun.new(from: "係長のくろ", amount: 110))
     assert dunned.dunned
     assert_equal 50, dunned.mood
-    assert_equal [ I::Repay.new(to: L::BANK, amount: 80) ], decisions(rules, dunned, tick(:evening), times: 20).uniq
+    living = Simulation::Brains::Rules::LIVING
+    assert_equal [ I::Repay.new(to: L::BANK, amount: 230 - living) ], decisions(rules, dunned, tick(:evening), times: 20).uniq
+    assert_equal [ nil ], decisions(rules, dunned.with(money: living), tick(:evening), times: 50).uniq, "返せるお金がなければ、遊ばない"
 
     repay = L::WantRepay.new(from: "こむぎ", to: L::BANK, amount: 80, reply_to: nil)
     paid = dunned.heard(L::Reply.new(request: repay, ok: true, message: "返しました", balance: 0, debts: { L::BANK => 30 }))

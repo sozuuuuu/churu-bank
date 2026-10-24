@@ -15,7 +15,7 @@ module Simulation
     PRELOAD = %w[
       Simulation::Letters Simulation::Intent Simulation::Temperament Simulation::Memory Simulation::Brain
       Simulation::Brains Simulation::Brains::Rules Simulation::Brains::Haiku Simulation::Resident
-      Simulation::Postman Simulation::Clock Simulation::Supervisor
+      Simulation::Postman Simulation::Clock Simulation::Supervisor Simulation::Clerk Simulation::ClerkRules
     ].freeze
 
     def self.preload

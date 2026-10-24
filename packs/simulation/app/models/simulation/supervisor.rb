@@ -1,4 +1,5 @@
-# 見張り役（Ractor 1 つ）: 住民の Ractor を作り、見張り（Ractor#monitor）、倒れたら起こし直す。Erlang の supervisor の one_for_one のつもり。
+# 見張り役（Ractor 1 つ）: 住民と行員の Ractor を作り、見張り（Ractor#monitor）、倒れたら起こし直す。Erlang の supervisor の one_for_one のつもり。
+# どの種類の Ractor を作るかは、設定（Resident::Spec / Clerk::Spec）の agent_class で決まる。
 #
 #   住民を作る → 見張り用の受け口を1つずつ作って monitor → 郵便屋の帳面に住民の受け口を書く
 #   Ractor.select で「自分あての手紙」と「見張りの知らせ」を同時に待つ
@@ -42,7 +43,7 @@ module Simulation
     private
 
     def start(spec, restarts:)
-      ractor = Resident.spawn(spec, restarts:, hall: @hall, postman: @postman)
+      ractor = spec.agent_class.spawn(spec, restarts:, hall: @hall, postman: @postman)
       watch = Ractor::Port.new
       ractor.monitor(watch)
       @postman << Letters::Register.new(name: spec.name, port: ractor.default_port)

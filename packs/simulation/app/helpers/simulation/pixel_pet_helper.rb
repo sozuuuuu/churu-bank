@@ -38,6 +38,8 @@ module Simulation
       sad: [ [ 4, 7, "#..|.##" ], [ 9, 7, "..#|##." ] ],
       dizzy: [ [ 4, 7, "#.#|.#.|#.#" ], [ 9, 7, "#.#|.#.|#.#" ] ]
     }.freeze
+    # 行員の眼鏡（住民と見分ける）
+    GLASSES = [ [ 3, 6, "####|#..#|#..#|####" ], [ 9, 6, "####|#..#|#..#|####" ], [ 7, 7, "##" ] ].freeze
     MOUTHS = {
       smile: [ 6, 10, "#..#|.##." ],
       flat: [ 7, 10, "##" ],
@@ -53,7 +55,8 @@ module Simulation
       note: "..##.|..#.#|..#..|###..|##...",
       sweat: "..#..|.#+#.|#+++#|#+++#|.###.",
       star: "#.#.#|.###.|#####|.###.|#.#.#",
-      coin: ".###.|#+#+#|#+#+#|#+#+#|.###."
+      coin: ".###.|#+#+#|#+#+#|#+#+#|.###.",
+      letter: "#####|##.##|#.#.#|#...#|#####"
     }.freeze
 
     # ポーズ: [目, 口, しるし]
@@ -66,11 +69,13 @@ module Simulation
       play: [ :happy, :smile, :note ],
       worry: [ :open, :frown, :sweat ],
       rich: [ :happy, :smile, :coin ],
-      dizzy: [ :dizzy, :open, :star ]
+      dizzy: [ :dizzy, :open, :star ],
+      work: [ :open, :flat, :letter ],
+      dun: [ :open, :frown, :letter ]
     }.freeze
     POSE_LABELS = {
       normal: "ふつう", happy: "ごきげん", sad: "しょんぼり", sleep: "おやすみ", eat: "もぐもぐ", play: "あそび中",
-      worry: "借金でひやひや", rich: "おかねもち", dizzy: "ころんだ！"
+      worry: "借金でひやひや", rich: "おかねもち", dizzy: "ころんだ！", work: "おしごと中", dun: "督促中"
     }.freeze
     PLAY_WORDS = %w[またたびバー ねこカフェ 温泉 宝くじ].freeze
 
@@ -89,16 +94,26 @@ module Simulation
       :normal
     end
 
-    # 液晶の中のねこ。pose は POSES の名前
-    def pixel_pet(pose, size: 128, label: nil)
+    # 行員のポーズ: ころんだら目が ×、督促に出ていれば督促中、承認したばかりならごきげん、ほかはおしごと中
+    def clerk_pose(clerk)
+      return :dizzy if clerk.restarts.positive? && clerk.last_action.to_s.start_with?("見張り役")
+      return :dun if clerk.visiting
+      return :happy if clerk.last_action.to_s.include?("承認")
+
+      :work
+    end
+
+    # 液晶の中のねこ。pose は POSES の名前、clerk: true なら眼鏡をかけた行員
+    def pixel_pet(pose, size: 128, label: nil, clerk: false)
       eyes, mouth, mark = POSES.fetch(pose)
       dark = dots(BODY.join("|"))
       light = dots(BODY.join("|"), char: "+")
       EYES.fetch(eyes).each { |x, y, art| dark += dots(art, x:, y:) }
       mx, my, art = MOUTHS.fetch(mouth)
       dark += dots(art, x: mx, y: my)
+      GLASSES.each { |x, y, glasses| dark += dots(glasses, x:, y:) } if clerk
 
-      tag.svg(class: "pixel-pet pose-#{pose}", viewBox: "0 0 23 16", width: size * 23 / 16, height: size,
+      tag.svg(class: "pixel-pet pose-#{pose}#{" is-clerk" if clerk}", viewBox: "0 0 23 16", width: size * 23 / 16, height: size,
               role: "img", "aria-label": label || POSE_LABELS.fetch(pose), "shape-rendering": "crispEdges") do
         safe_join([
           tag.g(class: "pixel-body") { safe_join([ rects(FILL, "px-fill"), rects(dark, "px-dark"), rects(light, "px-light") ]) },

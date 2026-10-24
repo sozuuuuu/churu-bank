@@ -95,6 +95,13 @@
 .rpg-link { margin: 0; font-size: .85rem; }
 .rpg-member.pose-dizzy { border-color: var(--rpg-hp-low); }
 
+/* ---- ぎんこういん（行員エージェント）。眼鏡のドット絵、地図では紺のスーツ ---- */
+.rpg-bank { display: grid; gap: 8px; }
+.rpg-section-title { font-size: 1rem; color: var(--rpg-gold); letter-spacing: .2em; }
+.rpg-clerk { border-color: #9fd3ff; }
+.rpg-walker.is-clerk .px-fill { fill: #c9dcff; }
+.rpg-walker.is-clerk .rpg-walker-name { background: #1b2a4a; border-color: #9fd3ff; }
+
 /* ---- メッセージ（手紙）とかしかり ---- */
 .rpg-bottom { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
 .rpg-messages { position: relative; }
@@ -104,6 +111,8 @@
 .rpg-message.kind-trouble { color: var(--rpg-gold); }
 .rpg-message.kind-lent { color: #9fe8ff; }
 .rpg-message.kind-restart { color: #d6b3ff; }
+.rpg-message.kind-case { color: #9fd3ff; }
+.rpg-message.kind-dun { color: #ff8a8a; }
 .rpg-more { position: absolute; right: 12px; bottom: 6px; color: var(--rpg-text); }
 
 .rpg-debts .town-debts svg { width: 100%; height: auto; max-width: 420px; display: block; margin: 0 auto; }

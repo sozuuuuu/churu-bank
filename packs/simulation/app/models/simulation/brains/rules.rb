@@ -2,10 +2,12 @@
 #
 #   朝 … 給料日なら働きに行く（Work）、家賃の日なら家賃を払う（PayRent）
 #   昼 … ごはんを買う（Eat。食べないと夕方におなかがすく）
-#   夕方 … 借金があれば返す（repay の確率の半分）→ 遊び場（splurge）→ おすそわけ（gift）→ ほしい物（buy）のどれか
+#   夕方 … 督促状が来ていれば、銀行へ必ず返しに行く。でなければ、借金があれば返す（repay の確率の半分）→
+#          遊び場（splurge）→ おすそわけ（gift）→ ほしい物（buy）のどれか
 #   夜 … ねむる（Rest）
 #   お給料が入った … 借金を返す（repay の確率。いちばん多い借金から、使ってよい額で）
 #   断られた（残高が足りない）… 銀行で借りる（borrow の確率。家賃・ごはんなら借りやすい）か、みんなに助けを求める（ask_help）
+#   行員の審査で断られた … みんなに助けを求める（ask_help）
 #   「足りないにゃ」が来た … 助ける（help の確率）。貸す（lend の確率）か、あげる
 #
 # 倹約家はいちばん安い物を、ほかの性格は使ってよい額の中から好きな物を選ぶ。
@@ -56,7 +58,16 @@ module Simulation
       def evening(memory)
         return unless memory.known_money?
 
-        repay(memory, chance: memory.temperament.repay / 2) || splurge(memory) || gift(memory) || shopping(memory)
+        dunned_repay(memory) || repay(memory, chance: memory.temperament.repay / 2) ||
+          splurge(memory) || gift(memory) || shopping(memory)
+      end
+
+      # 督促状が来ていたら、銀行へ返せるだけ返す（性格の確率によらない）
+      def dunned_repay(memory)
+        return unless memory.dunned && memory.bank_debt.positive?
+
+        amount = [ memory.bank_debt, memory.money.to_i ].min
+        Intent::Repay.new(to: Letters::BANK, amount:) if amount.positive?
       end
 
       def splurge(memory)
@@ -103,6 +114,9 @@ module Simulation
 
       def on_reply(memory, reply)
         return repay(memory) if reply.ok && reply.request.is_a?(Letters::AskSalary)
+        if !reply.ok && reply.reason == :loan_rejected
+          return chance?(memory.temperament.ask_help) ? Intent::AskHelp.new(amount: reply.request.amount.clamp(10, 100)) : nil
+        end
         return if reply.ok || reply.reason != :insufficient
 
         need = shortage(memory, reply.request)

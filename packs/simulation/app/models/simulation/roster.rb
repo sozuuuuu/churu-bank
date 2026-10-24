@@ -24,6 +24,9 @@ module Simulation
       { name: "くるみ", email_address: "kurumi@town.churu.test", temperament: :caring },
       { name: "ころん", email_address: "koron@town.churu.test", temperament: :clumsy }
     ].freeze
+    # 行員エージェント（seed の行員。いなければ行員なしで、ローンは窓口役がすぐ貸す）: [名前, 役目]
+    CLERKS = [ [ "窓口のたま", :teller ], [ "係長のくろ", :chief ] ].freeze
+
     # 町の朝ごとに、商品がこれより少なければここまで入荷する（ごはんのちゅ〜るは多めに）
     RESTOCK = { "churu" => 30, "churu-chicken" => 30 }.freeze
     RESTOCK_OTHERS = 5
@@ -51,6 +54,7 @@ module Simulation
       end
       control.update!(places:)
       residents.each { add_resident(bank, **it) }
+      add_clerks
       restock
       control
     end
@@ -84,6 +88,19 @@ module Simulation
     end
 
     def place(key) = PLACES.find { it.key == key.to_s }
+
+    def add_clerks
+      CLERKS.each do |name, role|
+        staff = ::Staff.find_by(name:) or next
+        ClerkStatus.find_or_create_by!(name:) { it.staff = staff; it.role = role.to_s }
+      end
+    end
+
+    # 行員の Ractor に渡す設定（Clerk::Spec）。窓口は、回す先の係長の名前を持つ
+    def clerk_specs(clerks = ClerkStatus.order(:id).to_a)
+      chief = clerks.find(&:chief?)&.name
+      clerks.map { Clerk::Spec.new(name: it.name, role: it.role.to_sym, chief:) }
+    end
 
     FUND = "ねこ町の基金"
     FUND_ACTOR = "town-fund"

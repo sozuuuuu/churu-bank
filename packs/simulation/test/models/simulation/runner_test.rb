@@ -83,6 +83,67 @@ class Simulation::RunnerTest < ActiveSupport::TestCase
     assert_equal [ [ "あずき", L::Lent.new(from: "こむぎ", amount: 30) ] ], delivered
   end
 
+  test "行員がいると、ローンはすぐ貸さない。たまへ申込を届け、決裁が来たら行員の actor で貸して返事を出す" do
+    tama, kuro = create_clerks
+    @control.update!(running: true)
+    @runner.handle(:check)
+    delivered = []
+    @runner.instance_variable_get(:@town).define_singleton_method(:deliver) { |name, letter| delivered << [ name, letter ] }
+    port = Ractor::Port.new
+
+    @runner.handle(L::WantLoan.new(from: "あずき", amount: 100, reply_to: port))
+    kase = Simulation::LoanCase.last
+    assert_equal [ "あずき", 100, "applied" ], [ kase.resident, kase.amount, kase.status ]
+    assert_equal "窓口のたま", delivered.last[0]
+    assert_equal L::Case.new(id: kase.id, from: "窓口役", resident: "あずき", amount: 100, owed: 0, salary: 170, overdue: 0),
+                 delivered.last[1], "試験のあずきは倹約家（お給料 170）"
+    assert_empty Loan.all, "決裁までは貸さない"
+
+    @runner.handle(L::Decision.new(from: "窓口のたま", case_id: kase.id, approve: true, reason: "返せそう"))
+    reply = wait_for(port) { true }
+    assert reply.ok, reply.message
+    assert_equal({ L::BANK => 110 }, reply.debts)
+    granted = Rails.configuration.event_store.read.of_type(Banking::Events::LoanGranted).last
+    assert_equal [ tama.staff.actor, "あずき" ], [ granted.metadata[:actor], granted.metadata[:resident] ]
+    assert_equal [ "approved", "窓口のたま", granted.data[:loan_id] ], kase.reload.then { [ it.status, it.decided_by, it.loan_id ] }
+
+    @runner.handle(L::WantLoan.new(from: "あずき", amount: 160, reply_to: port))
+    second = Simulation::LoanCase.last
+    @runner.handle(L::Copy.new(from: "窓口のたま", to: "係長のくろ", letter: delivered.last[1].with(from: "窓口のたま")))
+    assert_equal [ "forwarded", "窓口のたま" ], second.reload.then { [ it.status, it.handled_by ] }
+    @runner.handle(L::Decision.new(from: kuro.name, case_id: second.id, approve: false, reason: "お給料より多い"))
+    refused = wait_for(port) { true }
+    assert_not refused.ok
+    assert_equal :loan_rejected, refused.reason
+    assert_includes refused.message, "お給料より多い"
+    assert_equal "rejected", second.reload.status
+  end
+
+  test "係長に延滞を返し、督促した日を書く。同じ日にもう一度聞いても出ない" do
+    create_clerks
+    @control.update!(running: true, day: 9)
+    @runner.handle(:check)
+    bank = Banking::Bank.new(actor: "test")
+    loan_id = bank.lend(@azuki.account_number, 100).loan_id
+    kase = Simulation::LoanCase.create!(resident: "あずき", amount: 100, status: "approved", loan_id:, day: 1, decided_day: 1)
+    @runner.handle(L::Tick.new(day: 9, time: :morning, payday: false))
+    port = Ractor::Port.new
+
+    @runner.handle(L::AskOverdue.new(from: "係長のくろ", reply_to: port))
+    assert_equal [ L::OverdueItem.new(resident: "あずき", owed: 110, days: 8) ], wait_for(port) { true }.items
+    assert_equal 9, kase.reload.last_dunned_day
+    @runner.handle(L::AskOverdue.new(from: "係長のくろ", reply_to: port))
+    assert_empty wait_for(port) { true }.items
+  end
+
+  test "町を起こすとき、決まらずに残った申込は取り下げにする" do
+    create_clerks
+    old = Simulation::LoanCase.create!(resident: "あずき", amount: 50, status: "applied", day: 1)
+    @control.update!(running: true)
+    @runner.handle(:check)
+    assert_equal "withdrawn", old.reload.status
+  end
+
   test "閉じた受け口（返事を待たずに倒れた住民）には返事を出さずに続ける" do
     port = Ractor::Port.new
     port.close

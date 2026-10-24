@@ -6,7 +6,8 @@ module Simulation
 
     KEEP = 300 # これより古いものは消す
     KINDS = {
-      "ask" => "頼む", "reply" => "返事", "refuse" => "お断り", "trouble" => "助けて", "lent" => "借用書", "restart" => "起こし直し"
+      "ask" => "頼む", "reply" => "返事", "refuse" => "お断り", "trouble" => "助けて", "lent" => "借用書", "restart" => "起こし直し",
+      "case" => "申込", "dun" => "督促状"
     }.freeze
 
     scope :recent, -> { order(id: :desc).limit(40) }

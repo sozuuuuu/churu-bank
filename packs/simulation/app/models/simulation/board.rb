@@ -1,7 +1,8 @@
 # 画面の係（メインの Ractor）: 住民の Report・見張り役の Restarted・時計の Tick・手紙を表に書き、行員の画面「住民の様子」へ
 # Turbo Stream で配る。町を動かす係は Puma とは別のプロセスだが、Solid Cable（表 solid_cable_messages）を通すので届く
 #
-#   住民1匹のカード・町の時計・借金の関係図 … replace
+#   パーティーの窓（住民1匹）・町の時計と空・借金の関係図 … replace
+#   地図の上の住民 … replace を morph で（置きかえずに直すので、居場所が変わると CSS の transition で歩いて移る）
 #   手紙の流れ … 1通ずつ頭に prepend（画面には新しい 40 通、表には KEEP 通まで）
 module Simulation
   class Board
@@ -9,6 +10,7 @@ module Simulation
     STATUS_TARGET = "simulation_status".freeze
     LETTERS_TARGET = "simulation_letters".freeze
     DEBTS_TARGET = "simulation_debts".freeze
+    SKY_TARGET = "simulation_sky".freeze
     TELLER = "窓口役".freeze
     SUPERVISOR = "見張り役".freeze
     # 返事が ok なら、借金の関係図を書き直す手紙
@@ -49,12 +51,17 @@ module Simulation
     end
 
     def resident(status)
-      broadcast(:replace, target: ActionView::RecordIdentifier.dom_id(status),
-                          partial: "simulation/residents/resident", locals: { resident: status })
+      dom_id = ActionView::RecordIdentifier.dom_id(status)
+      broadcast(:replace, target: dom_id, partial: "simulation/residents/resident", locals: { resident: status })
+      index = ResidentStatus.order(:id).ids.index(status.id)
+      broadcast(:replace, target: "walker_#{dom_id}", partial: "simulation/residents/walker",
+                          locals: { resident: status, index: }, attributes: { method: "morph" })
     end
 
     def status
-      broadcast(:replace, target: STATUS_TARGET, partial: "simulation/residents/status", locals: { control: Control.current })
+      control = Control.current
+      broadcast(:replace, target: STATUS_TARGET, partial: "simulation/residents/status", locals: { control: })
+      broadcast(:replace, target: SKY_TARGET, partial: "simulation/residents/sky", locals: { control: })
     end
 
     def debts
@@ -69,9 +76,9 @@ module Simulation
       broadcast(:prepend, target: LETTERS_TARGET, partial: "simulation/residents/letter", locals: { letter: row })
     end
 
-    def broadcast(action, target:, partial:, locals:)
+    def broadcast(action, target:, partial:, locals:, attributes: {})
       html = ResidentsController.render(partial:, locals:)
-      Turbo::StreamsChannel.broadcast_action_to(STREAM, action:, target:, html:)
+      Turbo::StreamsChannel.broadcast_action_to(STREAM, action:, target:, html:, attributes:)
     end
   end
 end

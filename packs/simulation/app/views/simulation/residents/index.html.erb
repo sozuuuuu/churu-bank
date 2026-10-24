@@ -1,73 +1,95 @@
 <% content_for :title, "住民の様子 | ちゅーる銀行" %>
 <% content_for :head do %>
   <%= stylesheet_link_tag("simulation/simulation", "data-turbo-track": "dynamic") %>
-  <%# 液晶の文字（ドットの日本語フォント） %>
+  <%# RPG の文字（ドットの日本語フォント） %>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet" data-turbo-track="dynamic">
 <% end %>
 
-<%# 町を動かす係（別のプロセス）が、住民1匹ずつと町の時計を Turbo Stream（replace）で書き換える %>
+<%# 町を動かす係（別のプロセス）が、住民・地図の上の住民・時計・空・借金・手紙を Turbo Stream で書き換える %>
 <%= staff_stream_from Simulation::Board::STREAM %>
 
-<h1>住民の様子</h1>
-<p class="muted small">
-  ねこ町の住民は、1匹ずつが Ractor です。手紙を受け取って、自分の頭（いまは決まりで動く頭）で次にすることを決め、
-  銀行と商店には窓口役（メインの Ractor）を通して頼みます。住民がした出来事には「住民」の印が付きます。
-</p>
+<div class="rpg">
+  <h1 class="rpg-title">ねこ町</h1>
 
-<section class="card town-control">
-  <%= render "simulation/residents/status", control: @control %>
-  <div class="town-buttons">
-    <%= button_to "動かす", simulation_control_path, method: :patch, params: { control: { running: true } },
-                  class: "button", form: { class: "inline" } %>
-    <%= button_to "止める", simulation_control_path, method: :patch, params: { control: { running: false } },
-                  class: "button secondary", form: { class: "inline" } %>
-    <%= form_with model: @control, scope: :control, url: simulation_control_path, method: :patch, class: "inline town-speed" do |f| %>
-      <%= f.label :seconds_per_day, "速さ" %>
-      <%= f.select :seconds_per_day, Simulation::Control::SPEEDS.invert %>
-      <%= f.submit "変える", class: "button secondary" %>
-    <% end %>
+  <div class="rpg-top">
+    <%# フィールド（町の地図）。住民は、いましていることの建物の前へ歩いていく %>
+    <section class="rpg-window rpg-field" aria-label="町の地図">
+      <div class="rpg-map">
+        <%= town_map_svg %>
+        <%= render "simulation/residents/sky", control: @control %>
+        <% @residents.each_with_index do |resident, index| %>
+          <%= render "simulation/residents/walker", resident:, index: %>
+        <% end %>
+      </div>
+    </section>
+
+    <div class="rpg-side">
+      <section class="rpg-window">
+        <%= render "simulation/residents/status", control: @control %>
+      </section>
+      <section class="rpg-window rpg-command" aria-label="コマンド">
+        <h2>コマンド</h2>
+        <%= button_to "うごかす", simulation_control_path, method: :patch, params: { control: { running: true } },
+                      class: "rpg-command-item", form: { class: "inline" } %>
+        <%= button_to "とめる", simulation_control_path, method: :patch, params: { control: { running: false } },
+                      class: "rpg-command-item", form: { class: "inline" } %>
+        <%= form_with model: @control, scope: :control, url: simulation_control_path, method: :patch, class: "rpg-speed" do |f| %>
+          <%= f.label :seconds_per_day, "はやさ" %>
+          <%= f.select :seconds_per_day, Simulation::Control::SPEEDS.invert %>
+          <%= f.submit "けってい", class: "rpg-command-item" %>
+        <% end %>
+      </section>
+    </div>
   </div>
-  <p class="muted small">
-    町を動かす係は Puma とは別のプロセスです: <code>bin/rails churu:simulate</code>（はじめての時は住民と口座も用意します）。
-    給料日は <%= Simulation::Clock::PAYDAY_EVERY %> 日ごとの朝（お給料は性格で <%= Simulation::Temperament::ALL.values.map(&:salary).minmax.join("〜") %> ちゅ〜る）、
-    その次の日の朝は家賃（<%= churu(Simulation::Teller::RENT) %>）。毎日のお昼はごはん。
-    夕方は遊び場（<%= Simulation::Roster::PLACES.map { "#{it.name} #{it.price}" }.join("・") %> ちゅ〜る）へ行くこともあります。
-    足りなければ銀行のちゅ〜るローン（手数料 10%）で借りるか、みんなに「足りないにゃ」と手紙を出します。
-  </p>
-</section>
 
-<% if @residents.empty? %>
-  <p class="empty">住民がまだいません。<code>bin/rails churu:simulation:setup</code> か <code>bin/rails churu:simulate</code> で用意します。</p>
-<% else %>
-  <div class="town-residents">
-    <%= render partial: "simulation/residents/resident", collection: @residents %>
+  <% if @residents.empty? %>
+    <p class="rpg-window">住民がまだいません。<code>bin/rails churu:simulation:setup</code> か <code>bin/rails churu:simulate</code> で用意します。</p>
+  <% else %>
+    <div class="rpg-party">
+      <%= render partial: "simulation/residents/resident", collection: @residents %>
+    </div>
+  <% end %>
+
+  <div class="rpg-bottom">
+    <section class="rpg-window rpg-messages" aria-label="手紙の流れ">
+      <h2>てがみ</h2>
+      <ol id="<%= Simulation::Board::LETTERS_TARGET %>" class="rpg-message-list">
+        <%= render partial: "simulation/residents/letter", collection: @letters %>
+      </ol>
+      <span class="rpg-more" aria-hidden="true">▼</span>
+    </section>
+    <section class="rpg-window rpg-debts" aria-label="借金の関係図">
+      <h2>かしかり</h2>
+      <%= render "simulation/residents/debts", **@debts %>
+    </section>
   </div>
-<% end %>
 
-<div class="town-panels">
-  <section class="card">
-    <h2>借金の関係図</h2>
-    <p class="muted small">矢印は「借りた住民 → 貸した相手」。数はまだ返していない額です。</p>
-    <%= render "simulation/residents/debts", **@debts %>
-  </section>
-  <section class="card">
-    <h2>手紙の流れ</h2>
-    <p class="muted small">
-      住民・窓口役・郵便屋・見張り役のあいだの手紙です（時計の合図は数が多いので出しません）。
-      Ractor の受け口には「何通たまっているか」を聞けないので、カードの手紙の数は住民が自分で数えたものです。
+  <details class="rpg-window rpg-help">
+    <summary>ねこ町のきまり</summary>
+    <p>
+      住民は1匹ずつが Ractor です。手紙を受け取って、自分の頭（いまは決まりで動く頭）で次にすることを決め、
+      銀行と商店には窓口役（メインの Ractor）を通して頼みます。住民がした出来事には「住民」の印が付きます。
     </p>
-    <ol id="<%= Simulation::Board::LETTERS_TARGET %>" class="town-letters">
-      <%= render partial: "simulation/residents/letter", collection: @letters %>
-    </ol>
-  </section>
+    <p>
+      給料日は <%= Simulation::Clock::PAYDAY_EVERY %> 日ごとの朝（お給料は性格で <%= Simulation::Temperament::ALL.values.map(&:salary).minmax.join("〜") %> ちゅ〜る）、
+      その次の日の朝は家賃（<%= churu(Simulation::Teller::RENT) %>）。毎日のお昼はごはん。
+      夕方は遊び場（<%= Simulation::Roster::PLACES.map { "#{it.name} #{it.price}" }.join("・") %> ちゅ〜る）へ行くこともあります。
+      足りなければ銀行のちゅ〜るローン（手数料 10%）で借りるか、みんなに「足りないにゃ」と手紙を出します。
+    </p>
+    <p>
+      町を動かす係は Puma とは別のプロセスです: <code>bin/rails churu:simulate</code>（はじめての時は住民と口座も用意します）。
+      メッセージは住民・窓口役・郵便屋・見張り役のあいだの手紙です（時計の合図は数が多いので出しません）。
+      Ractor の受け口には「何通たまっているか」を聞けないので、てがみの数（↓受け取った・↑出した）は住民が自分で数えたものです。
+      HP は気分、G は所持金の見込みです。
+    </p>
+    <p>
+      住民の出来事は
+      <%= link_to "ねこの実況", event_viewer_commentary_path %>・
+      <%= link_to "ふせんの壁", event_viewer_wall_path %>・
+      <%= link_to "イベントの一覧", event_viewer_events_path %>
+      にも流れます（「住民」の印）。
+    </p>
+  </details>
 </div>
-
-<p class="small town-links">
-  住民の出来事は
-  <%= link_to "ねこの実況", event_viewer_commentary_path %>・
-  <%= link_to "ふせんの壁", event_viewer_wall_path %>・
-  <%= link_to "イベントの一覧", event_viewer_events_path %>
-  にも流れます（「住民」の印）。
-</p>

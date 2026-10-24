@@ -1,0 +1,9 @@
+<%# 地図の上の住民1匹。町を動かす係が Board#resident で morph（置きかえずに直す）するので、left / top が変わると歩いて移る（CSS の transition） %>
+<% x, y = Simulation::TownMap.spot(resident, index) %>
+<% pose = pet_pose(resident) %>
+<div id="walker_<%= dom_id(resident) %>" class="rpg-walker"
+     style="left: <%= (x * 100.0 / Simulation::TownMap::COLS).round(2) %>%; top: <%= (y * 100.0 / Simulation::TownMap::ROWS).round(2) %>%;"
+     title="<%= resident.name %>: <%= Simulation::TownMap.place_name(resident) %>">
+  <%= pixel_pet(pose, size: 32, label: "#{resident.name}（#{Simulation::TownMap.place_name(resident)}）") %>
+  <span class="rpg-walker-name"><%= resident.name %></span>
+</div>

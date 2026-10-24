@@ -73,6 +73,18 @@ class Simulation::RactorsTest < ActiveSupport::TestCase
     assert_equal :hello, wait_for(komugi) { true }, "こむぎには Trouble は届かず、次の手紙が先頭"
   end
 
+  test "郵便屋（本物の Ractor）: 「足りないにゃ」を配って、写しを役場へ出す（Ractor の中から定数を読めること）" do
+    postman = Simulation::Postman.spawn(hall: @hall)
+    azuki = Ractor::Port.new
+    postman << L::Register.new(name: "あずき", port: azuki)
+
+    postman << L::Broadcast.new(letter: L::Trouble.new(from: "こむぎ", amount: 30), except: "こむぎ")
+    assert_equal L::Trouble.new(from: "こむぎ", amount: 30), wait_for(azuki) { true }
+    assert_equal "みんな", wait_for(@hall) { it.is_a?(L::Copy) }.to
+    postman << :stop
+    join_within(postman)
+  end
+
   test "郵便屋: Deliver は1匹へ。住民どうしの手紙は写し（Copy）を役場へ出し、時計の合図は写さない" do
     postman = Simulation::Postman.new(hall: @hall)
     azuki = Ractor::Port.new

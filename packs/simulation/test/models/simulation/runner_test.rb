@@ -25,7 +25,7 @@ class Simulation::RunnerTest < ActiveSupport::TestCase
     assert @control.heartbeat_at.present?
 
     @control.update!(running: true)
-    assert_broadcasts(Simulation::Board::STREAM, 4) { @runner.handle(:check) } # 住民2匹の回数を 0 に・借金の関係図・町の様子
+    assert_broadcasts(Simulation::Board::STREAM, 7) { @runner.handle(:check) } # 住民2匹（窓と地図の上）の回数を 0 に・借金の関係図・町の様子と空
     assert @control.reload.town_running
     assert_equal "動いています（時計の合図を待っています）", @control.status_label
 

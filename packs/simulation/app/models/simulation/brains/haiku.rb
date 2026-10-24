@@ -15,7 +15,7 @@ module Simulation
       include Brain
 
       MODEL = "claude-haiku-5-5".freeze
-      TIMES = { morning: "朝", noon: "昼", evening: "夕方", night: "夜" }.freeze
+      TIMES = Ractor.make_shareable({ morning: "朝", noon: "昼", evening: "夕方", night: "夜" }) # 住民の Ractor の中から読む
 
       def initialize(think: nil, random: Random.new)
         @think = think

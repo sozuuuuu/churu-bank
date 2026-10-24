@@ -22,6 +22,14 @@ module Simulation
       ................
     ].freeze
 
+    # 体の中（塗りつぶし）。液晶では透明、地図やステータスの窓では白（px-fill）。頭と胴（4〜12 行目）の、いちばん左の点から右の点まで
+    FILL = BODY.each_with_index.flat_map do |row, y|
+      next [] unless (4..12).cover?(y)
+
+      left, right = row.index("#"), row.rindex("#")
+      (left + 1...right).filter_map { |x| [ x, y ] if row[x] == "." }
+    end.freeze
+
     # 顔のパーツ: [x, y, 点の並び]（点の並びは BODY と同じ書き方、行は | で区切る）
     EYES = {
       open: [ [ 4, 7, "##|##" ], [ 10, 7, "##|##" ] ],
@@ -93,7 +101,7 @@ module Simulation
       tag.svg(class: "pixel-pet pose-#{pose}", viewBox: "0 0 23 16", width: size * 23 / 16, height: size,
               role: "img", "aria-label": label || POSE_LABELS.fetch(pose), "shape-rendering": "crispEdges") do
         safe_join([
-          tag.g(class: "pixel-body") { safe_join([ rects(dark, "px-dark"), rects(light, "px-light") ]) },
+          tag.g(class: "pixel-body") { safe_join([ rects(FILL, "px-fill"), rects(dark, "px-dark"), rects(light, "px-light") ]) },
           (if mark
              art = MARKS.fetch(mark)
              tag.g(class: "pixel-mark") do

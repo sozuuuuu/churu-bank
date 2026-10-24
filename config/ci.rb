@@ -11,6 +11,9 @@ CI.run do
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
   step "Tests: Rails", "bin/test"
   step "Tests: Seeds", "env RAILS_ENV=test bin/rails db:seed:replant"
+  # seed が流れることを確かめたら、試験用の DB を空に戻す（残すと、あとで単独で流す試験が seed の商品とぶつかる）。
+  # replant の中で db:truncate_all がもう動いているので、同じ rake の呼び出しに並べると Rake は2回目を動かさない。だから別の段にする
+  step "Cleanup: test DB", "env RAILS_ENV=test bin/rails db:truncate_all"
 
   # Optional: Run system tests
   # step "Tests: System", "bin/rails test:system"

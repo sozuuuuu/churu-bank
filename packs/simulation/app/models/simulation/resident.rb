@@ -95,6 +95,7 @@ module Simulation
         ask(Letters::AskSalary.new(from: name, day: @memory.day, reply_to: inbox))
         "働いた。窓口に給料を頼んだ"
       when Intent::PayRent
+        @memory = @memory.doing("大家さんの家にいる")
         ask(Letters::PayRent.new(from: name, day: @memory.day, reply_to: inbox))
         "大家さんに家賃を払いに行った"
       when Intent::Eat
@@ -114,6 +115,7 @@ module Simulation
         ask(Letters::WantLend.new(from: name, to: intent.to, amount: intent.amount, reply_to: inbox))
         "#{intent.to}さんに #{intent.amount} ちゅ〜る貸すことにした"
       when Intent::Repay
+        @memory = @memory.doing("銀行の窓口にいる") if intent.to == Letters::BANK
         ask(Letters::WantRepay.new(from: name, to: intent.to, amount: intent.amount, reply_to: inbox))
         "#{intent.to == Letters::BANK ? "銀行" : "#{intent.to}さん"}に #{intent.amount} ちゅ〜る返しに行った"
       when Intent::Buy

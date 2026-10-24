@@ -1,36 +1,34 @@
-<%# 住民1匹のカード（たまごっちのような、たまご型の機械と液晶のドット絵）。町を動かす係が Board#resident で、このカードごと書き換える %>
+<%# パーティーの窓（住民1匹のステータス）。町を動かす係が Board#resident で、この窓ごと書き換える %>
 <% pose = pet_pose(resident) %>
-<article id="<%= dom_id(resident) %>" class="town-pet shell-<%= resident.temperament %>">
-  <div class="pet-shell">
-    <p class="pet-name"><%= resident.name %> <span><%= resident.temperament_label %></span></p>
-    <div class="pet-screen">
-      <%= pixel_pet(pose, size: 96, label: "#{resident.name}: #{Simulation::PixelPetHelper::POSE_LABELS.fetch(pose)}") %>
-      <p class="pet-lcd">
-        <span><%= Simulation::PixelPetHelper::POSE_LABELS.fetch(pose) %></span>
-        <span class="pet-hearts" title="気分 <%= resident.mood || "—" %> / 100"><%= resident.hearts %></span>
-      </p>
+<article id="<%= dom_id(resident) %>" class="rpg-window rpg-member pose-<%= pose %>">
+  <header class="rpg-member-head">
+    <%= pixel_pet(pose, size: 48, label: "#{resident.name}: #{Simulation::PixelPetHelper::POSE_LABELS.fetch(pose)}") %>
+    <div>
+      <h2 class="pet-name"><%= resident.name %></h2>
+      <p class="rpg-job"><%= resident.temperament_label %></p>
     </div>
-    <div class="pet-buttons" aria-hidden="true"><i></i><i></i><i></i></div>
+  </header>
+  <div class="rpg-hp" title="気分 <%= resident.mood || "—" %> / 100">
+    <span>HP</span>
+    <meter min="0" max="100" low="35" high="70" optimum="100" value="<%= resident.mood.to_i %>"><%= resident.mood %></meter>
+    <span><%= resident.mood || "—" %></span>
   </div>
-  <dl class="town-resident-facts">
-    <dt>いま</dt><dd><%= resident.state || "（まだ起きていない）" %></dd>
-    <dt>所持金の見込み</dt><dd><%= resident.money ? churu(resident.money) : "—" %></dd>
-    <dt>借金</dt>
-    <dd><% if (debt = resident.debt_total).positive? %><span class="badge badge-frozen"><%= churu(debt) %></span><% else %>なし<% end %></dd>
-    <dt>最後にしたこと</dt>
+  <dl class="rpg-stats">
+    <dt>G</dt><dd><%= resident.money ? number_with_delimiter(resident.money) : "—" %></dd>
+    <dt>しゃっきん</dt>
+    <dd class="<%= "is-debt" if (debt = resident.debt_total).positive? %>"><%= debt.positive? ? number_with_delimiter(debt) : "なし" %></dd>
+    <dt>てがみ</dt><dd>↓<%= resident.letters_received %> ↑<%= resident.letters_sent %></dd>
+    <dt>ころんだ</dt>
+    <dd class="<%= "is-debt" if resident.restarts.positive? %>"><%= resident.restarts %> 回</dd>
+  </dl>
+  <dl class="rpg-doing">
+    <dt>いま</dt><dd><%= Simulation::PixelPetHelper::POSE_LABELS.fetch(pose) %>・<%= resident.state || "（まだ起きていない）" %></dd>
+    <dt>さいご</dt>
     <dd>
       <%= resident.last_action || "—" %>
-      <% if resident.last_action_at %><span class="muted small">（<%= jp_time(resident.last_action_at) %>）</span><% end %>
+      <% if resident.last_action_at %><span class="rpg-dim">（<%= jp_time(resident.last_action_at) %>）</span><% end %>
     </dd>
-    <dt>手紙</dt>
-    <dd>受け取った <%= resident.letters_received %> 通・出した <%= resident.letters_sent %> 通</dd>
-    <dt>起こし直し</dt>
-    <dd>
-      <span class="<%= "badge badge-frozen" if resident.restarts.positive? %>"><%= resident.restarts %> 回</span>
-      <% if resident.last_error %><span class="muted small"><%= resident.last_error %></span><% end %>
-    </dd>
+    <% if resident.last_error %><dt>ころんだわけ</dt><dd class="rpg-dim"><%= resident.last_error %></dd><% end %>
   </dl>
-  <p class="small">
-    <%= link_to "口座 #{resident.account_number} の出来事", event_viewer_events_path(account: resident.account_number) %>
-  </p>
+  <p class="rpg-link"><%= link_to "▶ 口座 #{resident.account_number} の出来事", event_viewer_events_path(account: resident.account_number) %></p>
 </article>

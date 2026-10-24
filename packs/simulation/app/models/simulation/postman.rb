@@ -6,7 +6,7 @@
 # 倒れたばかりの住民の受け口は閉じているので、配れなかった手紙は捨てる（Erlang でも、いないプロセスへの手紙は消える）
 module Simulation
   class Postman
-    EVERYONE = "みんな"
+    EVERYONE = "みんな".freeze # Ractor の中から読む定数は凍らせる
 
     def self.spawn(hall:)
       Ractor.new(hall, name: "郵便屋") { |town_hall| Postman.new(hall: town_hall).run }

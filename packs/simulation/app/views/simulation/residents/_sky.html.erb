@@ -1,0 +1,2 @@
+<%# 空の色（朝・昼・夕方・夜で地図に色を重ねる）。町を動かす係が Board#status で、時計といっしょに書き換える %>
+<div id="<%= Simulation::Board::SKY_TARGET %>" class="rpg-sky sky-<%= control.time || "noon" %>" aria-hidden="true"></div>

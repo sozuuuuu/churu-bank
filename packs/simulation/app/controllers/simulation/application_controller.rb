@@ -6,6 +6,7 @@ module Simulation
     helper Ui::FormatHelper
     helper Ui::ThemeHelper # ねこの顔（cat）
     helper PixelPetHelper # 住民のドット絵
+    helper TownMapHelper # 町の地図（RPG のフィールド）
 
     layout "admin"
   end

@@ -1,5 +1,6 @@
-<%# 町のいまの様子。町を動かす係が Board#status で書き換える（ボタンは CSRF の印が要るので、ここには入れない） %>
-<div id="<%= Simulation::Board::STATUS_TARGET %>" class="town-status <%= "is-running" if control.town_running %>">
-  <strong><%= control.status_label %></strong>
-  <span class="muted small">速さ: <%= Simulation::Control::SPEEDS[control.seconds_per_day] %></span>
+<%# 町のいまの様子（何日目・朝昼夕夜・動いているか・速さ）。町を動かす係が Board#status で書き換える（ボタンは CSRF の印が要るので、ここには入れない） %>
+<div id="<%= Simulation::Board::STATUS_TARGET %>" class="town-status rpg-clock <%= "is-running" if control.town_running %>">
+  <p class="rpg-day"><%= control.day %>日目 <%= control.time_label || "—" %></p>
+  <p><strong><%= control.status_label %></strong></p>
+  <p class="rpg-dim">はやさ: <%= Simulation::Control::SPEEDS[control.seconds_per_day] %></p>
 </div>

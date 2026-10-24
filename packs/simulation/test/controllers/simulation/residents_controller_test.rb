@@ -29,7 +29,7 @@ class Simulation::ResidentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-cable-stream-source[channel=StaffStreamsChannel]"
     assert_select "##{ActionView::RecordIdentifier.dom_id(@komugi)}" do
       assert_select ".pet-name", text: /こむぎ/
-      assert_select ".pet-name", text: /倹約家/
+      assert_select ".rpg-job", text: "倹約家"
       assert_select "svg.pixel-pet[aria-label]"
       assert_select "dd", text: /ぶらぶら/
       assert_select "dd", text: /「ちゅ〜る」を買いたいと頼んだ/
@@ -41,6 +41,10 @@ class Simulation::ResidentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] select[name=?]", simulation_control_path, "control[seconds_per_day]"
     assert_select "##{Simulation::Board::DEBTS_TARGET}", text: /だれも借金していません/
     assert_select "##{Simulation::Board::LETTERS_TARGET}"
+    # RPG の地図: 建物の看板と、住民が地図の上に立っている（いましていること → 建物の前）
+    assert_select ".rpg-map svg.rpg-map-svg text", text: "ちゅ〜る商店"
+    assert_select "#walker_#{ActionView::RecordIdentifier.dom_id(@komugi)}[style*=?]", "left"
+    assert_select "##{Simulation::Board::SKY_TARGET}"
   end
 
   test "動かす・止める・速さは、表に書くだけ（町を動かす係が読む）" do

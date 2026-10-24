@@ -1,7 +1,5 @@
-<%# 手紙の流れの1通。町を動かす係が Board#letter で、一覧の頭に足す %>
-<li class="town-letter kind-<%= letter.kind %>">
-  <span class="muted small"><%= letter.day %> 日目</span>
-  <strong><%= letter.sender %></strong> → <strong><%= letter.recipient %></strong>
-  <span class="badge"><%= letter.kind_label %></span>
-  <span><%= letter.text %></span>
+<%# メッセージの窓の1行（手紙1通）。町を動かす係が Board#letter で、頭に足す %>
+<li class="rpg-message kind-<%= letter.kind %>">
+  <span class="rpg-dim"><%= letter.day %>日目</span>
+  <%= letter.sender %>「<%= letter.text %>」<span class="rpg-dim">→ <%= letter.recipient %>（<%= letter.kind_label %>）</span>
 </li>

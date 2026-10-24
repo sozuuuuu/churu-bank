@@ -175,12 +175,11 @@ module Simulation
     def overdue(ask)
       @board.letter(ask.from, Board::TELLER, ask)
       day = today
-      items = LoanCase.to_dun(day).filter_map do |kase|
-        owed = kase.outstanding
-        next unless owed.positive?
-
-        kase.update!(last_dunned_day: day)
-        Letters::OverdueItem.new(resident: kase.resident, owed:, days: day - (kase.last_repaid_day || kase.decided_day || kase.day).to_i)
+      # 住民ごとに1通（延滞しているローンの残りを合わせる）
+      items = LoanCase.to_dun(day).select { it.outstanding.positive? }.group_by(&:resident).map do |resident, cases|
+        cases.each { it.update!(last_dunned_day: day) }
+        days = cases.map { day - (it.last_repaid_day || it.decided_day || it.day).to_i }.max
+        Letters::OverdueItem.new(resident:, owed: cases.sum(&:outstanding), days:)
       end
       reply = Letters::Overdue.new(items: Ractor.make_shareable(items))
       @board.letter(Board::TELLER, ask.from, reply)
@@ -189,9 +188,9 @@ module Simulation
       nil
     end
 
-    # 郵便屋の写し。たまが係長へ回した申込なら、申込を「回した」にする
+    # 郵便屋の写し。行員（たま）が係長へ回した申込なら、申込を「回した」にする（役場からたまへ届けた写しは数えない）
     def copied(copy)
-      if copy.letter.is_a?(Letters::Case)
+      if copy.letter.is_a?(Letters::Case) && @clerks.key?(copy.from)
         LoanCase.where(id: copy.letter.id, status: "applied").update_all(status: "forwarded", handled_by: copy.from)
       end
       @board.letter(copy.from, copy.to, copy.letter)
